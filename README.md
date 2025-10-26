@@ -24,9 +24,6 @@ Sistema base de gestión desarrollado con Laravel 12, Vue 3, Inertia.js y PrimeV
 - Dashboard principal
 - Gestión de roles
 - Gestión de accesos
-- Administración de proyectos (en desarrollo)
-- Gestión de terrenos (en desarrollo)
-- Administración de categorías
 - Perfil de usuario
 - Configuración de apariencia
 - Cambio de contraseña
@@ -149,38 +146,6 @@ El sistema incluye un usuario administrador por defecto:
 - **Contraseña:** superadmin
 - **Rol:** Administrador
 
-**Importante:** Cambia estas credenciales después de la primera sesión.
-
-## Estructura del Proyecto
-
-```
-Template_365Soft/
-├── app/
-│   ├── Http/
-│   │   ├── Controllers/        # Controladores de la aplicación
-│   │   ├── Middleware/         # Middlewares personalizados
-│   │   └── Requests/           # Form Requests para validación
-│   ├── Models/                 # Modelos Eloquent
-│   └── Providers/              # Service Providers
-├── config/                     # Archivos de configuración
-├── database/
-│   ├── migrations/             # Migraciones de base de datos
-│   ├── factories/              # Factories para testing
-│   └── seeders/                # Seeders para datos iniciales
-├── public/                     # Punto de entrada público
-├── resources/
-│   ├── css/                    # Estilos CSS
-│   ├── js/
-│   │   ├── components/         # Componentes Vue reutilizables
-│   │   ├── layouts/            # Layouts de la aplicación
-│   │   ├── pages/              # Páginas Inertia
-│   │   └── composables/        # Composables Vue
-│   └── views/
-│       └── app.blade.php       # Template principal
-├── routes/                     # Definición de rutas
-├── storage/                    # Archivos de storage
-└── tests/                      # Tests automatizados
-```
 
 ## Comandos Útiles
 
@@ -259,23 +224,6 @@ El sistema incluye un sistema de roles flexible:
 2. Actualizar el middleware `RoleMiddleware`
 3. Agregar el rol a la navegación en `resources/js/config/navigation.ts`
 
-### Verificar Rol en Componentes Vue
-
-```typescript
-import { useAuth } from '@/composables/useAuth'
-
-const { hasRole, isAdmin } = useAuth()
-
-// Verificar si tiene un rol específico
-if (hasRole('admin')) {
-  // lógica para admin
-}
-
-// Verificar si es admin
-if (isAdmin.value) {
-  // lógica para admin
-}
-```
 
 ## Personalización
 
