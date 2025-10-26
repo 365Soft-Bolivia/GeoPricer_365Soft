@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import type { BadgeVariants } from "."
 import { cn } from "@/lib/utils"
-import { badgeVariants } from "."
 
 const props = defineProps<{
-  variant?: BadgeVariants["variant"]
   class?: HTMLAttributes["class"]
 }>()
 </script>
 
 <template>
-  <div :class="cn(badgeVariants({ variant }), props.class)">
+  <td
+    :class="
+      cn(
+        'p-4 align-middle [&:has([role=checkbox])]:pr-0',
+        props.class,
+      )
+    "
+  >
     <slot />
-  </div>
+  </td>
 </template>

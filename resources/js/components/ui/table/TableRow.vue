@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import type { BadgeVariants } from "."
 import { cn } from "@/lib/utils"
-import { badgeVariants } from "."
 
 const props = defineProps<{
-  variant?: BadgeVariants["variant"]
   class?: HTMLAttributes["class"]
 }>()
 </script>
 
 <template>
-  <div :class="cn(badgeVariants({ variant }), props.class)">
+  <tr :class="cn('border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted', props.class)">
     <slot />
-  </div>
+  </tr>
 </template>
