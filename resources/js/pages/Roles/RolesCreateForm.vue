@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 
 const emit = defineEmits<{
   save: [];
   cancel: [];
 }>();
+
+const toast = useToast();
 
 const form = useForm({
   nombre: '',
@@ -30,13 +32,23 @@ const handleSubmit = () => {
     preserveScroll: true,
     onSuccess: (page) => {
       const message = page.props.flash?.success || 'Rol creado correctamente';
-      Toast.success(message);
+      toast.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: message,
+        life: 3000
+      });
       emit('save');
       form.reset();
     },
     onError: (errors) => {
       const firstError = Object.values(errors)[0] as string;
-      Toast.error(firstError || 'Error al crear el rol');
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: firstError || 'Error al crear el rol',
+        life: 3000
+      });
     },
     onFinish: () => {
       isSubmitting.value = false;

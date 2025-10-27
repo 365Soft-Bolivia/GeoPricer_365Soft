@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\RolesController;
+use Illuminate\Support\Facades\Route;
 
 // Ruta principal para listar roles
 Route::middleware(['auth', 'verified', 'role:admin'])
