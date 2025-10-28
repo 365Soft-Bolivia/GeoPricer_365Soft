@@ -81,54 +81,55 @@
     }
 }
 :root {
-    --background: #f9f8f1;        /* aths-50: Fondo general muy claro */
-    --foreground: #322216;        /* aths-950: Texto principal oscuro */
-    
-    --card: #e5e1c3;              /* aths-100: Tarjetas / contenedores */
-    --card-foreground: #322216;   /* aths-950: Texto dentro de tarjetas */
-    
-    --popover: #dbd6ac;           /* aths-200: Fondos de popovers / menús */
-    --popover-foreground: #322216;/* aths-950: Texto en popovers */
-    
-    --primary: #b09450;           /* aths-500: Botones y encabezados principales */
-    --primary-foreground: #FFFFFF;/* Texto sobre primary (blanco para contraste) */
-    
-    --secondary: #9b7a44;         /* aths-600: Botones secundarios / acentos */
-    --secondary-foreground: #FFFFFF;
-    
-    --muted: #dbd6ac;             /* aths-200: Fondos suaves / hover */
-    --muted-foreground: #6b4d35;  /* aths-800: Texto en muted */
-    
-    --accent: #c8be81;            /* aths-300: Detalles / secciones alternas */
-    --accent-foreground: #322216; /* aths-950: Texto en accent */
-    
-    --destructive: #C62828;       /* Rojo para errores / alertas */
-    --destructive-foreground: #FFFFFF;
-    
-    --border: #82603b;            /* aths-700: Bordes y líneas */
-    --input: #FFFFFF;             /* Inputs y select (blanco) */
-    --ring: #bcaa63;              /* aths-400: Focus / anillos */
-    
-    /* Colores para gráficos */
-    --chart-1: #b09450;           /* aths-500 */
-    --chart-2: #c8be81;           /* aths-300 */
-    --chart-3: #9b7a44;           /* aths-600 */
-    --chart-4: #dbd6ac;           /* aths-200 */
-    --chart-5: #82603b;           /* aths-700 */
-    
+    --background: #ffffff;            /* white-50: Fondo general */
+    --foreground: #292929;            /* white-950: Texto principal */
+
+    --card: #efefef;                  /* white-100 */
+    --card-foreground: #292929;       /* white-950 */
+
+    --popover: #dcdcdc;               /* white-200 */
+    --popover-foreground: #292929;    /* white-950 */
+
+    --primary: #7c7c7c;               /* white-500: Botones / énfasis */
+    --primary-foreground: #ffffff;    /* Blanco para contraste */
+
+    --secondary: #656565;             /* white-600 */
+    --secondary-foreground: #ffffff;
+
+    --muted: #dcdcdc;                 /* white-200 */
+    --muted-foreground: #3d3d3d;      /* white-900 */
+
+    --accent: #bdbdbd;                /* white-300 */
+    --accent-foreground: #292929;     /* white-950 */
+
+    --destructive: #C62828;           /* Mantengo rojo para alertas */
+    --destructive-foreground: #ffffff;
+
+    --border: #525252;                /* white-700 */
+    --input: #ffffff;                 /* Blanco */
+    --ring: #989898;                  /* white-400 */
+
+    /* Gráficos */
+    --chart-1: #7c7c7c;               /* white-500 */
+    --chart-2: #bdbdbd;               /* white-300 */
+    --chart-3: #656565;               /* white-600 */
+    --chart-4: #dcdcdc;               /* white-200 */
+    --chart-5: #525252;               /* white-700 */
+
     --radius: 0.5rem;
-    
+
     /* Sidebar */
-    --sidebar-background: #f9f8f1; /* aths-50: Fondo sidebar */
-    --sidebar-foreground: #322216; /* aths-950: Texto sidebar */
-    --sidebar-primary: #b09450;    /* aths-500: Links principales */
-    --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #9b7a44;     /* aths-600: Links secundarios */
-    --sidebar-accent-foreground: #FFFFFF;
-    --sidebar-border: #82603b;     /* aths-700: Bordes sidebar */
-    --sidebar-ring: #bcaa63;       /* aths-400: Focus sidebar */
-    --sidebar: #f9f8f1;            /* aths-50: Fondo general sidebar */
+    --sidebar-background: #ffffff;    /* white-50 */
+    --sidebar-foreground: #292929;    /* white-950 */
+    --sidebar-primary: #7c7c7c;       /* white-500 */
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #656565;        /* white-600 */
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #525252;        /* white-700 */
+    --sidebar-ring: #989898;          /* white-400 */
+    --sidebar: #ffffff;               /* white-50 */
 }
+
 
 .dark {
     --background: hsl(0 0% 3.9%);
