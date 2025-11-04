@@ -27,4 +27,4 @@ require __DIR__.'/auth.php';
 require __DIR__.'/accesos.php';
 require __DIR__.'/roles.php';
 require __DIR__.'/productLocations.php';
-require __DIR__.'/productos.php';
+require __DIR__.'/products.php';
