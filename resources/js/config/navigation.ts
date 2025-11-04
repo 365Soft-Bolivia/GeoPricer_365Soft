@@ -1,5 +1,5 @@
-import { Folder, MapPinned, MapPin, Tag, LockKeyhole } from 'lucide-vue-next';
-import { dashboard, proyectos, terrenos, categorias, accesos,  } from '@/routes';
+import { Folder, MapPinned, Tag, LockKeyhole } from 'lucide-vue-next';
+import { dashboard, proyectos,  categorias, accesos, ubicaciones } from '@/routes';
 import type { NavItem } from '@/types';
 
 export const allMainNavItems: NavItem[] = [
@@ -15,9 +15,9 @@ export const allMainNavItems: NavItem[] = [
     roles: ['admin'],
   },
   {
-    title: 'Terrenos',
-    href: terrenos().url,
-    icon: MapPin,
+    title: 'Ubicaciones',
+    href: ubicaciones().url,
+    icon: MapPinned,
     roles: ['admin'],
   },
   {
