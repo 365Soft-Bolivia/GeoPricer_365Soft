@@ -1,0 +1,16 @@
+name: Move linked issue to "In Review" when PR is opened
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  move-linked-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move linked issue to 'In Review'
+        uses: peter-evans/project-actions@v2
+        with:
+          project: 'InnmobiliariaOficial_365Soft'
+          column: 'In Review'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
