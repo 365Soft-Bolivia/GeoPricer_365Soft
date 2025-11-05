@@ -26,7 +26,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 >
                     <PlaceholderPattern />
                     <h1>
-                        Hola Mundo para testeo 5, 5to intento
+                        Hola Mundo para testeo 6
                     </h1>
                 </div>
                 <div
