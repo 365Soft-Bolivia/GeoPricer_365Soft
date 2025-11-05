@@ -1,0 +1,19 @@
+name: Move Issue to In Review on PR opened
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  move-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Move linked issue to In Review
+        uses: peter-evans/create-or-update-project-card@v3
+        with:
+          project-name: 'InnmobiliariaOficial_365Soft'
+          column-name: 'In review'
+          issue-number: ${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
