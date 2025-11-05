@@ -1,19 +1,17 @@
-name: Move linked issue to "In Review" (Projects v2)
+name: Move linked issue to "In Review" when PR is opened
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened]
 
 jobs:
-  move-issue-v2:
+  move-linked-issue:
     runs-on: ubuntu-latest
     steps:
-      - name: Move linked issue to "In Review"
-        uses: titoportas/update-project-fields@v2
+      - name: Move linked issue to 'In Review'
+        uses: titoportas/update-project-fields@v1
         with:
-          github-token: ${{ secrets.ORG_PAT }}
-          organization: 365Soft-Bolivia
-          project-number: 1               # <- es el número que aparece en tu URL (/projects/1/)
-          item-id: ${{ github.event.pull_request.node_id }}
-          field: Status                   # <- nombre del campo (columna) en tu project
-          value: "In review"              # <- el valor exacto del campo (columna)
+          token: ${{ secrets.ORG_PAT }} # tu token con permisos repo, project, workflow
+          project-url: https://github.com/orgs/365Soft-Bolivia/projects/1
+          field: Status
+          value: In review
