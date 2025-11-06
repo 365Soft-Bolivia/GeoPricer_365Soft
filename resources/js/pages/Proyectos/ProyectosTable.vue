@@ -13,6 +13,24 @@ interface Producto {
   name: string;
   codigo_inmueble: string;
   price: number;
+  superficie_util?: number;
+  superficie_construida?: number;
+  ambientes?: number;
+  habitaciones?: number;
+  banos?: number;
+  cocheras?: number;
+  ano_construccion?: number;
+  operacion: string;
+  comision?: number;
+  taxes?: number;
+  description?: string;
+  sku?: string;
+  hsn_sac_code?: string;
+  allow_purchase?: boolean;
+  is_public?: boolean;
+  downloadable?: boolean;
+  downloadable_file?: string;
+  default_image?: string;
   estado: number;
   category: Category | null;
   created_at: string;
@@ -46,6 +64,11 @@ const deleteProduct = (id: number, name: string) => {
       }
     });
   }
+};
+
+// ✅ CAMBIADO: Navega a la página de detalles
+const viewProduct = (id: number) => {
+  router.visit(`/proyectos/${id}`);
 };
 
 const editProduct = (product: Producto) => {
@@ -136,6 +159,18 @@ const formatDate = (date: string) => {
             </td>
             <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
               <div class="flex items-center justify-end gap-2">
+                <!-- Botón Ver Detalles -->
+                <button
+                  @click="viewProduct(producto.id)"
+                  class="rounded p-1 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                  title="Ver detalles"
+                >
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+
                 <!-- Botón Editar -->
                 <button
                   @click="editProduct(producto)"

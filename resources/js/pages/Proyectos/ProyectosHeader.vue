@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useDebounceFn } from '@vueuse/core';
 import ProyectosCreateForm from './ProyectosCreateForm.vue';
+import products from '@/routes/products';
 
 interface Category {
   id: number;
@@ -39,6 +40,16 @@ const handleProductCreated = () => {
   showCreateDialog.value = false;
   router.reload({ only: ['productos'] });
 };
+
+//Función para ir a la página de detalles
+const verDetalles = (proyectoId: number) => {
+  router.visit(`/proyectos/${proyectoId}`);
+};
+
+const goToDetalles = (id: number) => {
+  router.visit(`/proyectos/${id}`);
+};
+
 </script>
 
 <template>

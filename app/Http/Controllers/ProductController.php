@@ -196,4 +196,42 @@ class ProductController extends Controller
             'success' => "Proyecto '{$nombreProducto}' eliminado correctamente.",
         ]);
     }
+    public function show(int $id)
+{
+    $producto = Product::with('category')->findOrFail($id);
+
+    return Inertia::render('Proyectos/ProyectosShow', [
+        'producto' => [
+            'id' => $producto->id,
+            'name' => $producto->name,
+            'codigo_inmueble' => $producto->codigo_inmueble,
+            'price' => $producto->price,
+            'superficie_util' => $producto->superficie_util,
+            'superficie_construida' => $producto->superficie_construida,
+            'ambientes' => $producto->ambientes,
+            'habitaciones' => $producto->habitaciones,
+            'banos' => $producto->banos,
+            'cocheras' => $producto->cocheras,
+            'ano_construccion' => $producto->ano_construccion,
+            'operacion' => $producto->operacion,
+            'comision' => $producto->comision,
+            'taxes' => $producto->taxes,
+            'description' => $producto->description,
+            'sku' => $producto->sku,
+            'hsn_sac_code' => $producto->hsn_sac_code,
+            'allow_purchase' => $producto->allow_purchase,
+            'is_public' => $producto->is_public,
+            'downloadable' => $producto->downloadable,
+            'downloadable_file' => $producto->downloadable_file,
+            'default_image' => $producto->default_image,
+            'estado' => $producto->estado ?? 1,
+            'category' => $producto->category ? [
+                'id' => $producto->category->id,
+                'category_name' => $producto->category->category_name,
+            ] : null,
+            'created_at' => $producto->created_at->format('Y-m-d H:i:s'),
+        ],
+    ]);
+}
+
 }
