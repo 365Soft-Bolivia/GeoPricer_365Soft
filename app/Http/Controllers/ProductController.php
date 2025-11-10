@@ -55,6 +55,11 @@ class ProductController extends Controller
                         'id' => $product->category->id,
                         'category_name' => $product->category->category_name,
                     ] : null,
+                    // ✅ CORRECCIÓN: Enviar image_path en lugar de url
+                    'primary_image' => $product->primaryImage ? [
+                        'id' => $product->primaryImage->id,
+                        'image_path' => $product->primaryImage->image_path,
+                    ] : null,
                     'created_at' => $product->created_at->format('Y-m-d H:i:s'),
                 ];
             });
@@ -197,41 +202,50 @@ class ProductController extends Controller
         ]);
     }
     public function show(int $id)
-{
-    $producto = Product::with('category')->findOrFail($id);
+    {
+        $producto = Product::with(['category', 'images'])->findOrFail($id);
 
-    return Inertia::render('Proyectos/ProyectosShow', [
-        'producto' => [
-            'id' => $producto->id,
-            'name' => $producto->name,
-            'codigo_inmueble' => $producto->codigo_inmueble,
-            'price' => $producto->price,
-            'superficie_util' => $producto->superficie_util,
-            'superficie_construida' => $producto->superficie_construida,
-            'ambientes' => $producto->ambientes,
-            'habitaciones' => $producto->habitaciones,
-            'banos' => $producto->banos,
-            'cocheras' => $producto->cocheras,
-            'ano_construccion' => $producto->ano_construccion,
-            'operacion' => $producto->operacion,
-            'comision' => $producto->comision,
-            'taxes' => $producto->taxes,
-            'description' => $producto->description,
-            'sku' => $producto->sku,
-            'hsn_sac_code' => $producto->hsn_sac_code,
-            'allow_purchase' => $producto->allow_purchase,
-            'is_public' => $producto->is_public,
-            'downloadable' => $producto->downloadable,
-            'downloadable_file' => $producto->downloadable_file,
-            'default_image' => $producto->default_image,
-            'estado' => $producto->estado ?? 1,
-            'category' => $producto->category ? [
-                'id' => $producto->category->id,
-                'category_name' => $producto->category->category_name,
-            ] : null,
-            'created_at' => $producto->created_at->format('Y-m-d H:i:s'),
-        ],
-    ]);
-}
+        return Inertia::render('Proyectos/ProyectosShow', [
+            'producto' => [
+                'id' => $producto->id,
+                'name' => $producto->name,
+                'codigo_inmueble' => $producto->codigo_inmueble,
+                'price' => $producto->price,
+                'superficie_util' => $producto->superficie_util,
+                'superficie_construida' => $producto->superficie_construida,
+                'ambientes' => $producto->ambientes,
+                'habitaciones' => $producto->habitaciones,
+                'banos' => $producto->banos,
+                'cocheras' => $producto->cocheras,
+                'ano_construccion' => $producto->ano_construccion,
+                'operacion' => $producto->operacion,
+                'comision' => $producto->comision,
+                'taxes' => $producto->taxes,
+                'description' => $producto->description,
+                'sku' => $producto->sku,
+                'hsn_sac_code' => $producto->hsn_sac_code,
+                'allow_purchase' => $producto->allow_purchase,
+                'is_public' => $producto->is_public,
+                'downloadable' => $producto->downloadable,
+                'downloadable_file' => $producto->downloadable_file,
+                'estado' => $producto->estado ?? 1,
+                'category' => $producto->category ? [
+                    'id' => $producto->category->id,
+                    'category_name' => $producto->category->category_name,
+                ] : null,
+                // ✅ CORRECCIÓN: Enviar image_path
+                'images' => $producto->images->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'image_path' => $image->image_path, // ✅ Cambiar url por image_path
+                        'original_name' => $image->original_name,
+                        'is_primary' => $image->is_primary,
+                        'order' => $image->order,
+                    ];
+                }),
+                'created_at' => $producto->created_at->format('Y-m-d H:i:s'),
+            ],
+        ]);
+    }
 
 }

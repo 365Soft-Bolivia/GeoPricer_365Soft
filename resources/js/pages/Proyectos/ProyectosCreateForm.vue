@@ -397,19 +397,6 @@ const submit = () => {
                       <p v-if="form.errors.hsn_sac_code" class="mt-1 text-sm text-red-600">{{ form.errors.hsn_sac_code }}</p>
                     </div>
 
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Imagen por Defecto (URL)
-                      </label>
-                      <input
-                        v-model="form.default_image"
-                        type="text"
-                        placeholder="https://..."
-                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
-                      />
-                      <p v-if="form.errors.default_image" class="mt-1 text-sm text-red-600">{{ form.errors.default_image }}</p>
-                    </div>
-
                     <div class="space-y-3">
                       <div class="flex items-center">
                         <input
@@ -435,7 +422,7 @@ const submit = () => {
                         </label>
                       </div>
 
-                      <div class="flex items-center">
+                      <!-- <div class="flex items-center">
                         <input
                           v-model="form.downloadable"
                           type="checkbox"
@@ -445,7 +432,7 @@ const submit = () => {
                         <label for="downloadable" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                           Archivo descargable
                         </label>
-                      </div>
+                      </div> -->
                     </div>
 
                     <div v-if="form.downloadable">

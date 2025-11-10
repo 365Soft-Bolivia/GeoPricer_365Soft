@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProductImageController;
 
 // CRUD completo
 Route::resource('products', ProductController::class)
@@ -13,4 +14,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/proyectos/{id}', [ProductController::class, 'update'])->name('proyectos.update');
     Route::patch('/proyectos/{id}/toggle', [ProductController::class, 'toggleStatus'])->name('proyectos.toggle');
     Route::delete('/proyectos/{id}', [ProductController::class, 'destroy'])->name('proyectos.destroy');
+
+
+    // Imágenes de productos
+    Route::post('/proyectos/{productId}/imagenes', [ProductImageController::class, 'store'])->name('products.images.store');
+    Route::post('/proyectos/{productId}/imagenes/{imageId}/principal', [ProductImageController::class, 'setPrimary'])->name('products.images.setPrimary');
+    Route::delete('/proyectos/{productId}/imagenes/{imageId}', [ProductImageController::class, 'destroy'])->name('products.images.destroy');
+    Route::post('/proyectos/{productId}/imagenes/reordenar', [ProductImageController::class, 'reorder'])->name('products.images.reorder');
 });

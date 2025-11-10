@@ -66,7 +66,7 @@ const deleteProduct = (id: number, name: string) => {
   }
 };
 
-// ✅ CAMBIADO: Navega a la página de detalles
+// CAMBIADO: Navega a la página de detalles
 const viewProduct = (id: number) => {
   router.visit(`/proyectos/${id}`);
 };

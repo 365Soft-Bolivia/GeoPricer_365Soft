@@ -3,10 +3,20 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import ProyectosImageUploader from './ProyectosImageUploader.vue';
+import ProyectosImageGallery from './ProyectosImageGallery.vue';
 
 interface Category {
   id: number;
   category_name: string;
+}
+
+interface ProductImage {
+  id: number;
+  url: string;
+  original_name: string;
+  is_primary: boolean;
+  order: number;
 }
 
 interface Producto {
@@ -31,9 +41,9 @@ interface Producto {
   is_public?: boolean;
   downloadable?: boolean;
   downloadable_file?: string;
-  default_image?: string;
   estado: number;
   category: Category | null;
+  images: ProductImage[];
   created_at: string;
 }
 
@@ -46,7 +56,7 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: props.producto.name, href: `/proyectos/${props.producto.id}` },
 ];
 
-const currentTab = ref<'general' | 'detalles' | 'otros'>('general');
+const currentTab = ref<'imagenes' | 'general' | 'detalles' | 'otros'>('imagenes');
 
 const formatPrice = (price?: number) => {
   if (!price) return 'No especificado';
@@ -74,6 +84,10 @@ const getOperacionLabel = (operacion: string) => {
   };
   return labels[operacion] || operacion;
 };
+
+const handleImageUploaded = () => {
+  // La página se recargará automáticamente por Inertia
+};
 </script>
 
 <template>
@@ -97,7 +111,7 @@ const getOperacionLabel = (operacion: string) => {
               <p class="mt-1 text-lg text-blue-100">
                 Código: {{ producto.codigo_inmueble }}
               </p>
-              <div class="mt-3">
+              <div class="mt-3 flex items-center gap-3">
                 <span 
                   :class="producto.estado === 1 
                     ? 'bg-green-400 text-green-900' 
@@ -106,6 +120,12 @@ const getOperacionLabel = (operacion: string) => {
                 >
                   <span class="h-2 w-2 rounded-full" :class="producto.estado === 1 ? 'bg-green-900' : 'bg-red-900'"></span>
                   {{ producto.estado === 1 ? 'Activo' : 'Inactivo' }}
+                </span>
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold text-white backdrop-blur-sm">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {{ producto.images.length }} {{ producto.images.length === 1 ? 'imagen' : 'imágenes' }}
                 </span>
               </div>
             </div>
@@ -123,6 +143,19 @@ const getOperacionLabel = (operacion: string) => {
       <div class="mb-6 overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
         <div class="border-b border-gray-200 dark:border-gray-700">
           <nav class="-mb-px flex space-x-8 px-6">
+            <button
+              type="button"
+              @click="currentTab = 'imagenes'"
+              :class="currentTab === 'imagenes' 
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400'"
+              class="flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
+            >
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Imágenes
+            </button>
             <button
               type="button"
               @click="currentTab = 'general'"
@@ -158,7 +191,33 @@ const getOperacionLabel = (operacion: string) => {
 
         <!-- Content -->
         <div class="p-6">
-          <!-- Tab: General -->
+          <!-- Tab: Imágenes -->
+          <div v-show="currentTab === 'imagenes'" class="space-y-6">
+            <!-- Subir imágenes -->
+            <div>
+              <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">
+                Subir Nuevas Imágenes
+              </h3>
+              <ProyectosImageUploader
+                :product-id="producto.id"
+                @uploaded="handleImageUploaded"
+              />
+            </div>
+
+            <!-- Galería existente -->
+            <div>
+              <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">
+                Galería de Imágenes
+              </h3>
+              <ProyectosImageGallery
+                :images="producto.images"
+                :product-id="producto.id"
+                :can-edit="true"
+              />
+            </div>
+          </div>
+
+          <!-- Tab: General (igual que antes) -->
           <div v-show="currentTab === 'general'" class="space-y-6">
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <!-- Precio Principal -->
