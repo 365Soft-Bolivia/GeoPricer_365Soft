@@ -11,19 +11,11 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
@@ -32,51 +24,71 @@ class LoginRequest extends FormRequest
         ];
     }
 
-    /**
-     * Validate the request's credentials and return the user without logging them in.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function validateCredentials(): User
     {
         $this->ensureIsNotRateLimited();
 
-        /** @var User|null $user */
-        $user = Auth::getProvider()->retrieveByCredentials($this->only('email', 'password'));
+        // DEBUG: Ver qué email se está intentando
+        \Log::info('🔍 Intento de login:', ['email' => $this->input('email')]);
 
-        if (! $user || ! Auth::getProvider()->validateCredentials($user, $this->only('password'))) {
+        // Buscar usuario SIN el scope de activos
+        $user = User::withoutGlobalScopes()->where('email', $this->input('email'))->first();
+
+        // DEBUG: Ver si encontró el usuario
+        \Log::info('👤 Usuario encontrado:', [
+            'existe' => $user ? 'SI' : 'NO',
+            'status' => $user ? $user->status : 'N/A',
+            'id' => $user ? $user->id : 'N/A'
+        ]);
+
+        // Si el usuario no existe
+        if (!$user) {
             RateLimiter::hit($this->throttleKey());
+            \Log::warning('❌ Usuario no encontrado');
 
             throw ValidationException::withMessages([
-                'email' => 'El correo o la contraseña son incorrectos.',
+                'email' => 'Las credenciales proporcionadas no son correctas.',
             ]);
         }
-        if ($user->estado != 1) {
+
+        // Verificar el estado ANTES de validar la contraseña
+        \Log::info('✅ Verificando estado:', [
+            'status_actual' => $user->status,
+            'es_active' => $user->status === 'active' ? 'SI' : 'NO'
+        ]);
+
+        if ($user->status !== 'active') {
             RateLimiter::hit($this->throttleKey());
+            \Log::warning('❌ Cuenta INACTIVA para: ' . $user->email);
 
             throw ValidationException::withMessages([
                 'email' => 'Tu cuenta está inactiva. Contacta al administrador.',
             ]);
         }
 
+        // Validar la contraseña
+        if (!Auth::getProvider()->validateCredentials($user, ['password' => $this->input('password')])) {
+            RateLimiter::hit($this->throttleKey());
+            \Log::warning('❌ Contraseña incorrecta para: ' . $user->email);
+
+            throw ValidationException::withMessages([
+                'email' => 'Las credenciales proporcionadas no son correctas.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
+        \Log::info('✅ Login exitoso para: ' . $user->email);
 
         return $user;
     }
 
-    /**
-     * Ensure the login request is not rate limited.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (!RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }
 
         event(new Lockout($this));
-
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
@@ -87,14 +99,11 @@ class LoginRequest extends FormRequest
         ]);
     }
 
-    /**
-     * Get the rate-limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
         return $this->string('email')
             ->lower()
-            ->append('|'.$this->ip())
+            ->append('|' . $this->ip())
             ->transliterate()
             ->value();
     }

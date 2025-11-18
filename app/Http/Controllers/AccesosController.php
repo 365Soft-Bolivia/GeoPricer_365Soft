@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Roles;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,13 +15,14 @@ class AccesosController extends Controller
     {
         $search = $request->input('search');
 
-        $usuarios = User::with('role')
+        $usuarios = User::withoutGlobalScope(\App\Scopes\ActiveScope::class)
+        ->with('roles')
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhereHas('role', function ($roleQuery) use ($search) {
-                            $roleQuery->where('nombre', 'like', "%{$search}%");
+                        ->orWhereHas('roles', function ($roleQuery) use ($search) {
+                            $roleQuery->where('display_name', 'like', "%{$search}%");
                         });
                 });
             })
@@ -32,108 +33,156 @@ class AccesosController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'estado' => $user->estado,
-                    'role' => $user->role ? [
-                        'id' => $user->role->id,
-                        'nombre' => $user->role->nombre,
+                    'status' => $user->status,
+                    'estado' => $user->status === 'active' ? 1 : 0,
+                    'role' => $user->roles->first() ? [
+                        'id' => $user->roles->first()->id,
+                        'nombre' => $user->roles->first()->display_name,
+                        'descripcion' => $user->roles->first()->description,
                     ] : null,
-                    'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+                    'roles' => $user->roles->map(function ($role) {
+                        return [
+                            'id' => $role->id,
+                            'name' => $role->name,
+                            'display_name' => $role->display_name,
+                        ];
+                    }),
+                    'created_at' => $user->created_at ? $user->created_at->format('Y-m-d H:i:s') : null,
                 ];
             });
 
-        $roles = Roles::where('activo', true)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'descripcion']);
+        $roles = Role::orderBy('display_name')->get()->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'nombre' => $role->display_name,
+                'name' => $role->name,
+                'descripcion' => $role->description,
+            ];
+        });
 
         return Inertia::render('Accesos', [
             'usuarios' => $usuarios->values(),
             'roles' => $roles,
             'filters' => [
-                'search' => $search, // ← Agregar esto
+                'search' => $search,
             ],
         ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role_id' => ['required', 'exists:roles,id'],
-        ], [
-            'name.required' => 'El nombre es obligatorio.',
-            'email.required' => 'El correo electrónico es obligatorio.',
-            'email.unique' => 'Este correo ya está registrado.',
-            'password.required' => 'La contraseña es obligatoria.',
-            'password.confirmed' => 'Las contraseñas no coinciden.',
-            'role_id.required' => 'Debes seleccionar un rol.',
-            'role_id.exists' => 'El rol seleccionado no existe.',
-        ]);
+        try {
+            \Log::info(' Datos recibidos para crear usuario:', $request->all());
 
-        User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role_id' => $validated['role_id'],
-        ]);
+            $validated = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+                'password' => ['required', 'confirmed', Rules\Password::defaults()],
+                'role_id' => ['required', 'exists:roles,id'],
+                'company_id' => ['nullable', 'integer', 'exists:companies,id'],
+                'gender' => ['nullable', 'in:male,female,other'],
+            ]);
 
-        return redirect()->route('accesos')->with('success', 'Usuario creado correctamente.');
+            \Log::info(' Validación exitosa:', $validated);
+
+            $user = new User();
+            $user->name = $validated['name'];
+            $user->email = $validated['email'];
+            $user->password = Hash::make($validated['password']);
+            $user->status = 'active'; //  Correcto según tu ENUM
+            $user->company_id = $validated['company_id'] ?? 1;
+            $user->dark_theme = 0;
+            $user->rtl = 0;
+            $user->email_notifications = 1;
+            $user->gender = $validated['gender'] ?? 'male';
+            $user->locale = 'es';
+            $user->login = 'enable';
+            $user->save();
+
+            \Log::info('Usuario creado con ID: ' . $user->id);
+
+            $user->roles()->attach($validated['role_id']);
+
+            \Log::info(' Rol asignado correctamente');
+
+            return redirect()->route('accesos')->with('success', 'Usuario creado correctamente.');
+        } catch (\Exception $e) {
+            \Log::error(' Error al crear usuario:', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+            return back()->with('error', 'Error al crear el usuario: ' . $e->getMessage())->withInput();
+        }
     }
-
     public function update(Request $request, int $id)
     {
-        $user = User::findOrFail($id);
+        try {
+            $user = User::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
-            'role_id' => ['required', 'exists:roles,id'],
-        ], [
-            'name.required' => 'El nombre es obligatorio.',
-            'email.required' => 'El correo electrónico es obligatorio.',
-            'email.unique' => 'Este correo ya está registrado.',
-            'password.confirmed' => 'Las contraseñas no coinciden.',
-            'role_id.required' => 'Debes seleccionar un rol.',
-            'role_id.exists' => 'El rol seleccionado no existe.',
-        ]);
+            \Log::info(' Actualizando usuario ID: ' . $id, $request->all());
 
-        $user->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'role_id' => $validated['role_id'],
-        ]);
-
-        if (!empty($validated['password'])) {
-            $user->update([
-                'password' => Hash::make($validated['password']),
+            $validated = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+                'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
+                'role_id' => ['required', 'exists:roles,id'],
+                'company_id' => ['nullable', 'integer', 'exists:companies,id'],
+                'gender' => ['nullable', 'in:male,female,other'],
+                'status' => ['nullable', 'in:active,deactive'], // Validación corregida
             ]);
-        }
 
-        return back()->with('success', 'Usuario actualizado correctamente.');
+            $user->name = $validated['name'];
+            $user->email = $validated['email'];
+            $user->company_id = $validated['company_id'] ?? $user->company_id;
+            $user->gender = $validated['gender'] ?? $user->gender;
+            $user->status = $validated['status'] ?? $user->status;
+
+            if (!empty($validated['password'])) {
+                $user->password = Hash::make($validated['password']);
+            }
+
+            $user->save();
+
+            $user->roles()->sync([$validated['role_id']]);
+
+            \Log::info(' Usuario actualizado correctamente');
+
+            return back()->with('success', 'Usuario actualizado correctamente.');
+        } catch (\Exception $e) {
+            \Log::error('💥 Error al actualizar usuario:', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+            ]);
+            return back()->with('error', 'Error al actualizar el usuario: ' . $e->getMessage());
+        }
     }
 
     public function toggleStatus(int $id)
-    {
-        $user = User::findOrFail($id);
+{
+    try {
+        $user = User::withoutGlobalScope(\App\Scopes\ActiveScope::class)
+            ->findOrFail($id);
 
         if ($user->id === auth()->id()) {
             return back()->with('error', 'No puedes cambiar el estado de tu propia cuenta.');
         }
 
-        $nuevoEstado = $user->estado == 1 ? 0 : 1;
-        $user->update(['estado' => $nuevoEstado]);
+        $nuevoEstado = $user->status === 'active' ? 'deactive' : 'active';
+        $user->status = $nuevoEstado;
+        $user->save();
 
-        $usuarios = User::with('role')->get();
-        $roles = Roles::all();
-
-        return back()->with([
-            'usuarios' => $usuarios,
-            'roles' => $roles,
-            'success' => $nuevoEstado == 1 ? 'Usuario activado.' : 'Usuario desactivado.',
+        return back()->with('success', $nuevoEstado === 'active' ? 'Usuario activado.' : 'Usuario desactivado.');
+        
+    } catch (\Exception $e) {
+        \Log::error('Error al cambiar estado:', [
+            'user_id' => $id,
+            'error' => $e->getMessage()
         ]);
+        
+        return back()->with('error', 'Error al cambiar el estado del usuario.');
     }
+}
 
     public function destroy(int $id)
     {
@@ -144,15 +193,9 @@ class AccesosController extends Controller
         }
 
         $nombreUsuario = $user->name;
+        $user->roles()->detach();
         $user->delete();
 
-        $usuarios = User::with('role')->get();
-        $roles = Roles::all();
-
-        return back()->with([
-            'usuarios' => $usuarios,
-            'roles' => $roles,
-            'success' => "Usuario {$nombreUsuario} eliminado correctamente.",
-        ]);
+        return back()->with('success', "Usuario {$nombreUsuario} eliminado correctamente.");
     }
 }

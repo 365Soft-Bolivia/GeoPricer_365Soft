@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Roles;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,27 +12,25 @@ class RolesController extends Controller
     {
         $search = $request->input('search');
 
-        $roles = Roles::query()
+        $roles = Role::query()
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
-                    $q->where('nombre', 'like', "%{$search}%")
-                        ->orWhere('descripcion', 'like', "%{$search}%");
+                    $q->where('display_name', 'like', "%{$search}%") // ✅ Cambiado de 'nombre'
+                        ->orWhere('description', 'like', "%{$search}%"); // ✅ Cambiado de 'descripcion'
                 });
             })
-            ->withCount(['users' => function ($query) {
-                // Asegurarse de usar la foreign key correcta
-                $query->whereColumn('users.role_id', 'roles.id');
-            }])
-            ->orderBy('nombre')
+            ->withCount('users') // ✅ Simplificado
+            ->orderBy('display_name') // ✅ Cambiado de 'nombre'
             ->get()
             ->map(function ($role) {
                 return [
                     'id' => $role->id,
-                    'nombre' => $role->nombre,
-                    'descripcion' => $role->descripcion,
-                    'activo' => $role->activo,
+                    'nombre' => $role->display_name, // ✅ Mapear para el frontend
+                    'name' => $role->name, // ✅ Nombre interno
+                    'descripcion' => $role->description, // ✅ Mapear para el frontend
+                    'activo' => $role->status === 'enabled' ? 1 : 0, // ✅ Ajustar según tu campo
                     'usuarios_count' => $role->users_count,
-                    'created_at' => $role->created_at->format('Y-m-d H:i:s'),
+                    'created_at' => $role->created_at ? $role->created_at->format('Y-m-d H:i:s') : null,
                 ];
             });
 
@@ -47,7 +45,7 @@ class RolesController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:255', 'unique:roles'],
+            'nombre' => ['required', 'string', 'max:255', 'unique:roles,display_name'],
             'descripcion' => ['nullable', 'string', 'max:500'],
             'activo' => ['boolean'],
         ], [
@@ -56,21 +54,23 @@ class RolesController extends Controller
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
-        Roles::create([
-            'nombre' => $validated['nombre'],
-            'descripcion' => $validated['descripcion'] ?? null,
-            'activo' => $validated['activo'] ?? true,
-        ]);
+        // ✅ Asignación directa
+        $role = new Role();
+        $role->name = strtolower(str_replace(' ', '_', $validated['nombre'])); // nombre interno
+        $role->display_name = $validated['nombre'];
+        $role->description = $validated['descripcion'] ?? null;
+        $role->status = ($validated['activo'] ?? true) ? 'enabled' : 'disabled';
+        $role->save();
 
         return redirect()->route('roles')->with('success', 'Rol creado correctamente.');
     }
 
     public function update(Request $request, int $id)
     {
-        $role = Roles::findOrFail($id);
+        $role = Role::findOrFail($id);
 
         $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:255', 'unique:roles,nombre,' . $role->id],
+            'nombre' => ['required', 'string', 'max:255', 'unique:roles,display_name,' . $role->id],
             'descripcion' => ['nullable', 'string', 'max:500'],
             'activo' => ['boolean'],
         ], [
@@ -79,46 +79,44 @@ class RolesController extends Controller
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
-        $role->update([
-            'nombre' => $validated['nombre'],
-            'descripcion' => $validated['descripcion'] ?? null,
-            'activo' => $validated['activo'] ?? $role->activo,
-        ]);
+        // ✅ Asignación directa
+        $role->display_name = $validated['nombre'];
+        $role->description = $validated['descripcion'] ?? null;
+        $role->status = ($validated['activo'] ?? $role->status === 'enabled') ? 'enabled' : 'disabled';
+        $role->save();
 
         return back()->with('success', 'Rol actualizado correctamente.');
     }
 
     public function toggleStatus(int $id)
     {
-        $role = Roles::findOrFail($id);
+        $role = Role::findOrFail($id);
 
         // Verificar si el rol tiene usuarios asignados antes de desactivarlo
-        if ($role->activo && $role->users()->count() > 0) {
+        $isEnabled = $role->status === 'enabled';
+        
+        if ($isEnabled && $role->users()->count() > 0) {
             return back()->with('error', 'No puedes desactivar un rol que tiene usuarios asignados.');
         }
 
-        $nuevoEstado = !$role->activo;
-        $role->update(['activo' => $nuevoEstado]);
+        $role->status = $isEnabled ? 'disabled' : 'enabled';
+        $role->save();
 
-        return back()->with([
-            'success' => $nuevoEstado ? 'Rol activado correctamente.' : 'Rol desactivado correctamente.',
-        ]);
+        return back()->with('success', $role->status === 'enabled' ? 'Rol activado correctamente.' : 'Rol desactivado correctamente.');
     }
 
     public function destroy(int $id)
     {
-        $role = Roles::findOrFail($id);
+        $role = Role::findOrFail($id);
 
         // Verificar si el rol tiene usuarios asignados
         if ($role->users()->count() > 0) {
             return back()->with('error', 'No puedes eliminar un rol que tiene usuarios asignados.');
         }
 
-        $nombreRole = $role->nombre;
+        $nombreRole = $role->display_name;
         $role->delete();
 
-        return back()->with([
-            'success' => "Rol '{$nombreRole}' eliminado correctamente.",
-        ]);
+        return back()->with('success', "Rol '{$nombreRole}' eliminado correctamente.");
     }
 }

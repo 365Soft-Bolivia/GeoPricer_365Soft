@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasCompany;
 use App\Traits\CustomFieldsTrait;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Modules\Purchase\Entities\PurchaseStockAdjustment;
@@ -238,4 +239,10 @@ class Product extends BaseModel
     {
         return $this->hasOne(ProductImage::class)->where('is_primary', true);
     }
+
+    public function location()
+    {
+        return $this->hasOne(ProductLocation::class, 'product_id');
+    }
+
 }
