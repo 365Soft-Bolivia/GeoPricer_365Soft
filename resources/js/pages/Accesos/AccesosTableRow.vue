@@ -18,6 +18,7 @@ interface Usuario {
   name: string;
   email: string;
   estado: number;
+  status: string;
   role: Role | null;
   created_at: string;
 }
@@ -41,24 +42,30 @@ const getRoleBadgeVariant = (roleName: string) => {
 };
 
 const handleToggleStatus = () => {
-  router.post(`/accesos/${props.usuario.id}/toggle-status`, {}, {
-    preserveScroll: true,
-    preserveState: true,
-    only: ['usuarios'],
-    onSuccess: () => {
-      showSuccess(
-        'Estado actualizado',
-        `El usuario ${props.usuario.name} ha sido ${props.usuario.estado === 1 ? 'desactivado' : 'activado'} exitosamente.`
-      );
-    },
-    onError: (errors) => {
-      console.error('Error al cambiar estado:', errors);
-      showError(
-        'Error al cambiar estado',
-        'No se pudo cambiar el estado del usuario. Por favor, intenta nuevamente.'
-      );
+  // Usa route() helper o construye la ruta correctamente
+  router.post(
+    `/accesos/${props.usuario.id}/toggle-status`, 
+    {}, 
+    {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: (page) => {
+        const wasActive = props.usuario.estado === 1;
+        showSuccess(
+          'Estado actualizado',
+          `El usuario ${props.usuario.name} ha sido ${wasActive ? 'desactivado' : 'activado'} exitosamente.`
+        );
+      },
+      onError: (errors) => {
+        console.error('Error al cambiar estado:', errors);
+        
+        // ✅ Mostrar el mensaje de error del servidor si existe
+        const errorMessage = errors.message || 'No se pudo cambiar el estado del usuario.';
+        
+        showError('Error al cambiar estado', errorMessage);
+      }
     }
-  });
+  );
 };
 
 const handleDelete = () => {

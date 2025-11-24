@@ -253,9 +253,34 @@ class User extends BaseModel implements AuthenticatableContract, AuthorizableCon
      *
      * @var array
      */
-    protected $guarded = [
-        'id'
-    ];
+    protected $fillable = [
+    'name',
+    'email',
+    'password',
+    'status',
+    'company_id',
+    'dark_theme',
+    'rtl',
+    'email_notifications',
+    'gender',
+    'locale',
+    'login',
+    'mobile',
+    'country_id',
+    'country_phonecode',
+    'image',
+    'telegram_user_id',
+    'onesignal_player_id',
+    'salutation',
+    'admin_approval',
+    'permission_sync',
+    'two_fa_verify_via',
+    'two_factor_code',
+    'google_calendar_status',
+    'customised_permissions',
+    'last_login',
+    // Agrega cualquier otro campo que necesites
+];
 
     /**
      * The attributes that should be hidden for arrays.
@@ -1226,7 +1251,7 @@ class User extends BaseModel implements AuthenticatableContract, AuthorizableCon
     }
 public function roles()
 {
-    return $this->belongsToMany(Role::class, 'role_user');
+    return $this->belongsToMany(Role::class, 'role_user', 'user_id', 'role_id');
 }
 
 public function getMainRoleAttribute()

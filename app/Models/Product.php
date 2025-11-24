@@ -239,6 +239,7 @@ class Product extends BaseModel
     {
         return $this->hasOne(ProductImage::class)->where('is_primary', true);
     }
+
     public function location()
     {
         return $this->hasOne(ProductLocation::class, 'product_id');
