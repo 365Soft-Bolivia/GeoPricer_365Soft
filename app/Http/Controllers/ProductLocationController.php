@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductLocationController extends Controller
 {
@@ -59,7 +60,6 @@ class ProductLocationController extends Controller
             ],
         ]);
     }
-
     /**
      * Listar todos los productos con ubicación (para refrescar datos)
      */
@@ -358,27 +358,37 @@ class ProductLocationController extends Controller
  */
 public function mapa(): Response
 {
-    $productsConUbicacion = Product::has('location')
-        ->with(['location', 'category'])
-        ->select('id', 'name', 'codigo_inmueble', 'price', 'default_image', 'category_id')
-        ->get()
-        ->map(function ($product) {
-            return [
-                'id' => $product->id,
-                'name' => $product->name,
-                'codigo_inmueble' => $product->codigo_inmueble,
-                'price' => $product->price,
-                'default_image' => $product->default_image,
-                'category' => $product->category?->category_name,
-                'location' => [
-                    'id' => $product->location->id,
-                    'latitude' => $product->location->latitude,
-                    'longitude' => $product->location->longitude,
-                    'address' => $product->location->address,
-                    'is_active' => $product->location->is_active,
-                ],
-            ];
-        });
+        // ✅ Incluir relación 'images' además de 'location' y 'category'
+        $productsConUbicacion = Product::with(['location', 'category', 'images'])
+            ->whereHas('location')
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'codigo_inmueble' => $product->codigo_inmueble,
+                    'price' => $product->price,
+                    'default_image' => $product->default_image,
+                    'category' => $product->category?->category_name,
+                    'location' => [
+                        'id' => $product->location->id,
+                        'latitude' => $product->location->latitude,
+                        'longitude' => $product->location->longitude,
+                        'address' => $product->location->address,
+                        'is_active' => $product->location->is_active,
+                    ],
+                    // ✅ AGREGADO: Mapear todas las imágenes del producto
+                    'images' => $product->images->map(function ($image) {
+                        return [
+                            'id' => $image->id,
+                            'image_path' => $image->image_path,
+                            'original_name' => $image->original_name,
+                            'is_primary' => $image->is_primary,
+                            'order' => $image->order,
+                        ];
+                    })->toArray(),
+                ];
+            });
 
     return Inertia::render('Locations/LocationsMap', [
         'productsConUbicacion' => $productsConUbicacion,
@@ -453,4 +463,5 @@ public function editar(): Response
         'productsConUbicacion' => $productsConUbicacion,
     ]);
 }
+
 }

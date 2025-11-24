@@ -244,3 +244,4 @@ class Product extends BaseModel
     {
         return $this->hasOne(ProductLocation::class, 'product_id');
     }
+}

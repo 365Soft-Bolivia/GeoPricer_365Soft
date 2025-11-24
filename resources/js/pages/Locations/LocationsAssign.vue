@@ -7,8 +7,11 @@ import { onMounted, ref, computed, onUnmounted } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowLeft, Search, MapPin, Save, Navigation } from 'lucide-vue-next';
+// import 'leaflet/dist/leaflet.css';
+// import { ArrowLeft, Navigation, X, MapPin } from 'lucide-vue-next';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
+
 
 // Fix para iconos de Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -155,32 +158,29 @@ const centerOnMyLocation = () => {
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
-                map!.setView([latitude, longitude], 16);
+                map!.setView([latitude, longitude], 15);
                 
-                toast.add({
-                    severity: 'success',
-                    summary: 'Ubicación obtenida',
-                    detail: 'Haz clic en el mapa para marcar la ubicación exacta',
-                    life: 3000
-                });
+                // Agregar marcador temporal de ubicación actual
+                L.marker([latitude, longitude], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        shadowUrl: iconShadow,
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).addTo(map!)
+                    .bindPopup('📍 Tu ubicación actual')
+                    .openPopup();
             },
             (error) => {
                 console.error('Error obteniendo ubicación:', error);
-                toast.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'No se pudo obtener tu ubicación. Verifica los permisos.',
-                    life: 4000
-                });
+                alert('No se pudo obtener tu ubicación. Verifica los permisos del navegador.');
             }
         );
     } else {
-        toast.add({
-            severity: 'warn',
-            summary: 'No disponible',
-            detail: 'Tu navegador no soporta geolocalización',
-            life: 3000
-        });
+        alert('Tu navegador no soporta geolocalización');
     }
 };
 
