@@ -11,9 +11,6 @@ use App\Http\Controllers\Public\PropiedadPublicController;
 |--------------------------------------------------------------------------
 */
 
-// Página de inicio - AGREGAR ESTO
-Route::get('/home', [HomeController::class, 'index'])->name('public.home');
-
 // Listado de propiedades público
 Route::get('/propiedades', [PropiedadPublicController::class, 'index'])->name('public.propiedades');
 
