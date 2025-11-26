@@ -1,0 +1,166 @@
+name: Move Issue to In Progress on Branch Creation
+
+on:
+  create:
+
+jobs:
+  move-to-in-progress:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'branch'
+    
+    steps:
+      - name: Extract issue number from branch name
+        id: extract
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          echo "Branch detectada: $BRANCH_NAME"
+          
+          # Extraer el primer número continuo del nombre de la rama
+          ISSUE_NUMBER=$(echo "$BRANCH_NAME" | grep -oE '[0-9]+' | head -n 1)
+          
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "No se encontró número de issue en el nombre de la rama"
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          else
+            echo "Issue detectado: #$ISSUE_NUMBER"
+            echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Move issue to In Progress
+        if: steps.extract.outputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ORG_PAT }}
+          script: |
+            const issueNumber = ${{ steps.extract.outputs.issue_number }};
+            const owner = '365Soft-Bolivia';
+            const repo = context.repo.repo;
+            const projectNumber = 1;
+            
+            console.log(`Procesando issue #${issueNumber} del repositorio ${owner}/${repo}`);
+            
+            try {
+              // Verificar que el issue existe
+              const issue = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: repo,
+                issue_number: issueNumber
+              });
+              
+              console.log(`Issue #${issueNumber} encontrado: ${issue.data.title}`);
+              
+              // Obtener el ID del proyecto de la organización
+              const projectQuery = `
+                query($org: String!, $number: Int!) {
+                  organization(login: $org) {
+                    projectV2(number: $number) {
+                      id
+                      field(name: "Status") {
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `;
+              
+              const projectData = await github.graphql(projectQuery, {
+                org: owner,
+                number: projectNumber
+              });
+              
+              const project = projectData.organization.projectV2;
+              const statusField = project.field;
+              
+              console.log('Proyecto encontrado:', project.id);
+              console.log('Campo Status encontrado:', statusField.id);
+              
+              // Buscar la opción "In progress" (case insensitive)
+              const inProgressOption = statusField.options.find(
+                opt => opt.name.toLowerCase() === 'in progress'
+              );
+              
+              if (!inProgressOption) {
+                console.log('Opciones disponibles:', statusField.options.map(o => o.name).join(', '));
+                throw new Error('No se encontró la opción "In progress" en el campo Status');
+              }
+              
+              console.log(`Opción "In progress" encontrada:`, inProgressOption.name);
+              
+              // Buscar el item del issue en el proyecto
+              const itemQuery = `
+                query($org: String!, $number: Int!, $issueId: ID!) {
+                  organization(login: $org) {
+                    projectV2(number: $number) {
+                      items(first: 100) {
+                        nodes {
+                          id
+                          content {
+                            ... on Issue {
+                              id
+                              number
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `;
+              
+              const itemData = await github.graphql(itemQuery, {
+                org: owner,
+                number: projectNumber,
+                issueId: issue.data.node_id
+              });
+              
+              const projectItem = itemData.organization.projectV2.items.nodes.find(
+                item => item.content?.number === issueNumber
+              );
+              
+              if (!projectItem) {
+                console.log(`Issue #${issueNumber} no está en el proyecto ${projectNumber}`);
+                return;
+              }
+              
+              console.log('Item del issue encontrado en el proyecto:', projectItem.id);
+              console.log('Moviendo a "In progress"...');
+              
+              // Actualizar el campo Status del item
+              const updateMutation = `
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: {
+                        singleSelectOptionId: $optionId
+                      }
+                    }
+                  ) {
+                    projectV2Item {
+                      id
+                    }
+                  }
+                }
+              `;
+              
+              await github.graphql(updateMutation, {
+                projectId: project.id,
+                itemId: projectItem.id,
+                fieldId: statusField.id,
+                optionId: inProgressOption.id
+              });
+              
+              console.log(`✅ Issue #${issueNumber} movido exitosamente a "In progress"`);
+              
+            } catch (error) {
+              console.error('Error al mover el issue:', error.message);
+              core.setFailed(error.message);
+            }
