@@ -129,17 +129,36 @@ const handleWhatsApp = () => {
     window.open(`https://wa.me/59166666666?text=${message}`, '_blank');
 };
 
-const handleShare = () => {
-    if (navigator.share) {
-        navigator.share({
-            title: props.propiedad.name,
-            text: props.propiedad.descripcion,
-            url: window.location.href
-        });
-    } else {
-        // Fallback: copiar al portapapeles
-        navigator.clipboard.writeText(window.location.href);
+// const handleShare = () => {
+//     if (navigator.share) {
+//         navigator.share({
+//             title: props.propiedad.name,
+//             text: props.propiedad.descripcion,
+//             url: window.location.href
+//         });
+//     } else {
+//         // Fallback: copiar al portapapeles
+//         navigator.clipboard.writeText(window.location.href);
+//         alert('Enlace copiado al portapapeles');
+//     }
+// };
+
+const handleShare = async () => {
+    try {
+        await navigator.clipboard.writeText(window.location.href);
         alert('Enlace copiado al portapapeles');
+    } catch (e) {
+        console.error('Error al copiar el enlace:', e);
+        alert('No se pudo copiar el enlace');
+    }
+};
+
+
+const openGoogleMaps = () => {
+    const location = props.propiedad.location;
+    if (location?.latitude && location?.longitude) {
+        const url = `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}&zoom=30`;
+        window.open(url, '_blank', 'noopener,noreferrer');
     }
 };
 
@@ -529,38 +548,41 @@ const breadcrumbs = computed(() => [
                 </div>
             </div>
 
-            <!-- Propiedades Relacionadas -->
-            <div v-if="relacionadas && relacionadas.length > 0" class="mt-12">
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                    Propiedades Relacionadas
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <Link
-                        v-for="relacionada in relacionadas"
-                        :key="relacionada.id"
-                        :href="`/propiedad/${relacionada.id}`"
-                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all group"
-                    >
-                        <div class="relative h-48">
-                            <img
-                                v-if="relacionada.default_image"
-                                :src="relacionada.default_image"
-                                :alt="relacionada.name"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            />
-                            <div v-else class="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                <Home :size="32" class="text-gray-400" />
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            <h3 class="font-semibold text-lg text-gray-900 dark:text-white mb-2 line-clamp-2">
-                                {{ relacionada.name }}
-                            </h3>
-                            <p class="text-blue-600 dark:text-blue-400 font-bold text-xl">
-                                {{ formatPrice(relacionada.price) }}
-                            </p>
-                        </div>
-                    </Link>
+            <!-- Ubicación en el Mapa -->
+            <div v-if="propiedad.location?.latitude && propiedad.location?.longitude" class="mt-12">
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            Ubicación
+                        </h2>
+                        <Button
+                            @click="openGoogleMaps"
+                            class="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 w-full sm:w-auto"
+                        >
+                            <MapPin :size="18" />
+                            Ver en Google Maps
+                        </Button>
+                    </div>
+                    
+                    <div class="mb-4 flex items-start gap-2 text-gray-600 dark:text-gray-400">
+                        <MapPin :size="20" class="mt-1 flex-shrink-0" />
+                        <span>{{ propiedad.location.address || propiedad.direccion || 'Ubicación exacta' }}</span>
+                    </div>
+
+                    <!-- Mapa -->
+                    <div class="relative w-full h-[400px] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <iframe
+                            :src="`https://www.google.com/maps?q=${propiedad.location.latitude},${propiedad.location.longitude}&z=17&output=embed`"
+                            width="100%"
+                            height="100%"
+                            style="border:0;"
+                            allowfullscreen=""
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                        ></iframe>
+                    </div>
+
+                    
                 </div>
             </div>
         </div>
