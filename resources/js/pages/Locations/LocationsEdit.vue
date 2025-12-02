@@ -433,7 +433,7 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Panel de instrucciones -->
-                <div class="absolute bottom-4 left-4 z-[999] bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-4 max-w-xs border border-gray-300">
+                <!-- <div class="absolute bottom-4 left-4 z-[999] bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-4 max-w-xs border border-gray-300">
                     <h3 class="font-bold text-sm mb-2 text-gray-800 flex items-center gap-2">
                         <MapPin :size="16" class="text-purple-600" />
                         Instrucciones
@@ -450,7 +450,7 @@ onUnmounted(() => {
                             Modo edición activo - Arrastra el marcador naranja
                         </p>
                     </div>
-                </div>
+                </div> -->
             </div>
 
             <!-- PANEL LATERAL -->

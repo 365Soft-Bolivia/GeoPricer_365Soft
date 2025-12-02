@@ -14,6 +14,8 @@ import { ArrowLeft, Navigation, X, MapPin } from 'lucide-vue-next';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
+import proyectos from '@/routes/admin/proyectos';
+import ProyectosShow from '../Proyectos/ProyectosShow.vue';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -47,16 +49,6 @@ interface Product {
     };
 }
 
-window.addEventListener("open-product", (e: any) => {
-    const product = props.productsConUbicacion.find(p => p.id === e.detail);
-    if (product) {
-        selectedProduct.value = product;
-        currentImageIndex.value = 0;
-    }
-});
-
-
-
 const props = defineProps<{
     productsConUbicacion: Product[];
 }>();
@@ -75,13 +67,11 @@ const markers: L.Marker[] = [];
 let userLocationMarker: L.Marker | null = null;
 let userLocationCircle: L.Circle | null = null;
 
-const defaultCenter = { lat: -16.5000, lng: -68.1500 }; // La Paz, Bolivia
+const defaultCenter = { lat: -17.0000, lng: -64.0000 };
 
-// ✅ FIXED: Computed para obtener imágenes ordenadas
 const sortedImages = computed(() => {
     if (!selectedProduct.value?.images?.length) return [];
     
-    // Ordenar por el campo 'order' y luego poner primarias primero
     return [...selectedProduct.value.images].sort((a, b) => {
         if (a.is_primary && !b.is_primary) return -1;
         if (!a.is_primary && b.is_primary) return 1;
@@ -89,12 +79,10 @@ const sortedImages = computed(() => {
     });
 });
 
-// ✅ Helper para obtener URL de imagen
 const getImageUrl = (imagePath: string) => {
     return `/storage/${imagePath}`;
 };
 
-// ✅ FIXED: Navegación de imágenes usando sortedImages
 const nextImage = () => {
     if (!sortedImages.value.length) return;
     currentImageIndex.value = (currentImageIndex.value + 1) % sortedImages.value.length;
@@ -112,147 +100,203 @@ const goToImage = (index: number) => {
 const initMap = () => {
     if (!mapContainer.value) return;
 
-    // Crear mapa centrado en La Paz
-    map = L.map(mapContainer.value).setView([defaultCenter.lat, defaultCenter.lng], 13);
+    map = L.map(mapContainer.value).setView([defaultCenter.lat, defaultCenter.lng], 6);
 
-    // Agregar capa de tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19,
     }).addTo(map);
 
-    // Agregar marcadores de productos
+    // ✅ CORREGIDO: Función del popup con manejo correcto de imágenes
+    const popupContent = (product: Product) => {
+        const images = product.images && product.images.length > 0
+            ? product.images.sort((a, b) => (a.is_primary ? -1 : 1))
+            : [];
+
+        const imageUrl = (path: string) => `/storage/${path}`;
+        const hasImages = images.length > 0;
+        
+        // Primera imagen o null
+        const firstImage = hasImages ? imageUrl(images[0].image_path) : null;
+
+        return `
+            <div class="popup-card" 
+                 style="width:260px;border-radius:12px;overflow:hidden;
+                        position:relative;
+                        box-shadow:0 4px 12px rgba(0,0,0,0.2);
+                        font-family:sans-serif;background:white;">
+                
+                <!-- IMAGEN O ÍCONO -->
+                <div class="image-container" 
+                     data-images='${JSON.stringify(images.map(i => imageUrl(i.image_path)))}'
+                     data-has-images="${hasImages}"
+                     style="position:relative;width:100%;height:160px;overflow:hidden;">
+                    
+                    ${hasImages ? `
+                        <!-- Imagen -->
+                        <img class="carousel-image"
+                            src="${firstImage}"
+                            style="width:100%;height:160px;object-fit:cover;display:block;"
+                            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                        />
+                        <!-- Fallback: Ícono de casa -->
+                        <div class="fallback-icon" 
+                             style="display:none;width:100%;height:100%;
+                                    background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    align-items:center;justify-content:center;color:white;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" 
+                                 fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                        </div>
+                        
+                        ${images.length > 1 ? `
+                            <!-- Botones navegación -->
+                            <button class="carousel-prev"
+                                style="position:absolute;top:50%;left:8px;transform:translateY(-50%);
+                                       background:rgba(0,0,0,0.7);color:white;border:none;
+                                       width:32px;height:32px;border-radius:50%;cursor:pointer;
+                                       font-size:20px;font-weight:bold;z-index:10;
+                                       display:flex;align-items:center;justify-content:center;">
+                                ‹
+                            </button>
+                            <button class="carousel-next"
+                                style="position:absolute;top:50%;right:8px;transform:translateY(-50%);
+                                       background:rgba(0,0,0,0.7);color:white;border:none;
+                                       width:32px;height:32px;border-radius:50%;cursor:pointer;
+                                       font-size:20px;font-weight:bold;z-index:10;
+                                       display:flex;align-items:center;justify-content:center;">
+                                ›
+                            </button>
+                            
+                            <!-- Contador -->
+                            <div class="image-counter" 
+                                 style="position:absolute;bottom:8px;right:8px;
+                                        background:rgba(0,0,0,0.7);color:white;
+                                        padding:4px 10px;border-radius:12px;font-size:12px;z-index:10;">
+                                <span class="current-index">1</span> / ${images.length}
+                            </div>
+                        ` : ''}
+                    ` : `
+                        <!-- No hay imágenes: Mostrar ícono -->
+                        <div style="display:flex;width:100%;height:100%;
+                                    background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    align-items:center;justify-content:center;color:white;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" 
+                                 fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                        </div>
+                    `}
+                </div>
+
+                <!-- CONTENIDO -->
+                <div style="padding:12px;background:white;">
+                    <h3 style="font-size:16px;font-weight:bold;margin-bottom:4px;color:#333;">
+                        ${product.name}
+                    </h3>
+
+                    <p style="font-size:12px;color:#666;margin:2px 0;">
+                        Código: <strong>${product.codigo_inmueble}</strong>
+                    </p>
+
+                    <p style="font-size:12px;color:#666;margin:2px 0;">
+                        Categoría: ${product.category ?? 'N/A'}
+                    </p>
+
+                    <p style="font-size:16px;font-weight:bold;color:#0a8a0a;margin-top:8px;">
+                        ${product.price.toLocaleString()} USD
+                    </p>
+
+                    <a
+                        href="/admin/proyectos/${product.id}"
+                        target="_blank"
+                        style="
+                            display:inline-block;width:100%;margin-top:12px;background:#caa86f;
+                            color:white;padding:8px 0;border-radius:6px;border:none;
+                            font-weight:bold;cursor:pointer;text-align:center;text-decoration:none;
+                        ">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
+        `;
+    };
+
+    // Agregar marcadores
     props.productsConUbicacion.forEach((product) => {
         if (!product.location.is_active) return;
 
         const marker = L.marker([product.location.latitude, product.location.longitude])
             .addTo(map!);
 
-        // Popup con información del producto
-        const popupContent = (product: Product) => {
-    const images = product.images
-        ? product.images.sort((a, b) => (a.is_primary ? -1 : 1))
-        : [];
+        marker.bindPopup(popupContent(product), {
+            maxWidth: 280,
+            className: 'custom-popup'
+        });
 
-    const imageUrl = (path: string) => `/storage/${path}`;
-
-    const imagesJson = JSON.stringify(images.map(i => imageUrl(i.image_path)));
-
-    return `
-        <div class="popup-card" 
-             style="width:260px;border-radius:12px;overflow:hidden;
-                    box-shadow:0 4px 12px rgba(0,0,0,0.2);font-family:sans-serif;
-                    background:white;">
-
-            <!-- CARRUSEL -->
-            <div class="carousel-container" 
-                 data-images='${imagesJson}'
-                 style="position:relative;width:100%;height:160px;overflow:hidden;background:#000;">
-
-                <!-- Imagen principal -->
-                <img class="carousel-image"
-                    src="${images.length ? imageUrl(images[0].image_path) : ''}"
-                    style="width:100%;height:160px;object-fit:cover;"
-                />
-
-                <!-- Flechas -->
-                <button class="carousel-prev" 
-                    style="position:absolute;top:50%;left:6px;transform:translateY(-50%);
-                           background:rgba(0,0,0,0.6);color:white;border:none;
-                           padding:4px 8px;border-radius:6px;cursor:pointer;">
-                    ‹
-                </button>
-
-                <button class="carousel-next" 
-                    style="position:absolute;top:50%;right:6px;transform:translateY(-50%);
-                           background:rgba(0,0,0,0.6);color:white;border:none;
-                           padding:4px 8px;border-radius:6px;cursor:pointer;">
-                    ›
-                </button>
-            </div>
-
-            <!-- CONTENIDO -->
-            <div style="padding:12px;background:white;">
-                <h3 style="font-size:16px;font-weight:bold;margin-bottom:4px;color:#333;">
-                    ${product.name}
-                </h3>
-
-                <p style="font-size:12px;color:#666;margin:2px 0;">
-                    Código: <strong>${product.codigo_inmueble}</strong>
-                </p>
-
-                <p style="font-size:12px;color:#666;margin:2px 0;">
-                    Categoría: ${product.category ?? 'N/A'}
-                </p>
-
-                <p style="font-size:16px;font-weight:bold;color:#0a8a0a;margin-top:8px;">
-                    ${product.price.toLocaleString()} USD
-                </p>
-
-                <button 
-                    onclick="window.dispatchEvent(new CustomEvent('open-product', { detail: ${product.id} }))"
-                    style="
-                        width:100%;margin-top:12px;background:#caa86f;
-                        color:white;padding:8px 0;border-radius:6px;border:none;
-                        font-weight:bold;cursor:pointer;
-                    ">
-                    Ver Detalle
-                </button>
-            </div>
-        </div>
-    `;
-};
-
-
-        
-        marker.bindPopup(popupContent(product));
-
+        // ✅ CORREGIDO: Event listener del carrusel
         marker.on("popupopen", (e) => {
-    const popup = e.popup.getElement();
+            const popup = e.popup.getElement();
+            if (!popup) return;
 
-    if (!popup) return;
+            const container = popup.querySelector(".image-container");
+            if (!container) return;
 
-    const carouselContainer = popup.querySelector(".carousel-container");
-    if (!carouselContainer) return;
+            const hasImages = container.getAttribute("data-has-images") === "true";
+            if (!hasImages) return; // No hay imágenes, no hacer nada
 
-    const imgEl = popup.querySelector(".carousel-image");
-    const prevBtn = popup.querySelector(".carousel-prev");
-    const nextBtn = popup.querySelector(".carousel-next");
+            const imgEl = popup.querySelector(".carousel-image") as HTMLImageElement;
+            const prevBtn = popup.querySelector(".carousel-prev");
+            const nextBtn = popup.querySelector(".carousel-next");
+            const counterEl = popup.querySelector(".current-index");
 
-    const images = JSON.parse(carouselContainer.dataset.images || "[]");
-    let index = 0;
+            const images = JSON.parse(container.getAttribute("data-images") || "[]");
+            if (images.length === 0) return;
 
-    const updateImage = () => {
-        if (imgEl) {
-            imgEl.src = images[index];
-        }
-    };
+            let index = 0;
 
-    prevBtn?.addEventListener("click", () => {
-        index = (index - 1 + images.length) % images.length;
-        updateImage();
-    });
+            const updateImage = () => {
+                if (imgEl) {
+                    imgEl.src = images[index];
+                    // Asegurar que se muestre la imagen
+                    imgEl.style.display = 'block';
+                    const fallbackIcon = imgEl.nextElementSibling as HTMLElement;
+                    if (fallbackIcon) fallbackIcon.style.display = 'none';
+                }
+                if (counterEl) {
+                    counterEl.textContent = (index + 1).toString();
+                }
+            };
 
-    nextBtn?.addEventListener("click", () => {
-        index = (index + 1) % images.length;
-        updateImage();
-    });
-});
+            prevBtn?.addEventListener("click", (e) => {
+                e.stopPropagation();
+                index = (index - 1 + images.length) % images.length;
+                updateImage();
+            });
 
+            nextBtn?.addEventListener("click", (e) => {
+                e.stopPropagation();
+                index = (index + 1) % images.length;
+                updateImage();
+            });
 
-        // Click en marcador para mostrar detalles
+            // Manejar error de carga de imagen
+            imgEl?.addEventListener('error', () => {
+                imgEl.style.display = 'none';
+                const fallbackIcon = imgEl.nextElementSibling as HTMLElement;
+                if (fallbackIcon) fallbackIcon.style.display = 'flex';
+            });
+        });
+
         marker.on('click', () => {
             selectedProduct.value = product;
         });
 
         markers.push(marker);
     });
-
-    // Ajustar vista para mostrar todos los marcadores
-    if (markers.length > 0) {
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.1));
-    }
 };
 
 const centerOnMyLocation = () => {
@@ -290,8 +334,8 @@ const centerOnMyLocation = () => {
                     html: `
                         <div style="position: relative;">
                             <div style="
-                                width: 20px;
-                                height: 20px;
+                                width: 17px;
+                                height: 17px;
                                 background: #3B82F6;
                                 border: 3px solid white;
                                 border-radius: 50%;
@@ -315,20 +359,25 @@ const centerOnMyLocation = () => {
                             </style>
                         </div>
                     `,
-                    iconSize: [26, 26],
-                    iconAnchor: [13, 13]
+                    iconSize: [10, 10],
+                    iconAnchor: [10, 10]
                 });
 
                 userLocationMarker = L.marker([latitude, longitude], {
                     icon: pulsingIcon
                 }).addTo(map!)
                     .bindPopup(`
-                        <div class="p-3">
-                            <p class="font-bold text-blue-600 mb-2">📍 Tu ubicación actual</p>
-                            <p class="text-xs text-gray-600">Precisión: ±${Math.round(accuracy)}m</p>
+                        <div class="w-max text-center text-xs">
+                            <p class="font-bold text-blue-600">📍 Tu ubicación actual</p>
                         </div>
                     `)
                     .openPopup();
+
+                setTimeout(() => {
+                    if (userLocationMarker && map) {
+                        userLocationMarker.closePopup();
+                    }
+                }, 1000);
 
                 isLocatingUser.value = false;
             },
@@ -340,13 +389,13 @@ const centerOnMyLocation = () => {
                 
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
-                        errorMessage = 'Permiso de ubicación denegado. Por favor, habilita el acceso a tu ubicación en la configuración del navegador.';
+                        errorMessage = 'Permiso de ubicación denegado.';
                         break;
                     case error.POSITION_UNAVAILABLE:
                         errorMessage = 'La información de ubicación no está disponible.';
                         break;
                     case error.TIMEOUT:
-                        errorMessage = 'La solicitud de ubicación ha expirado. Intenta nuevamente.';
+                        errorMessage = 'La solicitud de ubicación ha expirado.';
                         break;
                 }
                 
@@ -413,7 +462,6 @@ onUnmounted(() => {
 
             <!-- Controles superiores -->
             <div class="absolute top-4 left-4 right-4 z-[1000] flex items-center justify-between gap-3">
-                <!-- Botón Volver -->
                 <button
                     @click="goBack"
                     class="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all"
@@ -422,18 +470,7 @@ onUnmounted(() => {
                     <span class="font-semibold">Volver</span>
                 </button>
 
-                <!-- Grupo de botones de mapa -->
                 <div class="flex items-center gap-2">
-                    <!-- Botón Reiniciar Vista -->
-                    <button
-                        @click="resetView"
-                        class="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-lg shadow-lg transition-all"
-                        title="Ver todas las propiedades"
-                    >
-                        <MapPin :size="24" />
-                    </button>
-
-                    <!-- Botón Mi Ubicación con estado de carga -->
                     <button
                         @click="centerOnMyLocation"
                         :disabled="isLocatingUser"
@@ -452,25 +489,6 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <!-- Info Box con estadísticas -->
-            <div class="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-xl p-4 max-w-xs">
-                <div class="flex items-center gap-2 mb-3">
-                    <div class="bg-blue-100 p-2 rounded-lg">
-                        <MapPin :size="20" class="text-blue-600" />
-                    </div>
-                    <h3 class="font-bold text-lg text-gray-800">Mapa de Propiedades</h3>
-                </div>
-                <div class="space-y-2 text-sm text-gray-600">
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                        <p>Total de propiedades: <span class="font-semibold text-gray-900">{{ productsConUbicacion.length }}</span></p>
-                    </div>
-                    <p class="text-xs text-gray-500">• Haz clic en los marcadores para detalles</p>
-                    <p class="text-xs text-gray-500">• Usa scroll para hacer zoom</p>
-                    <p class="text-xs text-gray-500">• <Navigation :size="12" class="inline" /> = Tu ubicación</p>
-                </div>
-            </div>
-
             <!-- Panel de Detalles del Producto -->
             <Transition
                 enter-active-class="transition-transform duration-300"
@@ -484,7 +502,6 @@ onUnmounted(() => {
                     v-if="selectedProduct"
                     class="absolute top-0 right-0 h-full w-full md:w-96 bg-white shadow-2xl z-[1001] overflow-y-auto"
                 >
-                    <!-- Header -->
                     <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 p-4 flex items-center justify-between">
                         <h3 class="font-bold text-lg text-white">Detalles de la Propiedad</h3>
                         <button
@@ -496,9 +513,7 @@ onUnmounted(() => {
                     </div>
 
                     <div class="p-6">
-                        <!-- ✅ FIXED: Galería usando sortedImages -->
                         <div v-if="sortedImages.length > 0" class="mb-6 -mx-6 -mt-6">
-                            <!-- Imagen principal -->
                             <div class="relative group">
                                 <img
                                     :src="getImageUrl(sortedImages[currentImageIndex].image_path)"
@@ -506,12 +521,9 @@ onUnmounted(() => {
                                     class="w-full h-64 object-cover"
                                 />
                                 
-                                <!-- Overlay con gradiente -->
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
-                                <!-- Navegación de imágenes (si hay más de 1) -->
                                 <template v-if="sortedImages.length > 1">
-                                    <!-- Botón anterior -->
                                     <button
                                         @click="prevImage"
                                         class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
@@ -521,7 +533,6 @@ onUnmounted(() => {
                                         </svg>
                                     </button>
 
-                                    <!-- Botón siguiente -->
                                     <button
                                         @click="nextImage"
                                         class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
@@ -531,13 +542,11 @@ onUnmounted(() => {
                                         </svg>
                                     </button>
 
-                                    <!-- Contador de imágenes -->
                                     <div class="absolute bottom-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
                                         {{ currentImageIndex + 1 }} / {{ sortedImages.length }}
                                     </div>
                                 </template>
 
-                                <!-- Badge imagen principal -->
                                 <div v-if="sortedImages[currentImageIndex].is_primary" class="absolute top-3 left-3">
                                     <span class="inline-flex items-center gap-1 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
                                         <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
@@ -548,8 +557,7 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
-                            <!-- Thumbnails (miniaturas) -->
-                            <div v-if="sortedImages.length > 1" class="px-4 py-3 bg-gray-50 dark:bg-gray-900">
+                            <div v-if="sortedImages.length > 1" class="px-4 py-3 bg-gray-50">
                                 <div class="flex gap-2 overflow-x-auto pb-2">
                                     <button
                                         v-for="(image, index) in sortedImages"
@@ -572,7 +580,6 @@ onUnmounted(() => {
                             </div>
                         </div>
 
-                        <!-- Sin imágenes -->
                         <div v-else class="mb-4 w-full h-56 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center -mx-6 -mt-6">
                             <div class="text-center">
                                 <MapPin :size="48" class="text-gray-400 mx-auto mb-2" />
@@ -580,7 +587,6 @@ onUnmounted(() => {
                             </div>
                         </div>
 
-                        <!-- Información -->
                         <div class="space-y-4">
                             <div>
                                 <h4 class="text-xl font-bold text-gray-900 mb-2">
@@ -621,19 +627,6 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-                                <div
-                                    :class="[
-                                        'w-3 h-3 rounded-full',
-                                        selectedProduct.location.is_active ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
-                                    ]"
-                                ></div>
-                                <span class="text-sm font-medium" :class="selectedProduct.location.is_active ? 'text-green-600' : 'text-gray-500'">
-                                    {{ selectedProduct.location.is_active ? 'Ubicación Activa' : 'Ubicación Inactiva' }}
-                                </span>
-                            </div>
-
-                            <!-- Botón ver en Google Maps -->
                             <a
                                 :href="`https://www.google.com/maps/search/?api=1&query=${selectedProduct.location.latitude},${selectedProduct.location.longitude}`"
                                 target="_blank"

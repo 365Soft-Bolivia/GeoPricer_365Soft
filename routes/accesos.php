@@ -35,3 +35,4 @@ Route::put('/accesos/{id}', [AccesosController::class, 'update'])->name('accesos
 Route::delete('/accesos/{id}', [AccesosController::class, 'destroy'])->name('accesos.destroy');
 Route::patch('/accesos/{id}/toggle-status', [AccesosController::class, 'toggleStatus'])->name('accesos.toggle-status');
 Route::post('/accesos/{id}/toggle-status', [AccesosController::class, 'toggleStatus'])->name('accesos.toggle-status');
+

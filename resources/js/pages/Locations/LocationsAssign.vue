@@ -8,14 +8,11 @@ import { Head, router } from '@inertiajs/vue3';
 import { onMounted, ref, computed, onUnmounted } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowLeft, Search, MapPin, Save, Navigation } from 'lucide-vue-next';
-// import 'leaflet/dist/leaflet.css';
-// import { ArrowLeft, Navigation, X, MapPin } from 'lucide-vue-next';
+import { ArrowLeft, Search, MapPin, Save, Navigation, X, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 
-
-// Fix para iconos de Leaflet
+// Fix Leaflet icons
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -34,6 +31,7 @@ interface Product {
     price: number;
     default_image: string | null;
     category: string | null;
+    operacion?: string;
 }
 
 interface Category {
@@ -64,27 +62,33 @@ const mapContainer = ref<HTMLElement | null>(null);
 const selectedProduct = ref<Product | null>(null);
 const selectedCategory = ref<number | null>(null);
 const searchQuery = ref('');
-const address = ref('');
 const coordinates = ref<{ lat: number; lng: number } | null>(null);
 const isSaving = ref(false);
+
+// ✅ AGREGADO: Variables de ubicación que faltaban
+const isLocatingUser = ref(false);
+let userLocationMarker: L.Marker | null = null;
+let userLocationCircle: L.Circle | null = null;
+
+// Paginación
+const currentPage = ref(1);
+const itemsPerPage = 8;
 
 let map: L.Map | null = null;
 let marker: L.Marker | null = null;
 
-// Productos filtrados
+// Filtros
 const filteredProducts = computed(() => {
     let products = props.productsSinUbicacion;
 
-    // Filtrar por categoría
     if (selectedCategory.value) {
         const categoryName = props.categorias.find(c => c.id === selectedCategory.value)?.category_name;
         products = products.filter(p => p.category === categoryName);
     }
 
-    // Filtrar por búsqueda
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
-        products = products.filter(p => 
+        products = products.filter(p =>
             p.name.toLowerCase().includes(query) ||
             p.codigo_inmueble.toLowerCase().includes(query)
         );
@@ -93,18 +97,61 @@ const filteredProducts = computed(() => {
     return products;
 });
 
-// Validación para habilitar botón guardar
-const canSave = computed(() => {
-    return selectedProduct.value && coordinates.value;
+// Paginación
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage));
+
+const paginatedProducts = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredProducts.value.slice(start, start + itemsPerPage);
 });
 
-// Inicializar mapa
+const visiblePages = computed(() => {
+    const pages: (number | string)[] = [];
+    const total = totalPages.value;
+    const current = currentPage.value;
+
+    pages.push(1);
+
+    if (total <= 7) {
+        for (let i = 2; i <= total; i++) pages.push(i);
+    } else {
+        if (current <= 3) {
+            for (let i = 2; i <= 4; i++) pages.push(i);
+            pages.push('...');
+            pages.push(total);
+        } else if (current >= total - 2) {
+            pages.push('...');
+            for (let i = total - 3; i <= total; i++) pages.push(i);
+        } else {
+            pages.push('...');
+            for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+            pages.push('...');
+            pages.push(total);
+        }
+    }
+
+    return pages;
+});
+
+const resetPage = () => currentPage.value = 1;
+
+const goToPage = (page: number | string) => {
+    if (typeof page === 'number' && page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+const nextPage = () => currentPage.value < totalPages.value && currentPage.value++;
+const prevPage = () => currentPage.value > 1 && currentPage.value--;
+
+// Guardar
+const canSave = computed(() => selectedProduct.value && coordinates.value);
+
 const initMap = () => {
     if (!mapContainer.value) return;
 
     map = L.map(mapContainer.value).setView(
-        [props.defaultCenter.lat, props.defaultCenter.lng],
-        13
+        [props.defaultCenter.lat, props.defaultCenter.lng], 13
     );
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -112,22 +159,16 @@ const initMap = () => {
         maxZoom: 19,
     }).addTo(map);
 
-    // Click en el mapa para colocar marcador
-    map.on('click', (e: L.LeafletMouseEvent) => {
+    map.on('click', (e) => {
         placeMarker(e.latlng.lat, e.latlng.lng);
     });
 };
 
-// Colocar marcador en el mapa
 const placeMarker = (lat: number, lng: number) => {
     if (!map) return;
 
-    // Remover marcador anterior
-    if (marker) {
-        map.removeLayer(marker);
-    }
+    if (marker) map.removeLayer(marker);
 
-    // Crear nuevo marcador
     marker = L.marker([lat, lng], {
         draggable: true,
         icon: L.icon({
@@ -142,43 +183,120 @@ const placeMarker = (lat: number, lng: number) => {
 
     marker.bindPopup('📍 Ubicación seleccionada<br>Arrastra para ajustar').openPopup();
 
-    // Actualizar coordenadas
     coordinates.value = { lat, lng };
 
-    // Evento cuando se arrastra el marcador
-    marker.on('dragend', (e: L.DragEndEvent) => {
-        const position = e.target.getLatLng();
-        coordinates.value = { lat: position.lat, lng: position.lng };
+    marker.on('dragend', (e: any) => {
+        const pos = e.target.getLatLng();
+        coordinates.value = { lat: pos.lat, lng: pos.lng };
     });
 };
 
-// Centrar en mi ubicación
 const centerOnMyLocation = () => {
     if (!map) return;
 
     if ('geolocation' in navigator) {
+        isLocatingUser.value = true;
+
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                const { latitude, longitude } = position.coords;
-                map!.setView([latitude, longitude], 15);
+                const { latitude, longitude, accuracy } = position.coords;
                 
-                // Agregar marcador temporal de ubicación actual
-                L.marker([latitude, longitude], {
-                    icon: L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                        shadowUrl: iconShadow,
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                    })
+                map!.setView([latitude, longitude], 17, {
+                    animate: true,
+                    duration: 1.5
+                });
+
+                if (userLocationMarker) {
+                    map!.removeLayer(userLocationMarker);
+                }
+                if (userLocationCircle) {
+                    map!.removeLayer(userLocationCircle);
+                }
+
+                userLocationCircle = L.circle([latitude, longitude], {
+                    radius: accuracy,
+                    color: '#3B82F6',
+                    fillColor: '#3B82F6',
+                    fillOpacity: 0.1,
+                    weight: 2
+                }).addTo(map!);
+
+                const pulsingIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `
+                        <div style="position: relative;">
+                            <div style="
+                                width: 17px;
+                                height: 17px;
+                                background: #3B82F6;
+                                border: 3px solid white;
+                                border-radius: 50%;
+                                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+                                animation: pulse 2s infinite;
+                                position: relative;
+                                z-index: 1000;
+                            "></div>
+                            <style>
+                                @keyframes pulse {
+                                    0% {
+                                        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+                                    }
+                                    70% {
+                                        box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
+                                    }
+                                    100% {
+                                        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+                                    }
+                                }
+                            </style>
+                        </div>
+                    `,
+                    iconSize: [10, 10],
+                    iconAnchor: [10, 10]
+                });
+
+                userLocationMarker = L.marker([latitude, longitude], {
+                    icon: pulsingIcon
                 }).addTo(map!)
-                    .bindPopup('📍 Tu ubicación actual')
+                    .bindPopup(`
+                        <div class="w-max text-center text-xs">
+                            <p class="font-bold text-blue-600">📍 Tu ubicación actual</p>
+                        </div>
+                    `)
                     .openPopup();
+
+                setTimeout(() => {
+                    if (userLocationMarker && map) {
+                        userLocationMarker.closePopup();
+                    }
+                }, 1000);
+
+                isLocatingUser.value = false;
             },
             (error) => {
+                isLocatingUser.value = false;
                 console.error('Error obteniendo ubicación:', error);
-                alert('No se pudo obtener tu ubicación. Verifica los permisos del navegador.');
+                
+                let errorMessage = 'No se pudo obtener tu ubicación.';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Permiso de ubicación denegado.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'La información de ubicación no está disponible.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'La solicitud de ubicación ha expirado.';
+                        break;
+                }
+                
+                alert(errorMessage);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
             }
         );
     } else {
@@ -186,85 +304,66 @@ const centerOnMyLocation = () => {
     }
 };
 
-// Seleccionar producto
 const selectProduct = (product: Product) => {
     selectedProduct.value = product;
 };
 
-// Guardar ubicación
 const saveLocation = async () => {
     if (!selectedProduct.value || !coordinates.value) return;
-
     isSaving.value = true;
 
     try {
         const url = admin.ubicaciones.api.store(selectedProduct.value.id).url;
-        console.log('URL generada para guardar ubicación:', url);
-        console.log('admin.ubicaciones:', admin.ubicaciones);
         const response = await axios.post(url, {
             latitude: coordinates.value.lat,
             longitude: coordinates.value.lng,
-            address: address.value || null,
+            address: null,
             is_active: true,
         });
 
         if (response.data.success) {
             toast.add({
                 severity: 'success',
-                summary: '✅ Ubicación guardada',
+                summary: 'Ubicación guardada',
                 detail: `Ubicación asignada a "${selectedProduct.value.name}"`,
                 life: 3000
             });
 
-            // Resetear formulario
             selectedProduct.value = null;
             coordinates.value = null;
-            address.value = '';
-            
-            // Remover marcador
+
             if (marker && map) {
                 map.removeLayer(marker);
                 marker = null;
             }
 
-            // Recargar página para actualizar lista
-            setTimeout(() => {
-                router.reload();
-            }, 1500);
+            setTimeout(() => router.reload(), 1500);
         }
-    } catch (error: any) {
-        console.error('Error guardando ubicación:', error);
+    } catch {
         toast.add({
             severity: 'error',
             summary: 'Error',
-            detail: error.response?.data?.message || 'No se pudo guardar la ubicación',
-            life: 4000
+            detail: 'No se pudo guardar la ubicación',
+            life: 3000
         });
-    } finally {
-        isSaving.value = false;
     }
+
+    isSaving.value = false;
 };
 
-// Limpiar selección
 const clearSelection = () => {
     selectedProduct.value = null;
     coordinates.value = null;
-    address.value = '';
-    
+
     if (marker && map) {
         map.removeLayer(marker);
         marker = null;
     }
 };
 
-const goBack = () => {
-    router.visit(ubicaciones().url);
-};
+const goBack = () => router.visit(ubicaciones().url);
 
-onMounted(() => {
-    initMap();
-});
-
+onMounted(() => initMap());
 onUnmounted(() => {
     if (map) {
         map.remove();
@@ -275,200 +374,258 @@ onUnmounted(() => {
 
 <template>
     <Head title="Asignar Ubicación" />
-    
+
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-[calc(100vh-140px)] relative">
-            <!-- MAPA (Izquierda - 70%) -->
+            <!-- MAPA -->
             <div class="flex-1 relative">
                 <div ref="mapContainer" class="w-full h-full"></div>
 
-                <!-- Botón Volver -->
-                <button
-                    @click="goBack"
-                    class="absolute top-4 left-4 z-[1000] bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all"
-                >
-                    <ArrowLeft :size="20" />
-                    <span class="font-semibold">Volver</span>
-                </button>
+                <!-- Controles superior -->
+                <div class="absolute top-4 left-4 right-4 z-[1000] flex items-center justify-between">
+                    <button
+                        @click="goBack"
+                        class="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2"
+                    >
+                        <ArrowLeft :size="20" />
+                        Volver
+                    </button>
 
-                <!-- Botón Mi Ubicación -->
-                <button
-                    @click="centerOnMyLocation"
-                    class="absolute top-4 right-4 z-[1000] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg shadow-lg transition-all"
-                    title="Centrar en mi ubicación"
-                >
-                    <Navigation :size="24" />
-                </button>
-
-                <!-- Info flotante -->
-                <div class="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-4 max-w-sm">
-                    <h3 class="font-bold text-sm mb-2 text-gray-800 flex items-center gap-2">
-                        <MapPin :size="18" class="text-green-600" />
-                        Instrucciones
-                    </h3>
-                    <div class="space-y-1 text-xs text-gray-600">
-                        <p>1️⃣ Selecciona un producto del panel derecho</p>
-                        <p>2️⃣ Haz clic en el mapa para marcar la ubicación</p>
-                        <p>3️⃣ Arrastra el marcador para ajustar</p>
-                        <p>4️⃣ Guarda la ubicación</p>
-                    </div>
+                    <button
+                        @click="centerOnMyLocation"
+                        :disabled="isLocatingUser"
+                        :class="[
+                            'p-3 rounded-lg shadow-lg transition-all',
+                            isLocatingUser ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                        ]"
+                        class="text-white"
+                        title="Centrar en mi ubicación"
+                    >
+                        <Navigation :size="24" :class="isLocatingUser ? 'animate-pulse' : ''" />
+                    </button>
                 </div>
             </div>
 
-            <!-- PANEL LATERAL (Derecha - 30%) -->
-            <div class="w-[400px] bg-white shadow-2xl overflow-y-auto border-l border-gray-200">
-                <div class="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white p-6 z-10">
-                    <h2 class="text-xl font-bold mb-2">Asignar Ubicación</h2>
-                    <p class="text-sm text-green-100">
-                        Productos disponibles: {{ filteredProducts.length }}
-                    </p>
+            <!-- PANEL -->
+            <div class="w-[30%] min-w-[400px] bg-white shadow-xl flex flex-col">
+                <!-- Header -->
+                <div class="bg-green-600 text-white p-3 flex-shrink-0">
+                    <h2 class="text-lg font-bold">Asignar Ubicación</h2>
+                    <p class="text-xs text-green-100">{{ filteredProducts.length }} productos disponibles</p>
                 </div>
 
-                <div class="p-6 space-y-6">
-                    <!-- Filtros -->
-                    <div class="space-y-4">
-                        <!-- Buscador -->
+                <!-- Filtros -->
+                <div class="p-3 bg-gray-50 border-b flex-shrink-0">
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Buscar -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Buscar Producto
-                            </label>
+                            <label class="text-[10px] font-semibold text-gray-700 mb-1 block">Buscar</label>
                             <div class="relative">
-                                <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="18" />
+                                <Search class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" :size="12" />
                                 <input
                                     v-model="searchQuery"
+                                    @input="resetPage"
                                     type="text"
                                     placeholder="Nombre o código..."
-                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    class="w-full pl-7 pr-6 py-1.5 text-[10px] border rounded focus:ring-2 focus:ring-green-500"
                                 />
+                                <button
+                                    v-if="searchQuery"
+                                    @click="searchQuery = ''; resetPage()"
+                                    class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X :size="12" />
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Filtro por categoría -->
+                        <!-- Categoría -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Filtrar por Categoría
-                            </label>
+                            <label class="text-[10px] font-semibold text-gray-700 mb-1 block">Categoría</label>
                             <select
                                 v-model="selectedCategory"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                @change="resetPage"
+                                class="w-full px-2 py-1.5 text-[10px] border rounded focus:ring-2 focus:ring-green-500"
                             >
-                                <option :value="null">Todas las categorías</option>
+                                <option :value="null">Todas</option>
                                 <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
                                     {{ cat.category_name }}
                                 </option>
                             </select>
                         </div>
                     </div>
+                </div>
 
-                    <hr class="border-gray-200" />
-
-                    <!-- Lista de productos -->
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3">
-                            Selecciona un Producto
+                <!-- ✅ LISTA CON SCROLL (SOLO AQUÍ) -->
+                <!-- <div class="flex-1 overflow-y-auto p-3" style="max-height: calc(100vh - 500px);"> -->
+                    <div class="flex-1 overflow-y-auto px-3 pb-3">
+                    <div class="sticky top-0 z-30 bg-white border-b border-gray-200">
+                        <h3 class="text-[10px] font-semibold text-gray-700 py-2 px-1">
+                                    Propiedades ({{ filteredProducts.length }})
                         </h3>
+                    </div>
 
-                        <div v-if="filteredProducts.length === 0" class="text-center py-8 text-gray-500">
-                            <p class="text-sm">No hay productos disponibles</p>
-                        </div>
 
-                        <div v-else class="space-y-2 max-h-[300px] overflow-y-auto">
-                            <button
-                                v-for="product in filteredProducts"
-                                :key="product.id"
-                                @click="selectProduct(product)"
-                                :class="[
-                                    'w-full text-left p-3 rounded-lg border-2 transition-all',
-                                    selectedProduct?.id === product.id
-                                        ? 'border-green-500 bg-green-50'
-                                        : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
-                                ]"
+
+
+                    <!-- No hay -->
+                    <div v-if="filteredProducts.length === 0" class="text-center text-gray-500 text-xs py-8">
+                        <MapPin :size="28" class="mx-auto mb-2 text-gray-300" />
+                        No hay productos
+                    </div>
+
+                    <!-- Grid con scroll -->
+                    <div v-else class="grid grid-cols-2 gap-1.5">
+                        <button
+                            v-for="product in paginatedProducts"
+                            :key="product.id"
+                            @click="selectProduct(product)"
+                            :class="[
+                                'p-2 border rounded relative text-left transition-all',
+                                selectedProduct?.id === product.id
+                                    ? 'border-green-500 bg-green-50 shadow ring-1 ring-green-200'
+                                    : 'border-gray-200 hover:bg-gray-50 hover:border-green-300'
+                            ]"
+                        >
+                            <!-- Badge -->
+                            <div v-if="selectedProduct?.id === product.id" class="absolute top-1 right-1 bg-green-500 text-white rounded-full p-0.5">
+                                <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                                </svg>
+                            </div>
+
+                            <p class="font-semibold text-[10px] line-clamp-2 mb-0.5" :title="product.name">
+                                {{ product.name }}
+                            </p>
+                            <p class="text-[9px] text-gray-500">{{ product.codigo_inmueble }}</p>
+                            <div class="flex justify-between items-center text-[9px] text-gray-700 mt-1">
+                                <span class="truncate">{{ product.category || 'N/A' }}</span>
+                                <span class="text-green-600 font-bold ml-1 flex-shrink-0">
+                                    {{ (product.price / 1000).toFixed(0) }}k
+                                </span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FOOTER (GUARDAR + PAGINACIÓN) -->
+                <div class="p-2 border-t bg-gray-50 space-y-2 flex-shrink-0">
+                    <!-- Producto -->
+                    <div v-if="selectedProduct" class="bg-green-50 border border-green-200 p-2 rounded">
+                        <div class="flex justify-between gap-2">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[9px] font-semibold text-green-800 mb-0.5">✅ Seleccionado</p>
+                                <p class="text-[11px] font-medium truncate">{{ selectedProduct.name }}</p>
+                                <p class="text-[9px] text-gray-600">{{ selectedProduct.codigo_inmueble }}</p>
+                            </div>
+                            <button 
+                                @click="clearSelection" 
+                                class="text-green-700 hover:text-green-900 flex-shrink-0"
+                                title="Limpiar selección"
                             >
-                                <div class="flex items-start gap-3">
-                                    <img
-                                        v-if="product.default_image"
-                                        :src="product.default_image"
-                                        :alt="product.name"
-                                        class="w-16 h-16 object-cover rounded"
-                                    />
-                                    <div v-else class="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
-                                        <span class="text-gray-400 text-xs">Sin img</span>
-                                    </div>
-                                    
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-semibold text-sm text-gray-900 truncate">
-                                            {{ product.name }}
-                                        </p>
-                                        <p class="text-xs text-gray-500">{{ product.codigo_inmueble }}</p>
-                                        <p class="text-xs text-gray-600 mt-1">{{ product.category || 'Sin categoría' }}</p>
-                                        <p class="text-sm font-semibold text-green-600 mt-1">
-                                            Bs. {{ product.price.toLocaleString() }}
-                                        </p>
-                                    </div>
-                                </div>
+                                <X :size="14" />
                             </button>
                         </div>
                     </div>
 
-                    <hr class="border-gray-200" />
-
-                    <!-- Producto seleccionado -->
-                    <div v-if="selectedProduct" class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                        <h3 class="text-sm font-semibold text-green-800 mb-2">✅ Producto Seleccionado</h3>
-                        <p class="text-sm font-medium text-gray-900">{{ selectedProduct.name }}</p>
-                        <p class="text-xs text-gray-600">{{ selectedProduct.codigo_inmueble }}</p>
-                    </div>
-
                     <!-- Coordenadas -->
-                    <div v-if="coordinates" class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                        <h3 class="text-sm font-semibold text-blue-800 mb-2">📍 Coordenadas</h3>
-                        <p class="text-xs text-gray-700">
-                            <span class="font-medium">Lat:</span> {{ coordinates.lat.toFixed(6) }}
-                        </p>
-                        <p class="text-xs text-gray-700">
-                            <span class="font-medium">Lng:</span> {{ coordinates.lng.toFixed(6) }}
-                        </p>
+                    <div v-if="coordinates" class="bg-blue-50 border border-blue-200 p-2 rounded">
+                        <p class="text-[9px] font-semibold text-blue-800 mb-1">📍 Coordenadas</p>
+                        <div class="grid grid-cols-2 gap-2 text-[9px] text-gray-700">
+                            <div><span class="font-medium">Lat:</span> {{ coordinates.lat.toFixed(4) }}</div>
+                            <div><span class="font-medium">Lng:</span> {{ coordinates.lng.toFixed(4) }}</div>
+                        </div>
                     </div>
 
-                    <!-- Campo de dirección -->
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Dirección (opcional)
-                        </label>
-                        <textarea
-                            v-model="address"
-                            placeholder="Ej: Av. Arce #2081, Zona San Jorge"
-                            rows="2"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                        ></textarea>
-                    </div>
+                    <!-- GUARDAR -->
+                    <button
+                        @click="saveLocation"
+                        :disabled="!canSave || isSaving"
+                        :class="[
+                            'w-full py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 transition-all',
+                            canSave && !isSaving
+                                ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ]"
+                    >
+                        <Save :size="14" />
+                        {{ isSaving ? 'Guardando...' : 'Guardar Ubicación' }}
+                    </button>
 
-                    <!-- Botones de acción -->
-                    <div class="space-y-2">
-                        <button
-                            @click="saveLocation"
-                            :disabled="!canSave || isSaving"
-                            :class="[
-                                'w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2',
-                                canSave && !isSaving
-                                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            ]"
-                        >
-                            <Save :size="20" />
-                            <span>{{ isSaving ? 'Guardando...' : 'Guardar Ubicación' }}</span>
-                        </button>
+                    <!-- PAGINACIÓN -->
+                    <div v-if="totalPages > 1" class="pt-2 border-t">
+                        <div class="flex items-center justify-center gap-1">
+                            <!-- Anterior -->
+                            <button
+                                @click="prevPage"
+                                :disabled="currentPage === 1"
+                                class="text-[10px] px-2 py-1 rounded transition-colors"
+                                :class="currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'"
+                            >
+                                <ChevronLeft :size="14" />
+                            </button>
 
-                        <button
-                            v-if="selectedProduct"
-                            @click="clearSelection"
-                            class="w-full py-2 rounded-lg font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"
-                        >
-                            Limpiar Selección
-                        </button>
+                            <!-- Números -->
+                            <button
+                                v-for="(page, index) in visiblePages"
+                                :key="index"
+                                @click="goToPage(page)"
+                                :disabled="page === '...'"
+                                :class="[
+                                    'min-w-[24px] h-6 text-[10px] rounded transition-colors',
+                                    page === '...' ? 'text-gray-400 cursor-default' :
+                                    currentPage === page ? 'bg-blue-600 text-white font-bold' : 'hover:bg-gray-200 text-gray-700'
+                                ]"
+                            >
+                                {{ page }}
+                            </button>
+
+                            <!-- Siguiente -->
+                            <button
+                                @click="nextPage"
+                                :disabled="currentPage === totalPages"
+                                class="text-[10px] px-2 py-1 rounded transition-colors"
+                                :class="currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'"
+                            >
+                                <ChevronRight :size="14" />
+                            </button>
+                        </div>
+
+                        <!-- Info página actual -->
+                        <p class="text-center text-[9px] text-gray-500 mt-1">
+                            Página {{ currentPage }} de {{ totalPages }}
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Scroll personalizado solo para la lista */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+</style>
