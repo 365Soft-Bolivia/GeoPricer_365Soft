@@ -8,6 +8,7 @@ import PropertyFiltersSidebar from '@/components/public/PropertyFiltersSidebar.v
 import PropertyCardSkeleton from '@/components/public/PropertyCardSkeleton.vue';
 import EmptyState from '@/components/public/EmptyState.vue';
 import Pagination from '@/components/public/Pagination.vue';
+import PropiedadesTable from './PropiedadesTable.vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -170,10 +171,10 @@ const handleShare = async (propiedad: any) => {
     }
 };
 
-const exportProperties = () => {
-    // Lógica para exportar propiedades a PDF/Excel
-    console.log('Exportando propiedades...');
-};
+// const exportProperties = () => {
+//     // Lógica para exportar propiedades a PDF/Excel
+//     console.log('Exportando propiedades...');
+// };
 
 const toggleViewMode = (mode: 'grid' | 'list') => {
     viewMode.value = mode;
@@ -207,7 +208,8 @@ watch(favoriteProperties, (newFavorites) => {
             :class="[
                 'bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out z-30',
                 sidebarCollapsed ? 'w-16' : 'w-80',
-                'fixed lg:relative h-screen lg:h-auto overflow-y-auto'
+                sidebarCollapsed ? 'fixed -translate-x-full lg:relative lg:translate-x-0' : 'fixed lg:relative',
+                'h-screen lg:h-auto overflow-y-auto'
             ]"
         >
             <!-- Header del Sidebar -->
@@ -220,9 +222,19 @@ watch(favoriteProperties, (newFavorites) => {
                         variant="ghost"
                         size="sm"
                         @click="sidebarCollapsed = !sidebarCollapsed"
-                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
                     >
                         <component :is="sidebarCollapsed ? Menu : X" class="w-4 h-4" />
+                    </Button>
+                    <!-- Botón de cerrar solo visible en móvil cuando está abierto -->
+                    <Button
+                        v-if="sidebarCollapsed === false"
+                        variant="ghost"
+                        size="sm"
+                        @click="sidebarCollapsed = true"
+                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden absolute top-4 right-4"
+                    >
+                        <X class="w-4 h-4" />
                     </Button>
                 </div>
             </div>
@@ -437,26 +449,7 @@ watch(favoriteProperties, (newFavorites) => {
                                 </Button>
                             </div>
 
-                            <!-- Acciones adicionales -->
-                            <DropdownMenu>
-                                <DropdownMenuTrigger as-child>
-                                    <Button variant="outline" size="sm">
-                                        <Download class="w-4 h-4 mr-2" />
-                                        Exportar
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem @click="exportProperties">
-                                        <Download class="w-4 h-4 mr-2" />
-                                        Exportar a PDF
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem @click="exportProperties">
-                                        <Download class="w-4 h-4 mr-2" />
-                                        Exportar a Excel
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                          </div>
                     </div>
                 </div>
             </div>
@@ -469,131 +462,18 @@ watch(favoriteProperties, (newFavorites) => {
                         <PropertyCardSkeleton :count="perPage" />
                     </div>
 
-                    <!-- Lista de propiedades -->
-                    <div v-else-if="hasPropiedades" class="space-y-6">
-                        <!-- Grid View -->
-                        <div v-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            <PropertyCard
-                                v-for="propiedad in propiedades"
-                                :key="propiedad.id"
-                                :propiedad="propiedad"
-                                :lazy="true"
-                                :show-favorite="true"
-                                size="md"
-                                @favorite="handleFavorite"
-                                @share="handleShare"
-                            />
-                        </div>
-
-                        <!-- List View -->
-                        <div v-else class="space-y-4">
-                            <div
-                                v-for="propiedad in propiedades"
-                                :key="propiedad.id"
-                                class="bg-white dark:bg-gray-800 rounded-lg border hover:shadow-lg transition-all duration-200 p-6"
-                            >
-                                <div class="flex flex-col lg:flex-row gap-6">
-                                    <!-- Imagen en modo lista -->
-                                    <div class="lg:w-80 flex-shrink-0">
-                                        <PropertyCard
-                                            :propiedad="propiedad"
-                                            size="sm"
-                                            :show-favorite="false"
-                                            @favorite="handleFavorite"
-                                            @share="handleShare"
-                                        />
-                                    </div>
-
-                                    <!-- Información detallada -->
-                                    <div class="flex-1 space-y-4">
-                                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                            <div>
-                                                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-                                                    {{ propiedad.name }}
-                                                </h3>
-                                                <p class="text-gray-600 dark:text-gray-400">
-                                                    Código: {{ propiedad.codigo_inmueble }}
-                                                </p>
-                                            </div>
-                                            <div class="text-right">
-                                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                                    ${{ Number(propiedad.price).toLocaleString() }}
-                                                </div>
-                                                <div v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500">
-                                                    /mes
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Características ampliadas -->
-                                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
-                                            <div v-if="propiedad.ambientes" class="text-gray-600 dark:text-gray-400">
-                                                <span class="font-medium">Ambientes:</span> {{ propiedad.ambientes }}
-                                            </div>
-                                            <div v-if="propiedad.habitaciones" class="text-gray-600 dark:text-gray-400">
-                                                <span class="font-medium">Habitaciones:</span> {{ propiedad.habitaciones }}
-                                            </div>
-                                            <div v-if="propiedad.banos" class="text-gray-600 dark:text-gray-400">
-                                                <span class="font-medium">Baños:</span> {{ propiedad.banos }}
-                                            </div>
-                                            <div v-if="propiedad.cocheras" class="text-gray-600 dark:text-gray-400">
-                                                <span class="font-medium">Cocheras:</span> {{ propiedad.cocheras }}
-                                            </div>
-                                            <div v-if="propiedad.superficie_construida" class="text-gray-600 dark:text-gray-400">
-                                                <span class="font-medium">Superficie:</span> {{ propiedad.superficie_construida }}m²
-                                            </div>
-                                            <div v-if="propiedad.antiguedad" class="text-gray-600 dark:text-gray-400">
-                                                <span class="font-medium">Antigüedad:</span> {{ propiedad.antiguedad }} años
-                                            </div>
-                                            <div v-if="propiedad.direccion" class="text-gray-600 dark:text-gray-400">
-                                                <span class="font-medium">Ubicación:</span> {{ propiedad.direccion }}
-                                            </div>
-                                        </div>
-
-                                        <!-- Descripción -->
-                                        <p
-                                            v-if="propiedad.descripcion"
-                                            class="text-gray-600 dark:text-gray-400 line-clamp-3"
-                                        >
-                                            {{ propiedad.descripcion }}
-                                        </p>
-
-                                        <!-- Acciones -->
-                                        <div class="flex gap-3 pt-2">
-                                            <Button
-                                                :as="Link"
-                                                :href="publicRoutes.propiedad.show.url(propiedad.id)"
-                                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                                            >
-                                                Ver detalles
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                @click="handleShare(propiedad)"
-                                            >
-                                                <Share class="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Paginación -->
-                        <div class="mt-8">
-                            <Pagination
-                                :current-page="currentPage"
-                                :last-page="lastPage"
-                                :per-page="perPage"
-                                :total="total"
-                                :from="pagination?.from"
-                                :to="pagination?.to"
-                                :loading="isLoading"
-                                @page-change="handlePageChange"
-                                @per-page-change="handlePerPageChange"
-                            />
-                        </div>
-                    </div>
+                    <!-- Lista de propiedades usando el componente separado -->
+                    <PropiedadesTable
+                        v-else-if="hasPropiedades"
+                        :propiedades="propiedades"
+                        :pagination="pagination"
+                        :loading="isLoading"
+                        :view-mode="viewMode"
+                        @favorite="handleFavorite"
+                        @share="handleShare"
+                        @page-change="handlePageChange"
+                        @per-page-change="handlePerPageChange"
+                    />
 
                     <!-- Estado vacío -->
                     <div v-else class="py-12">
