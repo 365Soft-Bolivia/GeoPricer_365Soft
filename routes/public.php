@@ -25,4 +25,4 @@ Route::get('/propiedad/{id}', [PropiedadPublicController::class, 'show'])->name(
 
 // Otras páginas públicas
 Route::get('/sobre-nosotros', fn() => Inertia::render('Public/SobreNosotros'))->name('public.sobre');
-Route::post('/contacto', [ContactoController::class, 'store'])->name('public.contacto.store');
+

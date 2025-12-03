@@ -41,6 +41,8 @@ public function store(Request $request)
         'company_id' => 1
     ]);
 
-    return back()->with('success', 'Tu solicitud fue enviada correctamente ✔️');
+        return redirect()->back()->with([
+            'success' => 'Tu solicitud fue enviada correctamente ✔️'
+        ]);
 }
 }

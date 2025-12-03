@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import { 
-    ChevronLeft, ChevronRight, MapPin, Bed, Bath, Car, Home, 
+import {
+    ChevronLeft, ChevronRight, MapPin, Bed, Bath, Car, Home,
     Maximize2, Calendar, Phone, MessageCircle, Share2, X,
     Building, Grid3x3, Ruler, Clock
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useNotification } from '@/composables/useNotification';
+
+const { showSuccess, showError } = useNotification();
 
 interface ProductImage {
     id: number;
@@ -106,18 +109,93 @@ const formatPrice = (price: number) => {
     }).format(price);
 };
 
+const defaultMessage = `Hola, me interesa la propiedad ID: ${props.propiedad.codigo_inmueble} - ${props.propiedad.name}`;
+
 // Formulario de contacto
-const form = ref({
+const form = useForm({
     nombre: '',
+    apellido: '',
+    carnet: '',
     telefono: '',
     email: '',
-    mensaje: `Hola, me interesa esta propiedad ID: ${props.propiedad.codigo_inmueble} - ${props.propiedad.name}`
+    mensaje: defaultMessage
 });
 
+
 const submitContact = () => {
-    console.log('Enviando formulario:', form.value);
-    // Aquí iría la lógica de envío
+    if (!validateForm()) {
+        showError(
+        'Formulario incompleto',
+        'Por favor corrige los errores del formulario antes de enviar.'
+        );
+        return;
+    }
+
+    form.post('/contacto', {
+        onSuccess: () => {
+        showSuccess(
+            'Mensaje enviado',
+            'Tu mensaje fue enviado exitosamente. Pronto nos pondremos en contacto.'
+        );
+        form.reset();
+        errors.value = {}; // limpias errores frontend también
+        },
+
+        onError: (serverErrors) => {
+            console.error('Errores de validación del servidor:', serverErrors);
+
+        showError(
+            'Error al enviar el mensaje',
+            'Hubo un problema con el envío. Verifica los datos e intenta nuevamente.'
+        );
+        }
+    });
 };
+
+// VALIDACIÓN FRONT-END
+const errors = ref<{ [key: string]: string }>({});
+
+const validateForm = () => {
+    errors.value = {};
+
+    const onlyLetters = /^[A-Za-zÁÉÍÓÚÑáéíóúñ\s]+$/;
+    const onlyNumbers = /^\d+$/;
+    const gmailOnly = /^[\w.+-]+@gmail\.com$/;
+
+    // Nombre
+    if (!form.nombre.trim() || !onlyLetters.test(form.nombre)) {
+        errors.value.nombre = "El nombre solo debe contener letras.";
+    }
+
+    // Apellido
+    if (!form.apellido.trim() || !onlyLetters.test(form.apellido)) {
+        errors.value.apellido = "El apellido solo debe contener letras.";
+    }
+
+    // Carnet
+    if (!onlyNumbers.test(form.carnet)) {
+        errors.value.carnet = "El carnet solo debe contener números enteros.";
+    }
+
+    // Teléfono
+    if (!onlyNumbers.test(form.telefono)) {
+        errors.value.telefono = "El teléfono solo debe contener números enteros.";
+    }
+
+    // Email debe ser @gmail.com
+    if (!gmailOnly.test(form.email)) {
+        errors.value.email = "Debe ingresar un correo válido que termine en @gmail.com";
+    }
+
+    // Mensaje obligatorio
+    if (!form.mensaje.trim()) {
+        errors.value.mensaje = "El mensaje es obligatorio.";
+    }
+
+    return Object.keys(errors.value).length === 0;
+};
+
+
 
 // Acciones sociales
 const handleCall = () => {
@@ -488,6 +566,7 @@ const breadcrumbs = computed(() => [
                             <!-- Formulario -->
                             <form @submit.prevent="submitContact" class="space-y-4">
                                 <div>
+                                    <p v-if="errors.nombre" class="text-red-500 text-xs mt-1">{{ errors.nombre }}</p>
                                     <input
                                         v-model="form.nombre"
                                         type="text"
@@ -498,6 +577,29 @@ const breadcrumbs = computed(() => [
                                 </div>
 
                                 <div>
+                                    <p v-if="errors.apellido" class="text-red-500 text-xs mt-1">{{ errors.apellido }}</p>
+                                    <input
+                                        v-model="form.apellido"
+                                        type="text"
+                                        placeholder="Apellido"
+                                        required
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <p v-if="errors.carnet" class="text-red-500 text-xs mt-1">{{ errors.carnet }}</p>
+                                    <input
+                                        v-model="form.carnet"
+                                        type="text"
+                                        placeholder="Carnet"
+                                        required
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <p v-if="errors.telefono" class="text-red-500 text-xs mt-1">{{ errors.telefono }}</p>
                                     <input
                                         v-model="form.telefono"
                                         type="tel"
@@ -508,6 +610,7 @@ const breadcrumbs = computed(() => [
                                 </div>
 
                                 <div>
+                                    <p v-if="errors.email" class="text-red-500 text-xs mt-1">{{ errors.email }}</p>
                                     <input
                                         v-model="form.email"
                                         type="email"
@@ -518,6 +621,7 @@ const breadcrumbs = computed(() => [
                                 </div>
 
                                 <div>
+                                    <p v-if="errors.mensaje" class="text-red-500 text-xs mt-1">{{ errors.mensaje }}</p>
                                     <textarea
                                         v-model="form.mensaje"
                                         placeholder="Mensaje"
@@ -534,14 +638,14 @@ const breadcrumbs = computed(() => [
                                         required
                                         class="mt-1"
                                     />
-                                    <label for="terms" class="text-xs text-gray-600 dark:text-gray-400">
-                                        Acepto Términos y Condiciones de Uso y la Política de Privacidad
-                                    </label>
+                                <label for="terms" class="text-xs text-gray-600 dark:text-gray-400">
+                                    Acepto Términos y Condiciones de Uso y la Política de Privacidad
+                                </label>
                                 </div>
 
-                                <Button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white">
-                                    Contactar
-                                </Button>
+                                        <Button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white">
+                                            Contactar
+                                        </Button>
                             </form>
                         </div>
                     </div>
