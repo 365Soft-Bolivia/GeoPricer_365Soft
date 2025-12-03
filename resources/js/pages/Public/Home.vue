@@ -4,7 +4,6 @@ import { Link, router } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { Search, MapPin, Home, DollarSign, Building } from 'lucide-vue-next';
 import publicRoutes from '@/routes/public';
-import propiedad from '@/routes/public/propiedad';
 
 interface Props {
     featured_properties: any[];
@@ -48,13 +47,29 @@ const formatPrice = (price: string | number) => {
 const searchProperties = () => {
     const params: Record<string, string> = {};
 
+    // Depuración: mostrar los filtros actuales
+    console.log('Filtros seleccionados:', filters.value);
+
     Object.entries(filters.value).forEach(([key, value]) => {
-        if (value) {
+        if (value && value !== '') {
             params[key] = value.toString();
+            console.log(`Agregando parámetro: ${key} = ${value}`);
         }
     });
 
-    router.get(publicRoutes.propiedades.url(params));
+    console.log('Parámetros finales:', params);
+
+    // Construir URL manualmente para asegurar que funcione
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        searchParams.append(key, value);
+    });
+
+    const finalUrl = '/propiedades' + (searchParams.toString() ? '?' + searchParams.toString() : '');
+    console.log('URL final:', finalUrl);
+
+    // Usar la URL construida manualmente
+    router.get(finalUrl);
 };
 
 const getPropertyImage = (imagePath: string | null) => {
@@ -346,12 +361,12 @@ const getOperacionLabel = (operacion: string) => {
                                 </div>
                             </div>
 
-                            <Link
+                            <!-- <Link
                                 :href="propiedad.show.url(property.id)"
                                 class="block w-full text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 Ver Detalles
-                            </Link>
+                            </Link> -->
                         </div>
                     </div>
                 </div>

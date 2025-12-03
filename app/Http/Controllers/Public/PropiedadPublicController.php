@@ -14,7 +14,7 @@ use Inertia\Response;
 class PropiedadPublicController extends Controller
 {
     /**
-     * Muestra el listado público de propiedades
+     * Muestra el listado público de propiedades con soporte para filtros básicos y avanzados
      */
     public function index(Request $request): Response
     {
@@ -72,6 +72,45 @@ class PropiedadPublicController extends Controller
 
         if ($request->filled('superficie_max')) {
             $query->where('superficie_construida', '<=', $request->get('superficie_max'));
+        }
+
+        // Búsqueda por código de inmueble (para filtros del home)
+        if ($request->filled('codigo')) {
+            $codigo = $request->get('codigo');
+            $query->where(function ($q) use ($codigo) {
+                $q->where('codigo_inmueble', 'LIKE', "%{$codigo}%")
+                  ->orWhere('sku', 'LIKE', "%{$codigo}%");
+            });
+        }
+
+        // Filtro de rango de precios (para filtros del home)
+        if ($request->filled('rango_precio')) {
+            $rango = $request->get('rango_precio');
+            switch ($rango) {
+                case '0-50000':
+                    $query->where('price', '<=', 50000);
+                    break;
+                case '50000-100000':
+                    $query->whereBetween('price', [50000, 100000]);
+                    break;
+                case '100000-200000':
+                    $query->whereBetween('price', [100000, 200000]);
+                    break;
+                case '200000-500000':
+                    $query->whereBetween('price', [200000, 500000]);
+                    break;
+                case '500000+':
+                    $query->where('price', '>=', 500000);
+                    break;
+            }
+        }
+
+        // Filtro de ubicación (para filtros del home)
+        if ($request->filled('ubicacion') && !empty($request->get('ubicacion'))) {
+            $ubicacion = $request->get('ubicacion');
+            $query->whereHas('location', function ($q) use ($ubicacion) {
+                $q->where('address', 'LIKE', "%{$ubicacion}%");
+            });
         }
 
         // Obtener propiedades paginadas
@@ -163,6 +202,9 @@ class PropiedadPublicController extends Controller
             'filtros' => $request->only([
                 'categoria',
                 'operacion',
+                'codigo',
+                'rango_precio',
+                'ubicacion',
                 'precio_min',
                 'precio_max',
                 'ambientes',
