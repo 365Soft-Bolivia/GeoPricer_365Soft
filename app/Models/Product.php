@@ -78,14 +78,45 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class Product extends BaseModel
 {
-
     use HasCompany;
     use HasFactory, CustomFieldsTrait;
 
     protected $table = 'products';
     const FILE_PATH = 'products';
 
-    protected $fillable = ['name', 'codigo_inmueble', 'price', 'description', 'taxes', 'allow_purchase', 'superficie_util', 'superficie_construida', 'ambientes', 'habitaciones', 'banos', 'cocheras', 'ano_construccion', 'operacion', 'comision', 'is_public'];
+    /**
+     * CAMPOS PERMITIDOS
+     */
+    protected $fillable = [
+        'name',
+        'codigo_inmueble',
+        'price',
+        'description',
+        'taxes',
+        'allow_purchase',
+        'superficie_util',
+        'superficie_construida',
+        'ambientes',
+        'habitaciones',
+        'banos',
+        'cocheras',
+        'ano_construccion',
+        'operacion',
+        'comision',
+        'is_public',
+        'category_id',          // <- IMPORTANTE
+        'sub_category_id',
+        'unit_id',
+        'sku',
+        'hsn_sac_code',
+        'downloadable',
+        'downloadable_file',
+        'default_image',              // <- IMPORTANTE
+        'added_by',             // <- IMPORTANTE
+        'last_updated_by',      // <- IMPORTANTE
+        'company_id',
+    ];
+
     protected $appends = ['total_amount', 'image_url', 'download_file_url', 'image'];
 
     protected $with = ['tax'];
@@ -97,10 +128,6 @@ class Product extends BaseModel
 
     const CUSTOM_FIELD_MODEL = 'App\Models\Product';
 
-    /**
-     * Scope para filtrar productos visibles según el usuario.
-     * Los admins ven todo, los agentes ven solo sus propios productos o los públicos.
-     */
     public function scopeVisibleTo($query, $user)
     {
         $isAdmin = method_exists($user, 'hasRole') && $user->hasRole('admin');
@@ -111,7 +138,7 @@ class Product extends BaseModel
 
         return $query->where(function ($q) use ($user) {
             $q->where('added_by', $user->id)
-                ->orWhere('is_public', 1);
+              ->orWhere('is_public', 1);
         });
     }
 
@@ -127,7 +154,9 @@ class Product extends BaseModel
     public function getImageAttribute()
     {
         if ($this->default_image) {
-            return str($this->default_image)->contains('http') ? $this->default_image : (Product::FILE_PATH . '/' . $this->default_image);
+            return str($this->default_image)->contains('http')
+                ? $this->default_image
+                : (Product::FILE_PATH . '/' . $this->default_image);
         }
 
         return $this->default_image;
@@ -135,7 +164,9 @@ class Product extends BaseModel
 
     public function getDownloadFileUrlAttribute()
     {
-        return ($this->downloadable_file) ? asset_url_local_s3(Product::FILE_PATH . '/' . $this->downloadable_file) : null;
+        return ($this->downloadable_file)
+            ? asset_url_local_s3(Product::FILE_PATH . '/' . $this->downloadable_file)
+            : null;
     }
 
     public function tax(): BelongsTo
@@ -170,7 +201,6 @@ class Product extends BaseModel
 
     public function getTotalAmountAttribute()
     {
-
         if (!is_null($this->price) && !is_null($this->tax)) {
             return (int)$this->price + ((int)$this->price * ((int)$this->tax->rate_percent / 100));
         }
@@ -181,27 +211,6 @@ class Product extends BaseModel
     public function files(): HasMany
     {
         return $this->hasMany(ProductFiles::class, 'product_id')->orderByDesc('id');
-    }
-
-    public function getTaxListAttribute()
-    {
-        $productItem = Product::findOrFail($this->id);
-        $taxes = '';
-
-        if ($productItem && $productItem->taxes) {
-            $numItems = count(json_decode($productItem->taxes));
-
-            if (!is_null($productItem->taxes)) {
-                foreach (json_decode($productItem->taxes) as $index => $tax) {
-                    $tax = $this->taxbyid($tax)->first();
-                    $taxes .= $tax->tax_name . ': ' . $tax->rate_percent . '%';
-
-                    $taxes = ($index + 1 != $numItems) ? $taxes . ', ' : $taxes;
-                }
-            }
-        }
-
-        return $taxes;
     }
 
     public function orderItem(): HasMany
@@ -216,7 +225,6 @@ class Product extends BaseModel
 
     public function inventory()
     {
-        /** @phpstan-ignore-next-line */
         return $this->hasMany(PurchaseStockAdjustment::class, 'product_id');
     }
 
@@ -224,17 +232,12 @@ class Product extends BaseModel
     {
         return $this->hasMany(CustomerSuccess::class, 'product_id');
     }
-    /**
-     * Relación con imágenes
-     */
+
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('order');
     }
 
-    /**
-     * Imagen principal
-     */
     public function primaryImage(): HasOne
     {
         return $this->hasOne(ProductImage::class)->where('is_primary', true);

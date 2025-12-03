@@ -93,7 +93,7 @@ class ProductController extends Controller
             'comision' => 'nullable|numeric|min:0|max:100',
             'taxes' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
-            'category_id' => 'nullable|exists:product_category,id',
+            'category_id' => 'required|exists:product_category,id',
             'sku' => 'nullable|string|max:255|unique:products,sku',
             'hsn_sac_code' => 'nullable|string|max:255',
             'allow_purchase' => 'boolean',
@@ -113,6 +113,7 @@ class ProductController extends Controller
             'ano_construccion.digits' => 'El año de construcción debe tener 4 dígitos.',
             'ano_construccion.max' => 'El año de construcción no puede ser mayor al año actual.',
             'comision.max' => 'La comisión no puede ser mayor al 100%.',
+            'category_id.required' => 'Debes seleccionar una categoría.',
             'sku.unique' => 'Este SKU ya está registrado.',
             'category_id.exists' => 'La categoría seleccionada no existe.',
         ]);
@@ -146,7 +147,7 @@ class ProductController extends Controller
             'comision' => 'nullable|numeric|min:0|max:100',
             'taxes' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
-            'category_id' => 'nullable|exists:product_category,id',
+            'category_id' => 'required|exists:product_category,id',
             'sku' => 'nullable|string|max:255|unique:products,sku,' . $product->id,
             'hsn_sac_code' => 'nullable|string|max:255',
             'allow_purchase' => 'boolean',
@@ -166,6 +167,7 @@ class ProductController extends Controller
             'ano_construccion.digits' => 'El año de construcción debe tener 4 dígitos.',
             'ano_construccion.max' => 'El año de construcción no puede ser mayor al año actual.',
             'comision.max' => 'La comisión no puede ser mayor al 100%.',
+            'category_id.required' => 'Debes seleccionar una categoría.',
             'sku.unique' => 'Este SKU ya está registrado.',
             'category_id.exists' => 'La categoría seleccionada no existe.',
         ]);
