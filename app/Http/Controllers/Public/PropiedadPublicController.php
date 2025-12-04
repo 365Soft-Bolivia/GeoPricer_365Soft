@@ -219,6 +219,81 @@ class PropiedadPublicController extends Controller
     }
 
     /**
+     * Vista del mapa interactivo con todas las propiedades públicas con ubicación
+     */
+    public function mapa(): Response
+    {
+        // Obtener solo propiedades públicas que tengan ubicación activa
+        $productsConUbicacion = Product::with(['location', 'category', 'images'])
+            ->where('is_public', true)
+            ->whereHas('location', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'codigo_inmueble' => $product->codigo_inmueble ?? $product->sku ?? 'N/A',
+                    'price' => $product->price,
+                    'operacion' => $product->operacion,
+                    'default_image' => $product->default_image,
+                    'category' => $product->category?->category_name ?? null,
+                    'category_id' => $product->category_id,
+                    // Campos informativos adicionales
+                    'habitaciones' => $product->habitaciones,
+                    'banos' => $product->banos,
+                    'ambientes' => $product->ambientes,
+                    'cocheras' => $product->cocheras,
+                    'superficie_util' => $product->superficie_util,
+                    'superficie_construida' => $product->superficie_construida,
+                    'ano_construccion' => $product->ano_construccion,
+                    'antiguedad' => $product->ano_construccion ? (date('Y') - $product->ano_construccion) : null,
+                    'comision' => $product->comision,
+                    'location' => [
+                        'id' => $product->location->id,
+                        'latitude' => $product->location->latitude,
+                        'longitude' => $product->location->longitude,
+                        'address' => $product->location->address,
+                        'is_active' => $product->location->is_active,
+                    ],
+                    // Incluir todas las imágenes del producto
+                    'images' => $product->images->map(function ($image) {
+                        return [
+                            'id' => $image->id,
+                            'image_path' => $image->image_path,
+                            'original_name' => $image->original_name,
+                            'is_primary' => $image->is_primary,
+                            'order' => $image->order,
+                        ];
+                    })->toArray(),
+                ];
+            });
+
+        // Obtener categorías disponibles que tengan propiedades públicas con ubicación
+        $categoriasDisponibles = Product::where('is_public', true)
+            ->whereHas('location', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->whereNotNull('category_id')
+            ->with('category')
+            ->get()
+            ->pluck('category.category_name', 'category.id')
+            ->unique()
+            ->toArray();
+
+        return Inertia::render('Public/Propiedades/Mapa', [
+            'productsConUbicacion' => $productsConUbicacion,
+            'categoriasDisponibles' => $categoriasDisponibles,
+            'defaultCenter' => [
+                'lat' => -16.5000, // La Paz, Bolivia (centro del país)
+                'lng' => -68.1500,
+            ],
+            'totalPropiedades' => $productsConUbicacion->count(),
+        ]);
+    }
+
+    /**
      * Muestra el detalle de una propiedad específica
      */
     public function show(int $id): Response

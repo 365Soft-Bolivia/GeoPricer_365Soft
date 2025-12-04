@@ -3,7 +3,6 @@ import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { Search, MapPin, Home, DollarSign, Building } from 'lucide-vue-next';
-import publicRoutes from '@/routes/public';
 
 interface Props {
     featured_properties: any[];
@@ -200,7 +199,7 @@ const getOperacionLabel = (operacion: string) => {
                             </button>
 
                             <Link
-                                :href="publicRoutes.propiedades.url()"
+                                href="/propiedades"
                                 class="inline-flex items-center justify-center px-8 py-4 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all transform hover:scale-105 shadow-lg"
                             >
                                 <Home class="w-5 h-5 mr-2" />
@@ -373,7 +372,7 @@ const getOperacionLabel = (operacion: string) => {
 
                 <div class="text-center mt-12">
                     <Link
-                        :href="publicRoutes.propiedades.url()"
+                        href="/propiedades"
                         class="inline-flex items-center px-8 py-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg"
                     >
                         Ver Todas las Propiedades
@@ -394,14 +393,14 @@ const getOperacionLabel = (operacion: string) => {
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
                     <Link
-                        :href="publicRoutes.propiedades.url()"
+                        href="/propiedades"
                         class="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105"
                     >
                         <Search class="w-5 h-5 mr-2" />
                         Explorar Propiedades
                     </Link>
                     <Link
-                        :href="publicRoutes.contacto.url()"
+                        href="/contacto"
                         class="inline-flex items-center justify-center px-8 py-4 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-blue-600 transition-all"
                     >
                         Contactar Asesor

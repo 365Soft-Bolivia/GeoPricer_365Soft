@@ -23,6 +23,9 @@ Route::get('/propiedades', [PropiedadPublicController::class, 'index'])->name('p
 // Detalle de una propiedad
 Route::get('/propiedad/{id}', [PropiedadPublicController::class, 'show'])->name('public.propiedad.show');
 
+// Mapa interactivo de propiedades públicas
+Route::get('/mapa-propiedades', [PropiedadPublicController::class, 'mapa'])->name('public.mapa.propiedades');
+
 // Otras páginas públicas
 Route::get('/sobre-nosotros', fn() => Inertia::render('Public/SobreNosotros'))->name('public.sobre');
 
