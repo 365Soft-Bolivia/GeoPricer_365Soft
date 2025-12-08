@@ -247,4 +247,125 @@ class Product extends BaseModel
     {
         return $this->hasOne(ProductLocation::class, 'product_id');
     }
+
+    // Query Scopes para filtros optimizados
+    public function scopePublic($query)
+    {
+        return $query->where('is_public', true);
+    }
+
+    public function scopeByCategories($query, $categories)
+    {
+        if (empty($categories)) return $query;
+
+        $categoryIds = is_array($categories) ? $categories : explode(',', $categories);
+        return $query->whereIn('category_id', array_filter($categoryIds, 'is_numeric'));
+    }
+
+    public function scopeByOperations($query, $operations)
+    {
+        if (empty($operations)) return $query;
+
+        $operationTypes = is_array($operations) ? $operations : explode(',', $operations);
+        return $query->whereIn('operacion', $operationTypes);
+    }
+
+    public function scopeByPriceRange($query, $min = null, $max = null)
+    {
+        if ($min !== null) {
+            $query->where('price', '>=', $min);
+        }
+        if ($max !== null) {
+            $query->where('price', '<=', $max);
+        }
+        return $query;
+    }
+
+    public function scopeByCharacteristics($query, $ambientes = null, $habitaciones = null, $banos = null, $cocheras = null)
+    {
+        if ($ambientes !== null) {
+            $query->where('ambientes', $ambientes);
+        }
+        if ($habitaciones !== null) {
+            $query->where('habitaciones', $habitaciones);
+        }
+        if ($banos !== null) {
+            $query->where('banos', $banos);
+        }
+        if ($cocheras !== null) {
+            $query->where('cocheras', $cocheras);
+        }
+        return $query;
+    }
+
+    public function scopeBySurfaceRange($query, $min = null, $max = null)
+    {
+        if ($min !== null) {
+            $query->where('superficie_construida', '>=', $min);
+        }
+        if ($max !== null) {
+            $query->where('superficie_construida', '<=', $max);
+        }
+        return $query;
+    }
+
+    public function scopeByLandSurfaceRange($query, $min = null, $max = null)
+    {
+        if ($min !== null) {
+            $query->where('superficie_util', '>=', $min);
+        }
+        if ($max !== null) {
+            $query->where('superficie_util', '<=', $max);
+        }
+        return $query;
+    }
+
+    public function scopeByCode($query, $codigo)
+    {
+        if (empty($codigo)) return $query;
+
+        return $query->where(function ($q) use ($codigo) {
+            $q->where('codigo_inmueble', 'LIKE', "%{$codigo}%")
+              ->orWhere('sku', 'LIKE', "%{$codigo}%");
+        });
+    }
+
+    public function scopeByPriceRangePreset($query, $rango)
+    {
+        if (empty($rango)) return $query;
+
+        $ranges = [
+            '0-50000' => [null, 50000],
+            '50000-100000' => [50000, 100000],
+            '100000-200000' => [100000, 200000],
+            '200000-500000' => [200000, 500000],
+            '500000+' => [500000, null],
+        ];
+
+        if (isset($ranges[$rango])) {
+            [$min, $max] = $ranges[$rango];
+            return $query->byPriceRange($min, $max);
+        }
+
+        return $query;
+    }
+
+    public function scopeByLocation($query, $ubicacion)
+    {
+        if (empty($ubicacion)) return $query;
+
+        return $query->whereHas('location', function ($q) use ($ubicacion) {
+            $q->where('address', 'LIKE', "%{$ubicacion}%");
+        });
+    }
+
+    public function scopeWithRelations($query)
+    {
+        return $query->with([
+            'images' => fn($q) => $q->orderBy('order'),
+            'location',
+            'category',
+            'addedBy'
+        ]);
+    }
 }

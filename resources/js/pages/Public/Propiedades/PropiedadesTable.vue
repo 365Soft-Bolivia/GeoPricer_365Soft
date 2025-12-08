@@ -207,16 +207,25 @@ const total = computed(() => props.pagination?.total || 0);
                     </div>
 
                     <!-- Precio -->
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            ${{ Number(propiedad.price).toLocaleString() }}
-                        </span>
-                        <span v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500">
-                            /mes
-                        </span>
-                        <Badge v-if="propiedad.operacion" class="ml-auto" variant="secondary">
-                            {{ propiedad.operacion }}
-                        </Badge>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                ${{ Number(propiedad.price).toLocaleString() }}
+                            </span>
+                            <span v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500">
+                                /mes
+                            </span>
+                        </div>
+
+                        <!-- Badges de operación y categoría -->
+                        <div class="flex items-center gap-2">
+                            <Badge v-if="propiedad.operacion" class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                {{ propiedad.operacion }}
+                            </Badge>
+                            <Badge v-if="propiedad.category" class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                {{ propiedad.category }}
+                            </Badge>
+                        </div>
                     </div>
 
                     <!-- Características principales -->
@@ -381,16 +390,22 @@ const total = computed(() => props.pagination?.total || 0);
                                     <span>{{ propiedad.direccion }}</span>
                                 </div>
                             </div>
-                            <div class="text-right">
+                            <div class="text-right sm:text-left">
                                 <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
                                     ${{ Number(propiedad.price).toLocaleString() }}
                                 </div>
                                 <div v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500">
                                     /mes
                                 </div>
-                                <Badge v-if="propiedad.operacion" class="mt-2">
-                                    {{ propiedad.operacion }}
-                                </Badge>
+                                <!-- Badges de operación y categoría -->
+                                <div class="flex flex-wrap gap-2 mt-2">
+                                    <Badge v-if="propiedad.operacion" class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        {{ propiedad.operacion }}
+                                    </Badge>
+                                    <Badge v-if="propiedad.category" class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        {{ propiedad.category }}
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
 
@@ -416,9 +431,6 @@ const total = computed(() => props.pagination?.total || 0);
                             </div>
                             <div v-if="propiedad.antiguedad" class="text-gray-600 dark:text-gray-400">
                                 <span class="font-medium">Antigüedad:</span> {{ propiedad.antiguedad }} años
-                            </div>
-                            <div v-if="propiedad.category" class="text-gray-600 dark:text-gray-400">
-                                <span class="font-medium">Categoría:</span> {{ propiedad.category }}
                             </div>
                         </div>
 

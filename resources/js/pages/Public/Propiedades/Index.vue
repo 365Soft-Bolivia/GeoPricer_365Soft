@@ -69,6 +69,34 @@ const favoriteProperties = ref<Set<number>>(new Set());
 const sidebarCollapsed = ref(false);
 const filtersSidebar = ref<InstanceType<typeof PropertyFiltersSidebar>>();
 
+// Estado para controlar qué dropdowns están abiertos
+const openDropdowns = ref<Record<string, boolean>>({
+    categorias: false,
+    operaciones: false,
+    caracteristicas: false,
+    rangos: false
+});
+
+// Estado para los filtros seleccionados
+const selectedFilters = ref({
+    categorias: [] as number[],
+    operaciones: [] as string[],
+    ambientes: null as number | null,
+    habitaciones: null as number | null,
+    banos: null as number | null,
+    cocheras: null as number | null
+});
+
+// Estado para los filtros de rango
+const rangeFilters = ref({
+    precio_min: '',
+    precio_max: '',
+    superficie_construida_min: '',
+    superficie_construida_max: '',
+    superficie_terreno_min: '',
+    superficie_terreno_max: ''
+});
+
 // Computed properties
 const hasPropiedades = computed(() => props.propiedades.length > 0);
 const isLoading = computed(() => loading.value);
@@ -115,11 +143,16 @@ const handleFilter = (newFilters: any) => {
     });
 };
 
+// Función para toggle de dropdowns (evita que se cierren al hacer click en checkboxes)
+const toggleDropdown = (dropdown: string) => {
+    openDropdowns.value[dropdown] = !openDropdowns.value[dropdown];
+};
+
 const handlePageChange = (page: number) => {
     if (page === currentPage.value) return;
 
     const params = { ...props.filtros, page: page.toString() };
-    router.get(publicRoutes.propiedades.url(params), {}, {
+    router.get('/propiedades', params, {
         preserveScroll: false,
         onStart: () => {
             loading.value = true;
@@ -134,7 +167,7 @@ const handlePageChange = (page: number) => {
 
 const handlePerPageChange = (newPerPage: number) => {
     const params = { ...props.filtros, per_page: newPerPage.toString(), page: '1' };
-    router.get(publicRoutes.propiedades.url(params), {}, {
+    router.get('/propiedades', params, {
         preserveScroll: false,
         onStart: () => {
             loading.value = true;
@@ -146,7 +179,7 @@ const handlePerPageChange = (newPerPage: number) => {
 };
 
 const handleReset = () => {
-    filtersSidebar.value?.clear();
+    resetFilters();
 };
 
 const handleFavorite = (propertyId: number) => {
@@ -188,7 +221,159 @@ const toggleViewMode = (mode: 'grid' | 'list') => {
     localStorage.setItem('propiedades-view-mode', mode);
 };
 
-// Cargar preferencias guardadas
+// Funciones para manejar los filtros
+const applyFilters = () => {
+    loading.value = true;
+    console.log('Applying filters...'); // Debug log - Updated
+
+    // Construir parámetros para la visita de Inertia
+    const params: Record<string, string> = {};
+
+    // Filtros de categorías (múltiples)
+    if (selectedFilters.value.categorias.length > 0) {
+        params.categoria = selectedFilters.value.categorias.join(',');
+    }
+
+    // Filtros de operaciones (múltiples)
+    if (selectedFilters.value.operaciones.length > 0) {
+        params.operacion = selectedFilters.value.operaciones.join(',');
+    }
+
+    // Filtros de características (simple, solo uno a la vez)
+    if (selectedFilters.value.ambientes) {
+        params.ambientes = selectedFilters.value.ambientes.toString();
+    }
+    if (selectedFilters.value.habitaciones) {
+        params.habitaciones = selectedFilters.value.habitaciones.toString();
+    }
+    if (selectedFilters.value.banos) {
+        params.banos = selectedFilters.value.banos.toString();
+    }
+    if (selectedFilters.value.cocheras) {
+        params.cocheras = selectedFilters.value.cocheras.toString();
+    }
+
+    // Filtros de rango
+    if (rangeFilters.value.precio_min) {
+        params.precio_min = rangeFilters.value.precio_min;
+    }
+    if (rangeFilters.value.precio_max) {
+        params.precio_max = rangeFilters.value.precio_max;
+    }
+    if (rangeFilters.value.superficie_construida_min) {
+        params.superficie_construida_min = rangeFilters.value.superficie_construida_min;
+    }
+    if (rangeFilters.value.superficie_construida_max) {
+        params.superficie_construida_max = rangeFilters.value.superficie_construida_max;
+    }
+    if (rangeFilters.value.superficie_terreno_min) {
+        params.superficie_terreno_min = rangeFilters.value.superficie_terreno_min;
+    }
+    if (rangeFilters.value.superficie_terreno_max) {
+        params.superficie_terreno_max = rangeFilters.value.superficie_terreno_max;
+    }
+
+    // Resetear a la primera página
+    params.page = '1';
+
+    // Usar router.get para actualizar la URL y los datos
+    router.get('/propiedades', params, {
+        preserveScroll: true,
+        preserveState: false, // Importante: para que las props se actualicen
+        onFinish: () => {
+            loading.value = false;
+        }
+    });
+};
+
+const applyRangeFilters = () => {
+    applyFilters();
+};
+
+const toggleCharacteristicFilter = (type: string, value: number) => {
+    // Si ya está seleccionado el mismo valor, lo deselecciona
+    if (selectedFilters.value[type as keyof typeof selectedFilters.value] === value) {
+        selectedFilters.value[type as keyof typeof selectedFilters.value] = null;
+    } else {
+        selectedFilters.value[type as keyof typeof selectedFilters.value] = value;
+    }
+
+    // Aplica los filtros automáticamente
+    applyFilters();
+};
+
+const resetFilters = () => {
+    // Resetear todos los filtros
+    selectedFilters.value = {
+        categorias: [],
+        operaciones: [],
+        ambientes: null,
+        habitaciones: null,
+        banos: null,
+        cocheras: null
+    };
+
+    rangeFilters.value = {
+        precio_min: '',
+        precio_max: '',
+        superficie_construida_min: '',
+        superficie_construida_max: '',
+        superficie_terreno_min: '',
+        superficie_terreno_max: ''
+    };
+
+    // Aplicar filtros reseteados
+    applyFilters();
+};
+
+// Inicializar filtros desde las props (que vienen de la URL)
+const initializeFiltersFromProps = () => {
+    // Cargar categorías (pueden venir como string separado por comas)
+    if (props.filtros.categoria) {
+        if (Array.isArray(props.filtros.categoria)) {
+            selectedFilters.value.categorias = props.filtros.categoria.map(id => parseInt(id));
+        } else if (typeof props.filtros.categoria === 'string') {
+            selectedFilters.value.categorias = props.filtros.categoria.split(',').map(id => parseInt(id));
+        } else {
+            selectedFilters.value.categorias = [parseInt(props.filtros.categoria)];
+        }
+    }
+
+    // Cargar operaciones (pueden venir como string separado por comas)
+    if (props.filtros.operacion) {
+        if (Array.isArray(props.filtros.operacion)) {
+            selectedFilters.value.operaciones = props.filtros.operacion;
+        } else if (typeof props.filtros.operacion === 'string') {
+            selectedFilters.value.operaciones = props.filtros.operacion.split(',');
+        } else {
+            selectedFilters.value.operaciones = [props.filtros.operacion];
+        }
+    }
+
+    // Cargar características
+    selectedFilters.value.ambientes = props.filtros.ambientes ? parseInt(props.filtros.ambientes) : null;
+    selectedFilters.value.habitaciones = props.filtros.habitaciones ? parseInt(props.filtros.habitaciones) : null;
+    selectedFilters.value.banos = props.filtros.banos ? parseInt(props.filtros.banos) : null;
+    selectedFilters.value.cocheras = props.filtros.cocheras ? parseInt(props.filtros.cocheras) : null;
+
+    // Cargar rangos
+    rangeFilters.value.precio_min = props.filtros.precio_min || '';
+    rangeFilters.value.precio_max = props.filtros.precio_max || '';
+    rangeFilters.value.superficie_construida_min = props.filtros.superficie_construida_min || '';
+    rangeFilters.value.superficie_construida_max = props.filtros.superficie_construida_max || '';
+    rangeFilters.value.superficie_terreno_min = props.filtros.superficie_terreno_min || '';
+    rangeFilters.value.superficie_terreno_max = props.filtros.superficie_terreno_max || '';
+
+    // Mantener compatibilidad con parámetros antiguos
+    if (!rangeFilters.value.superficie_construida_min) {
+        rangeFilters.value.superficie_construida_min = props.filtros.superficie_min || '';
+    }
+    if (!rangeFilters.value.superficie_construida_max) {
+        rangeFilters.value.superficie_construida_max = props.filtros.superficie_max || '';
+    }
+};
+
+// Cargar preferencias guardadas y filtros de la URL
 onMounted(() => {
     const savedViewMode = localStorage.getItem('propiedades-view-mode') as 'grid' | 'list' | null;
     if (savedViewMode) {
@@ -200,11 +385,19 @@ onMounted(() => {
     if (savedFavorites) {
         favoriteProperties.value = new Set(JSON.parse(savedFavorites));
     }
+
+    // Inicializar filtros desde los parámetros de la URL
+    initializeFiltersFromProps();
 });
 
 // Guardar favoritos en localStorage cuando cambien
 watch(favoriteProperties, (newFavorites) => {
     localStorage.setItem('favorite-properties', JSON.stringify(Array.from(newFavorites)));
+}, { deep: true });
+
+// Sincronizar los filtros cuando cambian las props (cuando se aplica un filtro)
+watch(() => props.filtros, (newFilters) => {
+    initializeFiltersFromProps();
 }, { deep: true });
 </script>
 
@@ -225,6 +418,17 @@ watch(favoriteProperties, (newFavorites) => {
           <div class="p-4 border-b border-gray-200 dark:border-gray-700 relative">
             <div class="flex items-center justify-between">
               <h2 v-if="!sidebarCollapsed" class="text-lg font-semibold text-gray-900 dark:text-white">Filtros</h2>
+
+              <!-- Botón de limpiar filtros (solo visible cuando sidebar está expandido) -->
+              <Button
+                v-if="!sidebarCollapsed && hasFilters"
+                @click="resetFilters"
+                variant="outline"
+                size="sm"
+                class="text-xs px-2 py-1 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Limpiar
+              </Button>
 
               <!-- Toggle (oculto en desktop porque lg:hidden) -->
               <Button
@@ -252,64 +456,82 @@ watch(favoriteProperties, (newFavorites) => {
           <!-- Contenido del Sidebar -->
           <div v-if="!sidebarCollapsed" class="p-4 space-y-6">
             <!-- Filtro de Categorías -->
-            <Collapsible>
-              <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+            <div class="border border-gray-200 dark:border-gray-600 rounded-lg">
+              <button
+                @click="toggleDropdown('categorias')"
+                class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-t-lg transition-colors"
+              >
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Categorías</span>
-                <ChevronDown class="w-4 h-4" />
-              </CollapsibleTrigger>
+                <ChevronDown
+                  :class="[
+                    'w-4 h-4 transition-transform duration-200',
+                    openDropdowns.categorias ? 'rotate-180' : ''
+                  ]"
+                />
+              </button>
 
-              <CollapsibleContent class="mt-2 space-y-2 max-h-40 overflow-y-auto pl-2">
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="casa" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Casas</span>
-                </label>
-
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="departamento" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Departamentos</span>
-                </label>
-
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="terreno" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Terrenos</span>
-                </label>
-
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="oficina" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Oficinas</span>
-                </label>
-
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="local" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Locales Comerciales</span>
-                </label>
-              </CollapsibleContent>
-            </Collapsible>
+              <div
+                v-show="openDropdowns.categorias"
+                class="border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-b-lg"
+              >
+                <div class="p-3 space-y-2 max-h-40 overflow-y-auto">
+                  <label
+                    v-for="(nombre, id) in filter_options.categorias"
+                    :key="id"
+                    class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="id"
+                      v-model="selectedFilters.categorias"
+                      @click.stop
+                      @change="applyFilters"
+                      class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    >
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ nombre }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
 
             <!-- Filtro de Tipo de Operación -->
-            <Collapsible>
-              <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+            <div class="border border-gray-200 dark:border-gray-600 rounded-lg">
+              <button
+                @click="toggleDropdown('operaciones')"
+                class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-t-lg transition-colors"
+              >
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Operación</span>
-                <ChevronDown class="w-4 h-4" />
-              </CollapsibleTrigger>
+                <ChevronDown
+                  :class="[
+                    'w-4 h-4 transition-transform duration-200',
+                    openDropdowns.operaciones ? 'rotate-180' : ''
+                  ]"
+                />
+              </button>
 
-              <CollapsibleContent class="mt-2 space-y-2 pl-2">
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="venta" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Venta</span>
-                </label>
-
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="alquiler" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Alquiler</span>
-                </label>
-
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                  <input type="checkbox" value="anticretico" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Anticrético</span>
-                </label>
-              </CollapsibleContent>
-            </Collapsible>
+              <div
+                v-show="openDropdowns.operaciones"
+                class="border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-b-lg"
+              >
+                <div class="p-3 space-y-2 max-h-40 overflow-y-auto">
+                  <label
+                    v-for="(nombre, value) in filter_options.operaciones"
+                    :key="value"
+                    class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="value"
+                      v-model="selectedFilters.operaciones"
+                      @click.stop
+                      @change="applyFilters"
+                      class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    >
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ nombre }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
 
             <!-- Filtros Numéricos -->
             <div class="space-y-4">
@@ -319,10 +541,19 @@ watch(favoriteProperties, (newFavorites) => {
               <div class="space-y-2">
                 <label class="text-xs text-gray-600 dark:text-gray-400">Ambientes</label>
                 <div class="flex gap-2">
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+                  <button
+                    v-for="num in [1, 2, 3, 4]"
+                    :key="`amb-${num}`"
+                    @click="toggleCharacteristicFilter('ambientes', num === 4 ? 4 : num)"
+                    :class="[
+                      'px-3 py-1 text-xs border rounded transition-colors',
+                      selectedFilters.ambientes === (num === 4 ? 4 : num)
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+                    ]"
+                  >
+                    {{ num === 4 ? '4+' : num }}
+                  </button>
                 </div>
               </div>
 
@@ -330,10 +561,19 @@ watch(favoriteProperties, (newFavorites) => {
               <div class="space-y-2">
                 <label class="text-xs text-gray-600 dark:text-gray-400">Dormitorios</label>
                 <div class="flex gap-2">
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+                  <button
+                    v-for="num in [1, 2, 3, 4]"
+                    :key="`hab-${num}`"
+                    @click="toggleCharacteristicFilter('habitaciones', num === 4 ? 4 : num)"
+                    :class="[
+                      'px-3 py-1 text-xs border rounded transition-colors',
+                      selectedFilters.habitaciones === (num === 4 ? 4 : num)
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+                    ]"
+                  >
+                    {{ num === 4 ? '4+' : num }}
+                  </button>
                 </div>
               </div>
 
@@ -341,10 +581,19 @@ watch(favoriteProperties, (newFavorites) => {
               <div class="space-y-2">
                 <label class="text-xs text-gray-600 dark:text-gray-400">Baños</label>
                 <div class="flex gap-2">
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+                  <button
+                    v-for="num in [1, 2, 3, 4]"
+                    :key="`ban-${num}`"
+                    @click="toggleCharacteristicFilter('banos', num === 4 ? 4 : num)"
+                    :class="[
+                      'px-3 py-1 text-xs border rounded transition-colors',
+                      selectedFilters.banos === (num === 4 ? 4 : num)
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+                    ]"
+                  >
+                    {{ num === 4 ? '4+' : num }}
+                  </button>
                 </div>
               </div>
 
@@ -352,9 +601,19 @@ watch(favoriteProperties, (newFavorites) => {
               <div class="space-y-2">
                 <label class="text-xs text-gray-600 dark:text-gray-400">Estacionamientos</label>
                 <div class="flex gap-2">
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3+</button>
+                  <button
+                    v-for="num in [1, 2, 3]"
+                    :key="`coc-${num}`"
+                    @click="toggleCharacteristicFilter('cocheras', num === 3 ? 3 : num)"
+                    :class="[
+                      'px-3 py-1 text-xs border rounded transition-colors',
+                      selectedFilters.cocheras === (num === 3 ? 3 : num)
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+                    ]"
+                  >
+                    {{ num === 3 ? '3+' : num }}
+                  </button>
                 </div>
               </div>
             </div>
@@ -367,37 +626,84 @@ watch(favoriteProperties, (newFavorites) => {
               <div class="space-y-3">
                 <label class="text-xs text-gray-600 dark:text-gray-400">Precio (USD)</label>
                 <div class="flex gap-2 items-center">
-                  <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  <input
+                    type="number"
+                    v-model="rangeFilters.precio_min"
+                    placeholder="Desde"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
                   <span class="text-gray-500">-</span>
-                  <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  <input
+                    type="number"
+                    v-model="rangeFilters.precio_max"
+                    placeholder="Hasta"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
                 </div>
-                <Button size="sm" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm">Aplicar Precio</Button>
-              </div>
-
-              <!-- Metros de Terreno -->
-              <div class="space-y-3">
-                <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Terreno (m²)</label>
-                <div class="flex gap-2 items-center">
-                  <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-                  <span class="text-gray-500">-</span>
-                  <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-                </div>
-                <Button size="sm" class="w-full bg-green-600 hover:bg-green-700 text-white text-sm">Aplicar Terreno</Button>
+                <Button
+                  @click="applyRangeFilters"
+                  size="sm"
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                >
+                  Aplicar Precio
+                </Button>
               </div>
 
               <!-- Metros de Construcción -->
               <div class="space-y-3">
                 <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Construcción (m²)</label>
                 <div class="flex gap-2 items-center">
-                  <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  <input
+                    type="number"
+                    v-model="rangeFilters.superficie_construida_min"
+                    placeholder="Desde"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
                   <span class="text-gray-500">-</span>
-                  <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  <input
+                    type="number"
+                    v-model="rangeFilters.superficie_construida_max"
+                    placeholder="Hasta"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
                 </div>
-                <Button size="sm" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">Aplicar Construcción</Button>
+                <Button
+                  @click="applyRangeFilters"
+                  size="sm"
+                  class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm"
+                >
+                  Aplicar Construcción
+                </Button>
+              </div>
+
+              <!-- Metros de Terreno -->
+              <div class="space-y-3">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Terreno (m²)</label>
+                <div class="flex gap-2 items-center">
+                  <input
+                    type="number"
+                    v-model="rangeFilters.superficie_terreno_min"
+                    placeholder="Desde"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                  <span class="text-gray-500">-</span>
+                  <input
+                    type="number"
+                    v-model="rangeFilters.superficie_terreno_max"
+                    placeholder="Hasta"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <Button
+                  @click="applyRangeFilters"
+                  size="sm"
+                  class="w-full bg-green-600 hover:bg-green-700 text-white text-sm"
+                >
+                  Aplicar Terreno
+                </Button>
               </div>
             </div>
           </div>
-
           <!-- Icono cuando está colapsado -->
           <div v-else class="flex items-center justify-center h-full">
             <Button variant="ghost" @click="sidebarCollapsed = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -537,56 +843,82 @@ watch(favoriteProperties, (newFavorites) => {
 
     <div class="space-y-6 max-h-[70vh] overflow-y-auto">
       <!-- Categorías -->
-      <Collapsible>
-        <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+      <div class="border border-gray-200 dark:border-gray-600 rounded-lg">
+        <button
+          @click="toggleDropdown('categorias')"
+          class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-t-lg transition-colors"
+        >
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Categorías</span>
-          <ChevronDown class="w-4 h-4" />
-        </CollapsibleTrigger>
-        <CollapsibleContent class="mt-2 space-y-2 max-h-40 overflow-y-auto pl-2">
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="casa" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Casas</span>
-          </label>
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="departamento" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Departamentos</span>
-          </label>
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="terreno" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Terrenos</span>
-          </label>
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="oficina" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Oficinas</span>
-          </label>
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="local" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Locales Comerciales</span>
-          </label>
-        </CollapsibleContent>
-      </Collapsible>
+          <ChevronDown
+            :class="[
+              'w-4 h-4 transition-transform duration-200',
+              openDropdowns.categorias ? 'rotate-180' : ''
+            ]"
+          />
+        </button>
+
+        <div
+          v-show="openDropdowns.categorias"
+          class="border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-b-lg"
+        >
+          <div class="p-3 space-y-2 max-h-40 overflow-y-auto">
+            <label
+              v-for="(nombre, id) in filter_options.categorias"
+              :key="id"
+              class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded transition-colors"
+            >
+              <input
+                type="checkbox"
+                :value="id"
+                v-model="selectedFilters.categorias"
+                @click.stop
+                @change="applyFilters"
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              >
+              <span class="text-sm text-gray-700 dark:text-gray-300">{{ nombre }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
 
       <!-- Tipo de Operación -->
-      <Collapsible>
-        <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+      <div class="border border-gray-200 dark:border-gray-600 rounded-lg">
+        <button
+          @click="toggleDropdown('operaciones')"
+          class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-t-lg transition-colors"
+        >
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Operación</span>
-          <ChevronDown class="w-4 h-4" />
-        </CollapsibleTrigger>
-        <CollapsibleContent class="mt-2 space-y-2 pl-2">
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="venta" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Venta</span>
-          </label>
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="alquiler" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Alquiler</span>
-          </label>
-          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-            <input type="checkbox" value="anticretico" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Anticrético</span>
-          </label>
-        </CollapsibleContent>
-      </Collapsible>
+          <ChevronDown
+            :class="[
+              'w-4 h-4 transition-transform duration-200',
+              openDropdowns.operaciones ? 'rotate-180' : ''
+            ]"
+          />
+        </button>
+
+        <div
+          v-show="openDropdowns.operaciones"
+          class="border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-b-lg"
+        >
+          <div class="p-3 space-y-2 max-h-40 overflow-y-auto">
+            <label
+              v-for="(nombre, value) in filter_options.operaciones"
+              :key="value"
+              class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded transition-colors"
+            >
+              <input
+                type="checkbox"
+                :value="value"
+                v-model="selectedFilters.operaciones"
+                @click.stop
+                @change="applyFilters"
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              >
+              <span class="text-sm text-gray-700 dark:text-gray-300">{{ nombre }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
 
       <!-- Filtros Numéricos (Características) -->
       <div class="space-y-4">
@@ -596,10 +928,19 @@ watch(favoriteProperties, (newFavorites) => {
         <div class="space-y-2">
           <label class="text-xs text-gray-600 dark:text-gray-400">Ambientes</label>
           <div class="flex gap-2">
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+            <button
+              v-for="num in [1, 2, 3, 4]"
+              :key="`amb-mob-${num}`"
+              @click="toggleCharacteristicFilter('ambientes', num === 4 ? 4 : num)"
+              :class="[
+                'px-3 py-1 text-xs border rounded transition-colors',
+                selectedFilters.ambientes === (num === 4 ? 4 : num)
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+              ]"
+            >
+              {{ num === 4 ? '4+' : num }}
+            </button>
           </div>
         </div>
 
@@ -607,10 +948,19 @@ watch(favoriteProperties, (newFavorites) => {
         <div class="space-y-2">
           <label class="text-xs text-gray-600 dark:text-gray-400">Dormitorios</label>
           <div class="flex gap-2">
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+            <button
+              v-for="num in [1, 2, 3, 4]"
+              :key="`hab-mob-${num}`"
+              @click="toggleCharacteristicFilter('habitaciones', num === 4 ? 4 : num)"
+              :class="[
+                'px-3 py-1 text-xs border rounded transition-colors',
+                selectedFilters.habitaciones === (num === 4 ? 4 : num)
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+              ]"
+            >
+              {{ num === 4 ? '4+' : num }}
+            </button>
           </div>
         </div>
 
@@ -618,10 +968,19 @@ watch(favoriteProperties, (newFavorites) => {
         <div class="space-y-2">
           <label class="text-xs text-gray-600 dark:text-gray-400">Baños</label>
           <div class="flex gap-2">
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+            <button
+              v-for="num in [1, 2, 3, 4]"
+              :key="`ban-mob-${num}`"
+              @click="toggleCharacteristicFilter('banos', num === 4 ? 4 : num)"
+              :class="[
+                'px-3 py-1 text-xs border rounded transition-colors',
+                selectedFilters.banos === (num === 4 ? 4 : num)
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+              ]"
+            >
+              {{ num === 4 ? '4+' : num }}
+            </button>
           </div>
         </div>
 
@@ -629,9 +988,19 @@ watch(favoriteProperties, (newFavorites) => {
         <div class="space-y-2">
           <label class="text-xs text-gray-600 dark:text-gray-400">Estacionamientos</label>
           <div class="flex gap-2">
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3+</button>
+            <button
+              v-for="num in [1, 2, 3]"
+              :key="`coc-mob-${num}`"
+              @click="toggleCharacteristicFilter('cocheras', num === 3 ? 3 : num)"
+              :class="[
+                'px-3 py-1 text-xs border rounded transition-colors',
+                selectedFilters.cocheras === (num === 3 ? 3 : num)
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
+              ]"
+            >
+              {{ num === 3 ? '3+' : num }}
+            </button>
           </div>
         </div>
       </div>
@@ -644,50 +1013,97 @@ watch(favoriteProperties, (newFavorites) => {
         <div class="space-y-3">
           <label class="text-xs text-gray-600 dark:text-gray-400">Precio (USD)</label>
           <div class="flex gap-2 items-center">
-            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <input
+              type="number"
+              v-model="rangeFilters.precio_min"
+              placeholder="Desde"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
             <span class="text-gray-500">-</span>
-            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <input
+              type="number"
+              v-model="rangeFilters.precio_max"
+              placeholder="Hasta"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
           </div>
-          <Button size="sm" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm">Aplicar Precio</Button>
-        </div>
-
-        <!-- Metros de Terreno -->
-        <div class="space-y-3">
-          <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Terreno (m²)</label>
-          <div class="flex gap-2 items-center">
-            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-            <span class="text-gray-500">-</span>
-            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-          </div>
-          <Button size="sm" class="w-full bg-green-600 hover:bg-green-700 text-white text-sm">Aplicar Terreno</Button>
+          <Button
+            @click="applyRangeFilters"
+            size="sm"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm"
+          >
+            Aplicar Precio
+          </Button>
         </div>
 
         <!-- Metros de Construcción -->
         <div class="space-y-3">
           <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Construcción (m²)</label>
           <div class="flex gap-2 items-center">
-            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <input
+              type="number"
+              v-model="rangeFilters.superficie_construida_min"
+              placeholder="Desde"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
             <span class="text-gray-500">-</span>
-            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <input
+              type="number"
+              v-model="rangeFilters.superficie_construida_max"
+              placeholder="Hasta"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
           </div>
-          <Button size="sm" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">Aplicar Construcción</Button>
+          <Button
+            @click="applyRangeFilters"
+            size="sm"
+            class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm"
+          >
+            Aplicar Construcción
+          </Button>
+        </div>
+
+        <!-- Metros de Terreno -->
+        <div class="space-y-3">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Terreno (m²)</label>
+          <div class="flex gap-2 items-center">
+            <input
+              type="number"
+              v-model="rangeFilters.superficie_terreno_min"
+              placeholder="Desde"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+            <span class="text-gray-500">-</span>
+            <input
+              type="number"
+              v-model="rangeFilters.superficie_terreno_max"
+              placeholder="Hasta"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+          <Button
+            @click="applyRangeFilters"
+            size="sm"
+            class="w-full bg-green-600 hover:bg-green-700 text-white text-sm"
+          >
+            Aplicar Terreno
+          </Button>
         </div>
       </div>
     </div>
 
     <!-- BOTONES EN LA PARTE INFERIOR -->
     <div class="mt-4 flex gap-3">
-      <button class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50" @click="() => { console.log('Buscar (solo frontend)'); showFiltersModal = false; }">
-        Buscar
-      </button>
-      <button class="flex-1 px-4 py-2 rounded-lg bg-gray-200 text-sm font-medium hover:bg-gray-300" @click="() => { handleReset(); }">
-        Cancelar
-      </button>
+      <Button @click="showFiltersModal = false" class="flex-1">
+        Aplicar Filtros
+      </Button>
+      <Button @click="resetFilters" variant="outline" class="flex-1">
+        Limpiar
+      </Button>
     </div>
   </div>
 </div>
-
-  </div>
+</div>
 </template>
 
 <style scoped>
