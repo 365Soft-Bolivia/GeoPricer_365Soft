@@ -43,6 +43,10 @@ interface Props {
     };
 }
 
+// Mostrar modal de filtros (solo móvil)
+const showFiltersModal = ref(false);
+
+
 const props = withDefaults(defineProps<Props>(), {
     propiedades: () => [],
     filtros: () => ({}),
@@ -205,308 +209,485 @@ watch(favoriteProperties, (newFavorites) => {
 </script>
 
 <template>
-    <div class="h-screen bg-gray-50 dark:bg-gray-900 flex overflow-hidden">
-        <!-- Sidebar estático ocultable -->
-        <div
-            :class="[
-                'bg-white/80 dark:bg-[#0d1b2a] text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700 backdrop-blur-sm transition-all duration-300 ease-in-out z-30',
-                sidebarCollapsed ? 'w-16' : 'w-80',
-                sidebarCollapsed ? 'fixed -translate-x-full lg:relative lg:translate-x-0' : 'fixed lg:relative',
-                'max-h-screen overflow-y-auto'
-            ]"
+  <div class="w-full">
+    <!-- DESKTOP -->
+    <div class="hidden lg:block">
+      <div class="h-screen bg-gray-50 dark:bg-gray-900 flex overflow-hidden">
+        <!-- SIDEBAR -->
+        <aside
+          :class="[
+            'bg-white/80 dark:bg-[#0d1b2a] text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700 backdrop-blur-sm transition-all duration-300 ease-in-out z-30 max-h-screen overflow-y-auto',
+            sidebarCollapsed ? 'w-16' : 'w-80',
+            sidebarCollapsed ? 'fixed -translate-x-full lg:relative lg:translate-x-0' : 'fixed lg:relative'
+          ]"
         >
-            <!-- Header del Sidebar -->
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
-                    <h2 v-if="!sidebarCollapsed" class="text-lg font-semibold text-gray-900 dark:text-white">
-                        Filtros
-                    </h2>
+          <!-- Header del Sidebar -->
+          <div class="p-4 border-b border-gray-200 dark:border-gray-700 relative">
+            <div class="flex items-center justify-between">
+              <h2 v-if="!sidebarCollapsed" class="text-lg font-semibold text-gray-900 dark:text-white">Filtros</h2>
+
+              <!-- Toggle (oculto en desktop porque lg:hidden) -->
+              <Button
+                variant="ghost"
+                size="sm"
+                @click="sidebarCollapsed = !sidebarCollapsed"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
+              >
+                <component :is="sidebarCollapsed ? Menu : X" class="w-4 h-4" />
+              </Button>
+
+              <!-- Botón de cerrar visible solo en móvil dentro del sidebar -->
+              <Button
+                v-if="sidebarCollapsed === false"
+                variant="ghost"
+                size="sm"
+                @click="sidebarCollapsed = true"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden absolute top-4 right-4"
+              >
+                <X class="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <!-- Contenido del Sidebar -->
+          <div v-if="!sidebarCollapsed" class="p-4 space-y-6">
+            <!-- Filtro de Categorías -->
+            <Collapsible>
+              <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Categorías</span>
+                <ChevronDown class="w-4 h-4" />
+              </CollapsibleTrigger>
+
+              <CollapsibleContent class="mt-2 space-y-2 max-h-40 overflow-y-auto pl-2">
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="casa" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Casas</span>
+                </label>
+
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="departamento" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Departamentos</span>
+                </label>
+
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="terreno" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Terrenos</span>
+                </label>
+
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="oficina" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Oficinas</span>
+                </label>
+
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="local" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Locales Comerciales</span>
+                </label>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <!-- Filtro de Tipo de Operación -->
+            <Collapsible>
+              <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Operación</span>
+                <ChevronDown class="w-4 h-4" />
+              </CollapsibleTrigger>
+
+              <CollapsibleContent class="mt-2 space-y-2 pl-2">
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="venta" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Venta</span>
+                </label>
+
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="alquiler" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Alquiler</span>
+                </label>
+
+                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                  <input type="checkbox" value="anticretico" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Anticrético</span>
+                </label>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <!-- Filtros Numéricos -->
+            <div class="space-y-4">
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Características</h3>
+
+              <!-- Ambientes -->
+              <div class="space-y-2">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Ambientes</label>
+                <div class="flex gap-2">
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+                </div>
+              </div>
+
+              <!-- Dormitorios -->
+              <div class="space-y-2">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Dormitorios</label>
+                <div class="flex gap-2">
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+                </div>
+              </div>
+
+              <!-- Baños -->
+              <div class="space-y-2">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Baños</label>
+                <div class="flex gap-2">
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+                </div>
+              </div>
+
+              <!-- Estacionamientos -->
+              <div class="space-y-2">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Estacionamientos</label>
+                <div class="flex gap-2">
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+                  <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rangos -->
+            <div class="space-y-6 pb-20">
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Rangos</h3>
+
+              <!-- Precio -->
+              <div class="space-y-3">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Precio (USD)</label>
+                <div class="flex gap-2 items-center">
+                  <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  <span class="text-gray-500">-</span>
+                  <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                </div>
+                <Button size="sm" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm">Aplicar Precio</Button>
+              </div>
+
+              <!-- Metros de Terreno -->
+              <div class="space-y-3">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Terreno (m²)</label>
+                <div class="flex gap-2 items-center">
+                  <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  <span class="text-gray-500">-</span>
+                  <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                </div>
+                <Button size="sm" class="w-full bg-green-600 hover:bg-green-700 text-white text-sm">Aplicar Terreno</Button>
+              </div>
+
+              <!-- Metros de Construcción -->
+              <div class="space-y-3">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Construcción (m²)</label>
+                <div class="flex gap-2 items-center">
+                  <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  <span class="text-gray-500">-</span>
+                  <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                </div>
+                <Button size="sm" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">Aplicar Construcción</Button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Icono cuando está colapsado -->
+          <div v-else class="flex items-center justify-center h-full">
+            <Button variant="ghost" @click="sidebarCollapsed = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <ChevronLeft class="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            </Button>
+          </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="flex-1 flex flex-col max-h-screen overflow-y-auto">
+          <!-- Header del catálogo -->
+          <div class="bg-gray-900 text-gray-200 border-gray-700 border-b sticky top-0 z-40">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <!-- Título y contador -->
+                <div class="flex items-center gap-4">
+                  <Button variant="outline" size="sm" @click="showFiltersModal = true" class="lg:hidden">
+                    <Filter class="w-4 h-4" />
+                    Filtros
+                  </Button>
+                  <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Catálogo de Propiedades</h1>
+                  <Badge v-if="total > 0" variant="secondary" class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ total }} propiedades</Badge>
+                </div>
+
+                <!-- Controles -->
+                <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                  <div class="flex items-center border rounded-lg p-1">
                     <Button
-                        variant="ghost"
-                        size="sm"
-                        @click="sidebarCollapsed = !sidebarCollapsed"
-                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
+                      v-for="mode in viewModeOptions"
+                      :key="mode.value"
+                      :variant="viewMode === mode.value ? 'default' : 'ghost'"
+                      size="sm"
+                      @click="toggleViewMode(mode.value)"
+                      class="h-8 w-8 p-0"
                     >
-                        <component :is="sidebarCollapsed ? Menu : X" class="w-4 h-4" />
+                      <component :is="mode.icon" class="w-4 h-4" />
                     </Button>
-                    <!-- Botón de cerrar solo visible en móvil cuando está abierto -->
-                    <Button
-                        v-if="sidebarCollapsed === false"
-                        variant="ghost"
-                        size="sm"
-                        @click="sidebarCollapsed = true"
-                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden absolute top-4 right-4"
-                    >
-                        <X class="w-4 h-4" />
-                    </Button>
+                  </div>
                 </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Contenido del Sidebar -->
-            <div v-if="!sidebarCollapsed" class="p-4 space-y-6">
-                <!-- Filtro de Ubicación (comentado por ahora) -->
-                <!--
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Ubicación
-                    </label>
-                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                        <option value="">Todas las ubicaciones</option>
-                    </select>
-                </div>
-                -->
+          <!-- Contenido de propiedades -->
+          <main class="flex-1 overflow-y-auto">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-28">
+              <!-- Estado de carga -->
+              <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <PropertyCardSkeleton :count="perPage" />
+              </div>
 
-                <!-- Filtro de Categorías -->
-                <Collapsible>
-                    <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Categorías</span>
-                        <ChevronDown class="w-4 h-4" />
-                    </CollapsibleTrigger>
+              <!-- Lista de propiedades -->
+              <PropiedadesTable
+                v-else-if="hasPropiedades"
+                :propiedades="propiedades"
+                :pagination="pagination"
+                :loading="isLoading"
+                :view-mode="viewMode"
+                @favorite="handleFavorite"
+                @share="handleShare"
+                @page-change="handlePageChange"
+                @per-page-change="handlePerPageChange"
+              />
 
-                    <CollapsibleContent class="mt-2 space-y-2 max-h-40 overflow-y-auto pl-2">
-                        <!-- Aquí VA TU CONTENIDO EXISTENTE TAL CUAL -->
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="casa" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Casas</span>
-                        </label>
-
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="departamento" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Departamentos</span>
-                        </label>
-
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="terreno" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Terrenos</span>
-                        </label>
-
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="oficina" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Oficinas</span>
-                        </label>
-
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="local" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Locales Comerciales</span>
-                        </label>
-                    </CollapsibleContent>
-                </Collapsible>
-
-                <!-- Filtro de Tipo de Operación -->
-                <Collapsible>
-                    <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Operación</span>
-                        <ChevronDown class="w-4 h-4" />
-                    </CollapsibleTrigger>
-
-                    <CollapsibleContent class="mt-2 space-y-2 pl-2">
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="venta" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Venta</span>
-                        </label>
-
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="alquiler" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Alquiler</span>
-                        </label>
-
-                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
-                            <input type="checkbox" value="anticretico" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Anticrético</span>
-                        </label>
-                    </CollapsibleContent>
-                </Collapsible>
-
-                <!-- Filtros Numéricos -->
-                <div class="space-y-4">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Características</h3>
-
-                    <!-- Número de Ambientes -->
-                    <div class="space-y-2">
-                        <label class="text-xs text-gray-600 dark:text-gray-400">Ambientes</label>
-                        <div class="flex gap-2">
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
-                        </div>
-                    </div>
-
-                    <!-- Número de Dormitorios -->
-                    <div class="space-y-2">
-                        <label class="text-xs text-gray-600 dark:text-gray-400">Dormitorios</label>
-                        <div class="flex gap-2">
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
-                        </div>
-                    </div>
-
-                    <!-- Número de Baños -->
-                    <div class="space-y-2">
-                        <label class="text-xs text-gray-600 dark:text-gray-400">Baños</label>
-                        <div class="flex gap-2">
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
-                        </div>
-                    </div>
-
-                    <!-- Número de Estacionamientos -->
-                    <div class="space-y-2">
-                        <label class="text-xs text-gray-600 dark:text-gray-400">Estacionamientos</label>
-                        <div class="flex gap-2">
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filtros de Rango -->
-                <div class="space-y-6 pb-20">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Rangos</h3>
-
-                    <!-- Rango de Precios -->
-                    <div class="space-y-3">
-                        <label class="text-xs text-gray-600 dark:text-gray-400">Precio (USD)</label>
-                        <div class="flex gap-2 items-center">
-                            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                            <span class="text-gray-500">-</span>
-                            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                        </div>
-                        <Button size="sm" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm">
-                            Aplicar Precio
-                        </Button>
-                    </div>
-
-                    <!-- Metros de Terreno -->
-                    <div class="space-y-3">
-                        <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Terreno (m²)</label>
-                        <div class="flex gap-2 items-center">
-                            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                            <span class="text-gray-500">-</span>
-                            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                        </div>
-                        <Button size="sm" class="w-full bg-green-600 hover:bg-green-700 text-white text-sm">
-                            Aplicar Terreno
-                        </Button>
-                    </div>
-
-                    <!-- Metros de Construcción -->
-                    <div class="space-y-3">
-                        <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Construcción (m²)</label>
-                        <div class="flex gap-2 items-center">
-                            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                            <span class="text-gray-500">-</span>
-                            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                        </div>
-                        <Button size="sm" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">
-                            Aplicar Construcción
-                        </Button>
-                    </div>
-                </div>
+              <!-- Estado vacío -->
+              <div v-else class="py-12">
+                <EmptyState
+                  :type="hasFilters ? 'filter' : 'general'"
+                  :loading="isLoading"
+                  title="No se encontraron propiedades"
+                  :description="hasFilters ? 'No hay propiedades que coincidan con los filtros seleccionados. Intenta ajustar los criterios.' : 'Actualmente no hay propiedades disponibles. Vuelve a revisar pronto.'"
+                  action-text="Ajustar búsqueda"
+                  @action="handleReset"
+                  @retry="() => router.reload()"
+                />
+              </div>
             </div>
-
-            <!-- Icono cuando está colapsado -->
-            <div v-else class="flex items-center justify-center h-full">
-                <Button
-                    variant="ghost"
-                    @click="sidebarCollapsed = false"
-                    class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                    <ChevronLeft class="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                </Button>
-            </div>
+          </main>
         </div>
-
-        <!-- Contenido Principal -->
-        <div class="flex-1 flex flex-col max-col max-h-screen overflow-y-auto">
-            <!-- Header del catálogo -->
-            <div class="bg-gray-900 text-gray-200 border-gray-700 border-b sticky top-0 z-40">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <!-- Título y contador -->
-                        <div class="flex items-center gap-4">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                @click="sidebarCollapsed = !sidebarCollapsed"
-                                class="lg:hidden"
-                            >
-                                <Filter class="w-4 h-4" />
-                                Filtros
-                            </Button>
-                            <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                                Catálogo de Propiedades
-                            </h1>
-                            <Badge v-if="total > 0" variant="secondary" class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                {{ total }} propiedades
-                            </Badge>
-                        </div>
-
-                        <!-- Controles -->
-                        <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                            <!-- Vista toggle -->
-                            <div class="flex items-center border rounded-lg p-1">
-                                <Button
-                                    v-for="mode in viewModeOptions"
-                                    :key="mode.value"
-                                    :variant="viewMode === mode.value ? 'default' : 'ghost'"
-                                    size="sm"
-                                    @click="toggleViewMode(mode.value)"
-                                    class="h-8 w-8 p-0"
-                                >
-                                    <component :is="mode.icon" class="w-4 h-4" />
-                                </Button>
-                            </div>
-
-                          </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Contenido de propiedades -->
-            <div class="flex-1 overflow-y-auto">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-28">
-                    <!-- Estado de carga -->
-                    <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <PropertyCardSkeleton :count="perPage" />
-                    </div>
-
-                    <!-- Lista de propiedades usando el componente separado -->
-                    <PropiedadesTable
-                        v-else-if="hasPropiedades"
-                        :propiedades="propiedades"
-                        :pagination="pagination"
-                        :loading="isLoading"
-                        :view-mode="viewMode"
-                        @favorite="handleFavorite"
-                        @share="handleShare"
-                        @page-change="handlePageChange"
-                        @per-page-change="handlePerPageChange"
-                    />
-
-                    <!-- Estado vacío -->
-                    <div v-else class="py-12">
-                        <EmptyState
-                            :type="hasFilters ? 'filter' : 'general'"
-                            :loading="isLoading"
-                            title="No se encontraron propiedades"
-                            :description="hasFilters
-                                ? 'No hay propiedades que coincidan con los filtros seleccionados. Intenta ajustar los criterios.'
-                                : 'Actualmente no hay propiedades disponibles. Vuelve a revisar pronto.'"
-                            action-text="Ajustar búsqueda"
-                            @action="handleReset"
-                            @retry="() => router.reload()"
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+
+    <!-- MOBILE -->
+    <div class="lg:hidden min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <!-- Header móvil -->
+      <header class="sticky top-0 z-40 bg-gray-900 text-gray-200 border-b border-gray-700">
+        <div class="px-4 py-4 flex items-center justify-between">
+          <h1 class="text-lg font-semibold">Catálogo de Propiedades</h1>
+          <button class="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-3 py-1 text-sm" @click="showFiltersModal = true">
+            <Filter class="w-4 h-4" />
+            <span>Filtros</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Contenido propiedades móvil -->
+      <main class="flex-1 overflow-y-auto">
+        <div class="px-4 py-4">
+          <!-- Estado de carga -->
+          <div v-if="isLoading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <PropertyCardSkeleton :count="perPage" />
+          </div>
+
+          <!-- Lista o vacío -->
+          <PropiedadesTable
+            v-else-if="hasPropiedades"
+            :propiedades="propiedades"
+            :pagination="pagination"
+            :loading="isLoading"
+            :view-mode="viewMode"
+            @favorite="handleFavorite"
+            @share="handleShare"
+            @page-change="handlePageChange"
+            @per-page-change="handlePerPageChange"
+          />
+
+          <div v-else class="py-8">
+            <EmptyState
+              :type="hasFilters ? 'filter' : 'general'"
+              :loading="isLoading"
+              title="No se encontraron propiedades"
+              :description="hasFilters ? 'No hay propiedades que coincidan con los filtros seleccionados. Intenta ajustar los criterios.' : 'Actualmente no hay propiedades disponibles. Vuelve a revisar pronto.'"
+              action-text="Ajustar búsqueda"
+              @action="handleReset"
+              @retry="() => router.reload()"
+            />
+          </div>
+        </div>
+      </main>
+    </div>
+
+<!-- MODAL FILTROS (solo móvil) -->
+<div v-if="showFiltersModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50 lg:hidden">
+  <div class="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 relative">
+    <button class="absolute right-4 top-4 text-gray-500" @click="showFiltersModal = false">✕</button>
+    <h2 class="text-xl font-semibold mb-4">Filtros</h2>
+
+    <div class="space-y-6 max-h-[70vh] overflow-y-auto">
+      <!-- Categorías -->
+      <Collapsible>
+        <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Categorías</span>
+          <ChevronDown class="w-4 h-4" />
+        </CollapsibleTrigger>
+        <CollapsibleContent class="mt-2 space-y-2 max-h-40 overflow-y-auto pl-2">
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="casa" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Casas</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="departamento" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Departamentos</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="terreno" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Terrenos</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="oficina" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Oficinas</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="local" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Locales Comerciales</span>
+          </label>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <!-- Tipo de Operación -->
+      <Collapsible>
+        <CollapsibleTrigger class="w-full flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Operación</span>
+          <ChevronDown class="w-4 h-4" />
+        </CollapsibleTrigger>
+        <CollapsibleContent class="mt-2 space-y-2 pl-2">
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="venta" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Venta</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="alquiler" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Alquiler</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+            <input type="checkbox" value="anticretico" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Anticrético</span>
+          </label>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <!-- Filtros Numéricos (Características) -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Características</h3>
+
+        <!-- Ambientes -->
+        <div class="space-y-2">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Ambientes</label>
+          <div class="flex gap-2">
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+          </div>
+        </div>
+
+        <!-- Dormitorios -->
+        <div class="space-y-2">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Dormitorios</label>
+          <div class="flex gap-2">
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+          </div>
+        </div>
+
+        <!-- Baños -->
+        <div class="space-y-2">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Baños</label>
+          <div class="flex gap-2">
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">4+</button>
+          </div>
+        </div>
+
+        <!-- Estacionamientos -->
+        <div class="space-y-2">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Estacionamientos</label>
+          <div class="flex gap-2">
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">1</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">2</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">3+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rangos -->
+      <div class="space-y-6 pb-20">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Rangos</h3>
+
+        <!-- Precio -->
+        <div class="space-y-3">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Precio (USD)</label>
+          <div class="flex gap-2 items-center">
+            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <span class="text-gray-500">-</span>
+            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <Button size="sm" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm">Aplicar Precio</Button>
+        </div>
+
+        <!-- Metros de Terreno -->
+        <div class="space-y-3">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Terreno (m²)</label>
+          <div class="flex gap-2 items-center">
+            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <span class="text-gray-500">-</span>
+            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <Button size="sm" class="w-full bg-green-600 hover:bg-green-700 text-white text-sm">Aplicar Terreno</Button>
+        </div>
+
+        <!-- Metros de Construcción -->
+        <div class="space-y-3">
+          <label class="text-xs text-gray-600 dark:text-gray-400">Metros de Construcción (m²)</label>
+          <div class="flex gap-2 items-center">
+            <input type="number" placeholder="Desde" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <span class="text-gray-500">-</span>
+            <input type="number" placeholder="Hasta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <Button size="sm" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">Aplicar Construcción</Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTONES EN LA PARTE INFERIOR -->
+    <div class="mt-4 flex gap-3">
+      <button class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50" @click="() => { console.log('Buscar (solo frontend)'); showFiltersModal = false; }">
+        Buscar
+      </button>
+      <button class="flex-1 px-4 py-2 rounded-lg bg-gray-200 text-sm font-medium hover:bg-gray-300" @click="() => { handleReset(); }">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+  </div>
 </template>
 
 <style scoped>
@@ -516,6 +697,13 @@ watch(favoriteProperties, (newFavorites) => {
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+/* Asegurar buen spacing en móviles */
+@media (max-width: 640px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
