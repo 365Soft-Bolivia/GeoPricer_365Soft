@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { admin } from '@/routes-custom';
+import { useToast } from 'primevue/usetoast';
 
 interface ProductImage {
   id: number;
@@ -21,10 +21,14 @@ const props = withDefaults(defineProps<Props>(), {
   canEdit: false,
 });
 
-const { proyectos } = admin;
+const toast = useToast();
 
 const selectedImage = ref<ProductImage | null>(null);
 const showLightbox = ref(false);
+const showDeleteConfirm = ref(false);
+const imageToDelete = ref<number | null>(null);
+const showPrimaryConfirm = ref(false);
+const imageToPrimary = ref<number | null>(null);
 
 const getImageUrl = (imagePath: string) => {
   return `/storage/${imagePath}`;
@@ -35,24 +39,98 @@ const currentIndex = computed(() => {
   return props.images.findIndex(img => img.id === selectedImage.value?.id);
 });
 
-const setPrimary = (imageId: number) => {
-  if (confirm('¿Establecer como imagen principal?')) {
-    router.post(proyectos.images.setPrimary(props.productId, imageId).url, {}, {
-      preserveScroll: true,
-    });
-  }
+// ✅ Confirmar establecer como principal
+const confirmSetPrimary = (imageId: number) => {
+  imageToPrimary.value = imageId;
+  showPrimaryConfirm.value = true;
 };
 
-const deleteImage = (imageId: number) => {
-  if (confirm('¿Estás seguro de eliminar esta imagen?')) {
-    router.delete(proyectos.images.delete(props.productId, imageId).url, {
+const setPrimary = () => {
+  if (!imageToPrimary.value) return;
+
+  const imageId = imageToPrimary.value;
+  
+  router.post(
+    `/admin/productos/${props.productId}/imagenes/${imageId}/principal`,
+    {},
+    {
       preserveScroll: true,
-    });
-  }
+      onSuccess: () => {
+        toast.add({
+          severity: 'success',
+          summary: '✅ Imagen principal actualizada',
+          detail: 'La imagen se estableció como principal correctamente',
+          life: 3000
+        });
+        showPrimaryConfirm.value = false;
+        imageToPrimary.value = null;
+      },
+      onError: (errors) => {
+        console.error('Error estableciendo imagen principal:', errors);
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: errors.error || 'No se pudo establecer la imagen como principal',
+          life: 4000
+        });
+        showPrimaryConfirm.value = false;
+        imageToPrimary.value = null;
+      }
+    }
+  );
+};
+
+// ✅ Confirmar eliminación
+const confirmDelete = (imageId: number) => {
+  imageToDelete.value = imageId;
+  showDeleteConfirm.value = true;
+};
+
+const deleteImage = () => {
+  if (!imageToDelete.value) return;
+
+  const imageId = imageToDelete.value;
+
+  router.delete(
+    `/admin/productos/${props.productId}/imagenes/${imageId}`,
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.add({
+          severity: 'success',
+          summary: '✅ Imagen eliminada',
+          detail: 'La imagen se eliminó correctamente',
+          life: 3000
+        });
+        showDeleteConfirm.value = false;
+        imageToDelete.value = null;
+      },
+      onError: (errors) => {
+        console.error('Error eliminando imagen:', errors);
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: errors.error || 'No se pudo eliminar la imagen',
+          life: 4000
+        });
+        showDeleteConfirm.value = false;
+        imageToDelete.value = null;
+      }
+    }
+  );
+};
+
+const cancelDelete = () => {
+  showDeleteConfirm.value = false;
+  imageToDelete.value = null;
+};
+
+const cancelPrimary = () => {
+  showPrimaryConfirm.value = false;
+  imageToPrimary.value = null;
 };
 
 const openLightbox = (image: ProductImage) => {
-  console.log('Abriendo lightbox para:', image);
   selectedImage.value = image;
   showLightbox.value = true;
   document.body.style.overflow = 'hidden';
@@ -74,7 +152,6 @@ const prevImage = () => {
   selectedImage.value = props.images[prevIndex];
 };
 
-// Navegación con teclado
 const handleKeydown = (e: KeyboardEvent) => {
   if (!showLightbox.value) return;
   
@@ -91,7 +168,6 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 };
 
-// Agregar listener de teclado
 if (typeof window !== 'undefined') {
   window.addEventListener('keydown', handleKeydown);
 }
@@ -125,31 +201,23 @@ if (typeof window !== 'undefined') {
           loading="lazy"
         />
 
-        <!-- Overlay -->
         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
 
         <!-- Badge principal -->
-        <Transition
-          enter-active-class="transition-all duration-300"
-          enter-from-class="scale-0 opacity-0"
-          enter-to-class="scale-100 opacity-100"
-        >
-          <div v-if="image.is_primary" class="absolute left-3 top-3">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1.5 text-xs font-bold text-white shadow-lg">
-              <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              Principal
-            </span>
-          </div>
-        </Transition>
+        <div v-if="image.is_primary" class="absolute left-3 top-3">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1.5 text-xs font-bold text-white shadow-lg">
+            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            Principal
+          </span>
+        </div>
 
-        <!-- 🔍 Botón de zoom funcional -->
+        <!-- Botón zoom -->
         <div class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           <button
             @click.stop="openLightbox(image)"
             class="rounded-full bg-white/90 p-4 shadow-xl backdrop-blur-sm hover:scale-110 transition-transform"
-            title="Ver imagen ampliada"
           >
             <svg class="h-8 w-8 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
@@ -157,37 +225,137 @@ if (typeof window !== 'undefined') {
           </button>
         </div>
 
-        <!-- Acciones inferiores (editar / eliminar) -->
-        <Transition
-          enter-active-class="transition-all duration-300"
-          enter-from-class="translate-y-full opacity-0"
-          enter-to-class="translate-y-0 opacity-100"
-        >
-          <div v-if="canEdit" class="absolute bottom-0 left-0 right-0 flex gap-2 bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <button
-              v-if="!image.is_primary"
-              @click.stop="setPrimary(image.id)"
-              class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/90 px-3 py-2 text-xs font-semibold text-gray-900 backdrop-blur-sm transition-all hover:bg-white hover:scale-105"
-              title="Establecer como principal"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              Principal
-            </button>
-            <button
-              @click.stop="deleteImage(image.id)"
-              class="flex items-center justify-center rounded-lg bg-red-500/90 px-3 py-2 text-white backdrop-blur-sm transition-all hover:bg-red-600 hover:scale-105"
-              title="Eliminar imagen"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-        </Transition>
+        <!-- Acciones -->
+        <div v-if="canEdit" class="absolute bottom-0 left-0 right-0 flex gap-2 bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <button
+            v-if="!image.is_primary"
+            @click.stop="confirmSetPrimary(image.id)"
+            class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/90 px-3 py-2 text-xs font-semibold text-gray-900 backdrop-blur-sm transition-all hover:bg-white hover:scale-105"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            </svg>
+            Principal
+          </button>
+          <button
+            @click.stop="confirmDelete(image.id)"
+            class="flex items-center justify-center rounded-lg bg-red-500/90 px-3 py-2 text-white backdrop-blur-sm transition-all hover:bg-red-600 hover:scale-105"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- ✅ Modal de Confirmación - Eliminar -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-opacity duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showDeleteConfirm"
+          class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          @click="cancelDelete"
+        >
+          <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
+            @click.stop
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                  ¿Eliminar imagen?
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Esta acción no se puede deshacer
+                </p>
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <button
+                @click="cancelDelete"
+                class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="deleteImage"
+                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ✅ Modal de Confirmación - Imagen Principal -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-opacity duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showPrimaryConfirm"
+          class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          @click="cancelPrimary"
+        >
+          <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
+            @click.stop
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                  ¿Establecer como principal?
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Esta será la imagen destacada del producto
+                </p>
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <button
+                @click="cancelPrimary"
+                class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="setPrimary"
+                class="flex-1 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Lightbox -->
     <Teleport to="body">
@@ -204,7 +372,6 @@ if (typeof window !== 'undefined') {
           class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 backdrop-blur-sm"
           @click="closeLightbox"
         >
-          <!-- Header -->
           <div class="absolute left-0 right-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent p-6">
             <div class="flex items-center gap-3">
               <div class="rounded-lg bg-white/10 px-3 py-1 backdrop-blur-sm">
@@ -217,7 +384,6 @@ if (typeof window !== 'undefined') {
               </div>
             </div>
 
-            <!-- Botón cerrar -->
             <button
               @click.stop="closeLightbox"
               class="group rounded-full bg-white/10 p-3 backdrop-blur-sm transition-all hover:bg-white/20 hover:rotate-90"
@@ -228,7 +394,6 @@ if (typeof window !== 'undefined') {
             </button>
           </div>
 
-          <!-- Botón anterior -->
           <button
             v-if="images.length > 1"
             @click.stop="prevImage"
@@ -239,7 +404,6 @@ if (typeof window !== 'undefined') {
             </svg>
           </button>
 
-          <!-- Imagen principal -->
           <div :key="selectedImage.id" class="flex max-h-[85vh] max-w-[90vw] items-center justify-center" @click.stop>
             <img
               :src="getImageUrl(selectedImage.image_path)"
@@ -248,7 +412,6 @@ if (typeof window !== 'undefined') {
             />
           </div>
 
-          <!-- Botón siguiente -->
           <button
             v-if="images.length > 1"
             @click.stop="nextImage"
@@ -259,7 +422,6 @@ if (typeof window !== 'undefined') {
             </svg>
           </button>
 
-          <!-- Thumbnails -->
           <div v-if="images.length > 1" class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
             <div class="mx-auto flex max-w-4xl gap-3 overflow-x-auto pb-2">
               <button
@@ -278,18 +440,6 @@ if (typeof window !== 'undefined') {
                 />
                 <div v-if="image.id === selectedImage.id" class="absolute inset-0 bg-white/20"></div>
               </button>
-            </div>
-          </div>
-
-          <!-- Atajo de teclado -->
-          <div class="absolute bottom-6 left-6 rounded-lg bg-black/50 px-3 py-2 backdrop-blur-sm">
-            <div class="flex items-center gap-2 text-xs text-white/80">
-              <kbd class="rounded bg-white/10 px-2 py-1 font-mono">←</kbd>
-              <kbd class="rounded bg-white/10 px-2 py-1 font-mono">→</kbd>
-              <span>Navegar</span>
-              <span class="mx-2">•</span>
-              <kbd class="rounded bg-white/10 px-2 py-1 font-mono">ESC</kbd>
-              <span>Cerrar</span>
             </div>
           </div>
         </div>

@@ -17,9 +17,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(fu
     Route::patch('/proyectos/{id}/toggle', [ProductController::class, 'toggleStatus'])->name('admin.proyectos.toggle');
     Route::delete('/proyectos/{id}', [ProductController::class, 'destroy'])->name('admin.proyectos.destroy');
 
-    // Imágenes de proyectos
-    Route::post('/proyectos/{productId}/imagenes', [ProductImageController::class, 'store'])->name('admin.proyectos.images.store');
-    Route::post('/proyectos/{productId}/imagenes/{imageId}/principal', [ProductImageController::class, 'setPrimary'])->name('admin.proyectos.images.setPrimary');
-    Route::delete('/proyectos/{productId}/imagenes/{imageId}', [ProductImageController::class, 'destroy'])->name('admin.proyectos.images.destroy');
-    Route::post('/proyectos/{productId}/imagenes/reordenar', [ProductImageController::class, 'reorder'])->name('admin.proyectos.images.reorder');
+    // Rutas de imágenes de productos
+    Route::prefix('productos/{productId}/imagenes')->name('productos.images.')->group(function () {
+        Route::post('/', [ProductImageController::class, 'store'])->name('store');
+        Route::post('/{imageId}/principal', [ProductImageController::class, 'setPrimary'])->name('setPrimary');
+        Route::delete('/{imageId}', [ProductImageController::class, 'destroy'])->name('delete');
+        Route::post('/reordenar', [ProductImageController::class, 'reorder'])->name('reorder');
+    });
 });

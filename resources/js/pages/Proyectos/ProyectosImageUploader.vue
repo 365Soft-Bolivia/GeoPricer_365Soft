@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { admin } from '@/routes-custom';
+import productos from '@/routes/productos';
 
 interface Props {
   productId: number;
@@ -64,7 +65,7 @@ const removeFile = (index: number) => {
 };
 
 const submit = () => {
-  form.post(proyectos.images.store(props.productId).url, {
+  form.post(productos.images.store(props.productId).url, {
     preserveScroll: true,
     onSuccess: () => {
       form.reset();
