@@ -7,60 +7,92 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\Facades\Image;
+
 
 class ProductImageController extends Controller
 {
     /**
      * Subir nuevas imágenes
      */
-    public function store(Request $request, int $productId)
-    {
-        try {
-            $product = Product::findOrFail($productId);
+public function store(Request $request, int $productId)
+{
+    try {
+        $product = Product::findOrFail($productId);
 
-            $request->validate([
-                'images' => 'required|array|min:1|max:10',
-                'images.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            ], [
-                'images.required' => 'Debe seleccionar al menos una imagen.',
-                'images.*.image' => 'El archivo debe ser una imagen.',
-                'images.*.mimes' => 'La imagen debe ser: jpeg, png, jpg, gif o webp.',
-                'images.*.max' => 'La imagen no debe superar los 5MB.',
-            ]);
+        $request->validate([
+            'images' => 'required|array|min:1|max:10',
+            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+        ], [
+            'images.required' => 'Debe seleccionar al menos una imagen.',
+            'images.*.image' => 'El archivo debe ser una imagen.',
+            'images.*.mimes' => 'La imagen debe ser: jpeg, png, jpg o gif.',
+            'images.*.max' => 'La imagen no debe superar los 5MB.',
+        ]);
 
-            $uploaded = [];
-            $isFirstImage = $product->images()->count() === 0;
+        $folderBase = 'productos/' . $productId;
+        $uploaded = [];
+        $isFirstImage = $product->images()->count() === 0;
 
-            foreach ($request->file('images') as $index => $image) {
-                $path = $image->store('productos/' . $productId, 'public');
+        foreach ($request->file('images') as $index => $image) {
 
-                $productImage = ProductImage::create([
-                    'product_id' => $productId,
-                    'image_path' => $path,
-                    'original_name' => $image->getClientOriginalName(),
-                    'is_primary' => $isFirstImage && $index === 0,
-                    'order' => $product->images()->count() + $index,
-                ]);
+            $img = Image::make($image);
+            $width = $img->width();
+            $originalName = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME);
 
-                $uploaded[] = [
-                    'id' => $productImage->id,
-                    'image_path' => $productImage->image_path,
-                    'original_name' => $productImage->original_name,
-                    'is_primary' => $productImage->is_primary,
-                    'order' => $productImage->order,
-                ];
+            // Determinar carpeta según ancho
+            if ($width >= 1600) {
+                $sizeFolder = 'large';
+            } elseif ($width >= 800) {
+                $sizeFolder = 'medium';
+            } else {
+                $sizeFolder = 'small';
             }
 
-            return back()->with([
-                'success' => 'Imágenes subidas correctamente.',
-                'uploaded' => $uploaded,
+            // Ruta donde se guardará la imagen principal
+            $path = $folderBase . '/' . $sizeFolder . '/' . $originalName . '.webp';
+
+            // Guardar imagen en WebP
+            Storage::disk('public')->put($path, (string) $img->encode('webp', 90));
+
+            // Crear thumbnail pequeño si es necesario
+            if ($sizeFolder !== 'small') {
+                $thumbPath = $folderBase . '/small/' . $originalName . '.webp';
+                $thumb = $img->resize(400, null, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })->encode('webp', 80);
+                Storage::disk('public')->put($thumbPath, (string) $thumb);
+            }
+
+            // Guardar en BD
+            $productImage = ProductImage::create([
+                'product_id' => $productId,
+                'image_path' => $path,
+                'original_name' => $image->getClientOriginalName(),
+                'is_primary' => $isFirstImage && $index === 0,
+                'order' => $product->images()->count() + $index,
             ]);
 
-        } catch (\Exception $e) {
-            Log::error('Error subiendo imágenes: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Error al subir imágenes: ' . $e->getMessage()]);
+            $uploaded[] = [
+                'id' => $productImage->id,
+                'image_path' => $productImage->image_path,
+                'original_name' => $productImage->original_name,
+                'is_primary' => $productImage->is_primary,
+                'order' => $productImage->order,
+            ];
         }
+
+        return back()->with([
+            'success' => 'Imágenes subidas correctamente.',
+            'uploaded' => $uploaded,
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error subiendo imágenes: ' . $e->getMessage());
+        return back()->withErrors(['error' => 'Error al subir imágenes: ' . $e->getMessage()]);
     }
+}
 
     /**
      * Establecer imagen como principal

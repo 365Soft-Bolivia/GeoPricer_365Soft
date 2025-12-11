@@ -408,6 +408,7 @@ if (typeof window !== 'undefined') {
             <img
               :src="getImageUrl(selectedImage.image_path)"
               :alt="selectedImage.original_name"
+              loading="lazy"
               class="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
             />
           </div>
@@ -428,14 +429,15 @@ if (typeof window !== 'undefined') {
                 v-for="(image, index) in images"
                 :key="image.id"
                 @click.stop="selectedImage = image"
-                :class="image.id === selectedImage.id 
-                  ? 'ring-4 ring-white scale-110' 
+                :class="image.id === selectedImage.id
+                  ? 'ring-4 ring-white scale-110'
                   : 'opacity-50 hover:opacity-100 hover:scale-105'"
                 class="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg transition-all"
               >
                 <img
                   :src="getImageUrl(image.image_path)"
                   :alt="`Thumbnail ${index + 1}`"
+                  loading="lazy"
                   class="h-full w-full object-cover"
                 />
                 <div v-if="image.id === selectedImage.id" class="absolute inset-0 bg-white/20"></div>
