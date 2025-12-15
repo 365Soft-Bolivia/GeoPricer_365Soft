@@ -1,644 +1,679 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { admin } from '@/routes-custom';
-
-const { ubicaciones } = admin;
-import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
-import { onMounted, ref, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowLeft, Navigation, X, MapPin } from 'lucide-vue-next';
+import 'leaflet.markercluster';
+import { ArrowLeft, Navigation, X, Search, Radar, MapPin } from 'lucide-vue-next';
 
-// Fix para iconos de Leaflet
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import proyectos from '@/routes/admin/proyectos';
-import ProyectosShow from '../Proyectos/ProyectosShow.vue';
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: iconRetina,
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-});
-
-interface ProductImage {
-    id: number;
-    image_path: string;
-    original_name: string;
-    is_primary: boolean;
-    order: number;
-}
-
+/* ================= PROPS ================= */
 interface Product {
-    id: number;
-    name: string;
-    codigo_inmueble: string;
-    price: number;
-    default_image: string | null;
-    category: string | null;
-    images?: ProductImage[];
-    location: {
-        id: number;
-        latitude: number;
-        longitude: number;
-        address: string | null;
-        is_active: boolean;
-    };
+  id: number;
+  name: string;
+  codigo_inmueble: string;
+  price: number;
+  category?: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    is_active: boolean;
+  };
 }
 
 const props = defineProps<{
-    productsConUbicacion: Product[];
+  productsConUbicacion: Product[];
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Ubicaciones', href: ubicaciones().url },
-    { title: 'Ver Mapa', href: '/ubicaciones/mapa' },
-];
+/* ================= MAP ================= */
+const mapRef = ref<HTMLElement | null>(null);
+let map: L.Map;
 
-const mapContainer = ref<HTMLElement | null>(null);
-const selectedProduct = ref<Product | null>(null);
+/* ================= CAPAS ================= */
+let baseLayer = L.layerGroup();
+let radarCluster = L.markerClusterGroup();
+
+/* ================= USER LOCATION ================= */
+let userMarker: L.CircleMarker | null = null;
+let userAccuracy: L.Circle | null = null;
 const isLocatingUser = ref(false);
-const currentImageIndex = ref(0);
-let map: L.Map | null = null;
-const markers: L.Marker[] = [];
-let userLocationMarker: L.Marker | null = null;
-let userLocationCircle: L.Circle | null = null;
 
-const defaultCenter = { lat: -17.0000, lng: -64.0000 };
+/* ================= RADAR ================= */
+let radarMarker: L.Marker | null = null;
+let radarCircle: L.Circle | null = null;
+let radarPulse: L.Circle | null = null;
+let pulseInterval: number | null = null;
 
-const sortedImages = computed(() => {
-    if (!selectedProduct.value?.images?.length) return [];
-    
-    return [...selectedProduct.value.images].sort((a, b) => {
-        if (a.is_primary && !b.is_primary) return -1;
-        if (!a.is_primary && b.is_primary) return 1;
-        return a.order - b.order;
-    });
+/* ================= STATE ================= */
+const radarRadius = ref(800);
+const radarCenter = ref<L.LatLng | null>(null);
+const showPanel = ref(false);
+const results = ref<Product[]>([]);
+const searchQuery = ref('');
+const radarMode = ref(false); // Modo de colocación de radar
+const radarPlaced = ref(false); // Si el radar ya está colocado
+
+/* ================= COMPUTED ================= */
+const filteredResults = computed(() => {
+  if (!searchQuery.value) return results.value;
+  
+  const query = searchQuery.value.toLowerCase();
+  return results.value.filter(p =>
+    p.name.toLowerCase().includes(query) ||
+    p.codigo_inmueble.toLowerCase().includes(query) ||
+    (p.category && p.category.toLowerCase().includes(query))
+  );
 });
 
-const getImageUrl = (imagePath: string) => {
-    return `/storage/${imagePath}`;
-};
-
-const nextImage = () => {
-    if (!sortedImages.value.length) return;
-    currentImageIndex.value = (currentImageIndex.value + 1) % sortedImages.value.length;
-};
-
-const prevImage = () => {
-    if (!sortedImages.value.length) return;
-    currentImageIndex.value = (currentImageIndex.value - 1 + sortedImages.value.length) % sortedImages.value.length;
-};
-
-const goToImage = (index: number) => {
-    currentImageIndex.value = index;
-};
-
-const initMap = () => {
-    if (!mapContainer.value) return;
-
-    map = L.map(mapContainer.value).setView([defaultCenter.lat, defaultCenter.lng], 6);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19,
-    }).addTo(map);
-
-    // ✅ CORREGIDO: Función del popup con manejo correcto de imágenes
-    const popupContent = (product: Product) => {
-        const images = product.images && product.images.length > 0
-            ? product.images.sort((a, b) => (a.is_primary ? -1 : 1))
-            : [];
-
-        const imageUrl = (path: string) => `/storage/${path}`;
-        const hasImages = images.length > 0;
-        
-        // Primera imagen o null
-        const firstImage = hasImages ? imageUrl(images[0].image_path) : null;
-
-        return `
-            <div class="popup-card" 
-                 style="width:260px;border-radius:12px;overflow:hidden;
-                        position:relative;
-                        box-shadow:0 4px 12px rgba(0,0,0,0.2);
-                        font-family:sans-serif;background:white;">
-                
-                <!-- IMAGEN O ÍCONO -->
-                <div class="image-container" 
-                     data-images='${JSON.stringify(images.map(i => imageUrl(i.image_path)))}'
-                     data-has-images="${hasImages}"
-                     style="position:relative;width:100%;height:160px;overflow:hidden;">
-                    
-                    ${hasImages ? `
-                        <!-- Imagen -->
-                        <img class="carousel-image"
-                            src="${firstImage}"
-                            style="width:100%;height:160px;object-fit:cover;display:block;"
-                            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
-                        />
-                        <!-- Fallback: Ícono de casa -->
-                        <div class="fallback-icon" 
-                             style="display:none;width:100%;height:100%;
-                                    background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                    align-items:center;justify-content:center;color:white;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" 
-                                 fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                            </svg>
-                        </div>
-                        
-                        ${images.length > 1 ? `
-                            <!-- Botones navegación -->
-                            <button class="carousel-prev"
-                                style="position:absolute;top:50%;left:8px;transform:translateY(-50%);
-                                       background:rgba(0,0,0,0.7);color:white;border:none;
-                                       width:32px;height:32px;border-radius:50%;cursor:pointer;
-                                       font-size:20px;font-weight:bold;z-index:10;
-                                       display:flex;align-items:center;justify-content:center;">
-                                ‹
-                            </button>
-                            <button class="carousel-next"
-                                style="position:absolute;top:50%;right:8px;transform:translateY(-50%);
-                                       background:rgba(0,0,0,0.7);color:white;border:none;
-                                       width:32px;height:32px;border-radius:50%;cursor:pointer;
-                                       font-size:20px;font-weight:bold;z-index:10;
-                                       display:flex;align-items:center;justify-content:center;">
-                                ›
-                            </button>
-                            
-                            <!-- Contador -->
-                            <div class="image-counter" 
-                                 style="position:absolute;bottom:8px;right:8px;
-                                        background:rgba(0,0,0,0.7);color:white;
-                                        padding:4px 10px;border-radius:12px;font-size:12px;z-index:10;">
-                                <span class="current-index">1</span> / ${images.length}
-                            </div>
-                        ` : ''}
-                    ` : `
-                        <!-- No hay imágenes: Mostrar ícono -->
-                        <div style="display:flex;width:100%;height:100%;
-                                    background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                    align-items:center;justify-content:center;color:white;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" 
-                                 fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                            </svg>
-                        </div>
-                    `}
-                </div>
-
-                <!-- CONTENIDO -->
-                <div style="padding:12px;background:white;">
-                    <h3 style="font-size:16px;font-weight:bold;margin-bottom:4px;color:#333;">
-                        ${product.name}
-                    </h3>
-
-                    <p style="font-size:12px;color:#666;margin:2px 0;">
-                        Código: <strong>${product.codigo_inmueble}</strong>
-                    </p>
-
-                    <p style="font-size:12px;color:#666;margin:2px 0;">
-                        Categoría: ${product.category ?? 'N/A'}
-                    </p>
-
-                    <p style="font-size:16px;font-weight:bold;color:#0a8a0a;margin-top:8px;">
-                        ${product.price.toLocaleString()} USD
-                    </p>
-
-                    <a
-                        href="/admin/proyectos/${product.id}"
-                        target="_blank"
-                        style="
-                            display:inline-block;width:100%;margin-top:12px;background:#caa86f;
-                            color:white;padding:8px 0;border-radius:6px;border:none;
-                            font-weight:bold;cursor:pointer;text-align:center;text-decoration:none;
-                        ">
-                        Ver Detalle
-                    </a>
-                </div>
-            </div>
-        `;
-    };
-
-    // Agregar marcadores
-    props.productsConUbicacion.forEach((product) => {
-        if (!product.location.is_active) return;
-
-        const marker = L.marker([product.location.latitude, product.location.longitude])
-            .addTo(map!);
-
-        marker.bindPopup(popupContent(product), {
-            maxWidth: 280,
-            className: 'custom-popup'
-        });
-
-        // ✅ CORREGIDO: Event listener del carrusel
-        marker.on("popupopen", (e) => {
-            const popup = e.popup.getElement();
-            if (!popup) return;
-
-            const container = popup.querySelector(".image-container");
-            if (!container) return;
-
-            const hasImages = container.getAttribute("data-has-images") === "true";
-            if (!hasImages) return; // No hay imágenes, no hacer nada
-
-            const imgEl = popup.querySelector(".carousel-image") as HTMLImageElement;
-            const prevBtn = popup.querySelector(".carousel-prev");
-            const nextBtn = popup.querySelector(".carousel-next");
-            const counterEl = popup.querySelector(".current-index");
-
-            const images = JSON.parse(container.getAttribute("data-images") || "[]");
-            if (images.length === 0) return;
-
-            let index = 0;
-
-            const updateImage = () => {
-                if (imgEl) {
-                    imgEl.src = images[index];
-                    // Asegurar que se muestre la imagen
-                    imgEl.style.display = 'block';
-                    const fallbackIcon = imgEl.nextElementSibling as HTMLElement;
-                    if (fallbackIcon) fallbackIcon.style.display = 'none';
-                }
-                if (counterEl) {
-                    counterEl.textContent = (index + 1).toString();
-                }
-            };
-
-            prevBtn?.addEventListener("click", (e) => {
-                e.stopPropagation();
-                index = (index - 1 + images.length) % images.length;
-                updateImage();
-            });
-
-            nextBtn?.addEventListener("click", (e) => {
-                e.stopPropagation();
-                index = (index + 1) % images.length;
-                updateImage();
-            });
-
-            // Manejar error de carga de imagen
-            imgEl?.addEventListener('error', () => {
-                imgEl.style.display = 'none';
-                const fallbackIcon = imgEl.nextElementSibling as HTMLElement;
-                if (fallbackIcon) fallbackIcon.style.display = 'flex';
-            });
-        });
-
-        marker.on('click', () => {
-            selectedProduct.value = product;
-        });
-
-        markers.push(marker);
-    });
-};
-
-const centerOnMyLocation = () => {
-    if (!map) return;
-
-    if ('geolocation' in navigator) {
-        isLocatingUser.value = true;
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude, accuracy } = position.coords;
-                
-                map!.setView([latitude, longitude], 17, {
-                    animate: true,
-                    duration: 1.5
-                });
-
-                if (userLocationMarker) {
-                    map!.removeLayer(userLocationMarker);
-                }
-                if (userLocationCircle) {
-                    map!.removeLayer(userLocationCircle);
-                }
-
-                userLocationCircle = L.circle([latitude, longitude], {
-                    radius: accuracy,
-                    color: '#3B82F6',
-                    fillColor: '#3B82F6',
-                    fillOpacity: 0.1,
-                    weight: 2
-                }).addTo(map!);
-
-                const pulsingIcon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `
-                        <div style="position: relative;">
-                            <div style="
-                                width: 17px;
-                                height: 17px;
-                                background: #3B82F6;
-                                border: 3px solid white;
-                                border-radius: 50%;
-                                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-                                animation: pulse 2s infinite;
-                                position: relative;
-                                z-index: 1000;
-                            "></div>
-                            <style>
-                                @keyframes pulse {
-                                    0% {
-                                        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-                                    }
-                                    70% {
-                                        box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
-                                    }
-                                    100% {
-                                        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-                                    }
-                                }
-                            </style>
-                        </div>
-                    `,
-                    iconSize: [10, 10],
-                    iconAnchor: [10, 10]
-                });
-
-                userLocationMarker = L.marker([latitude, longitude], {
-                    icon: pulsingIcon
-                }).addTo(map!)
-                    .bindPopup(`
-                        <div class="w-max text-center text-xs">
-                            <p class="font-bold text-blue-600">📍 Tu ubicación actual</p>
-                        </div>
-                    `)
-                    .openPopup();
-
-                setTimeout(() => {
-                    if (userLocationMarker && map) {
-                        userLocationMarker.closePopup();
-                    }
-                }, 1000);
-
-                isLocatingUser.value = false;
-            },
-            (error) => {
-                isLocatingUser.value = false;
-                console.error('Error obteniendo ubicación:', error);
-                
-                let errorMessage = 'No se pudo obtener tu ubicación.';
-                
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = 'Permiso de ubicación denegado.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'La información de ubicación no está disponible.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = 'La solicitud de ubicación ha expirado.';
-                        break;
-                }
-                
-                alert(errorMessage);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
-        );
-    } else {
-        alert('Tu navegador no soporta geolocalización');
-    }
-};
-
-const resetView = () => {
-    if (!map || markers.length === 0) return;
-
-    if (userLocationMarker) {
-        map.removeLayer(userLocationMarker);
-        userLocationMarker = null;
-    }
-    if (userLocationCircle) {
-        map.removeLayer(userLocationCircle);
-        userLocationCircle = null;
-    }
-
-    const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.1), {
-        animate: true,
-        duration: 1
-    });
-};
-
-const closeDetails = () => {
-    selectedProduct.value = null;
-    currentImageIndex.value = 0;
-};
-
-const goBack = () => {
-    router.visit(ubicaciones().url);
-};
-
+/* ================= INIT ================= */
 onMounted(() => {
-    initMap();
+  map = L.map(mapRef.value!).setView([-17.38, -66.16], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  baseLayer.addTo(map);
+  radarCluster.addTo(map);
+
+  drawAllProperties();
+  
+  // Solo escuchar clicks cuando el modo radar está activo
+  map.on('click', (e) => {
+    if (radarMode.value && !radarPlaced.value) {
+      placeRadar(e);
+    }
+  });
 });
 
 onUnmounted(() => {
-    if (map) {
-        map.remove();
-        map = null;
-    }
+  if (pulseInterval) clearInterval(pulseInterval);
+  map.remove();
 });
+
+/* ================= BASE PROPERTIES ================= */
+const drawAllProperties = () => {
+  baseLayer.clearLayers();
+
+  props.productsConUbicacion.forEach(p => {
+    if (!p.location.is_active) return;
+
+    const marker = L.marker([p.location.latitude, p.location.longitude]);
+    
+    marker.bindPopup(`
+      <div class="text-sm">
+        <b>${p.name}</b><br>
+        <span class="text-xs text-gray-600">${p.codigo_inmueble}</span>
+      </div>
+    `);
+    
+    marker.addTo(baseLayer);
+  });
+};
+
+/* ================= USER LOCATION ================= */
+const locateMe = () => {
+  if (!('geolocation' in navigator)) {
+    alert('Tu navegador no soporta geolocalización');
+    return;
+  }
+
+  isLocatingUser.value = true;
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+
+      if (userMarker) map.removeLayer(userMarker);
+      if (userAccuracy) map.removeLayer(userAccuracy);
+
+      userAccuracy = L.circle([latitude, longitude], {
+        radius: accuracy,
+        color: '#3B82F6',
+        fillColor: '#3B82F6',
+        fillOpacity: 0.1,
+        weight: 2
+      }).addTo(map);
+
+      const pulsingIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `
+          <div style="position: relative;">
+            <div style="
+              width: 17px;
+              height: 17px;
+              background: #3B82F6;
+              border: 3px solid white;
+              border-radius: 50%;
+              box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+              animation: pulse 2s infinite;
+              position: relative;
+              z-index: 1000;
+            "></div>
+            <style>
+              @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+                70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+              }
+            </style>
+          </div>
+        `,
+        iconSize: [10, 10],
+        iconAnchor: [10, 10]
+      });
+
+      userMarker = L.circleMarker([latitude, longitude], {
+        icon: pulsingIcon
+      } as any).addTo(map);
+
+      map.setView([latitude, longitude], 16, {
+        animate: true,
+        duration: 1.5
+      });
+
+      isLocatingUser.value = false;
+    },
+    (error) => {
+      isLocatingUser.value = false;
+      let errorMessage = 'No se pudo obtener tu ubicación.';
+      
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          errorMessage = 'Permiso de ubicación denegado.';
+          break;
+        case error.POSITION_UNAVAILABLE:
+          errorMessage = 'La información de ubicación no está disponible.';
+          break;
+        case error.TIMEOUT:
+          errorMessage = 'La solicitud de ubicación ha expirado.';
+          break;
+      }
+      
+      alert(errorMessage);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+};
+
+/* ================= ACTIVAR MODO RADAR ================= */
+const activateRadarMode = () => {
+  radarMode.value = true;
+  map.getContainer().style.cursor = 'crosshair';
+};
+
+/* ================= RADAR ================= */
+const placeRadar = (e: L.LeafletMouseEvent) => {
+  radarCenter.value = e.latlng;
+  radarPlaced.value = true;
+  map.getContainer().style.cursor = '';
+
+  // Círculo azul semi-transparente
+  radarCircle = L.circle(e.latlng, {
+    radius: radarRadius.value,
+    color: '#3B82F6',
+    fillColor: '#3B82F6',
+    fillOpacity: 0.15,
+    weight: 2
+  }).addTo(map);
+
+  // Marcador arrastrable
+  radarMarker = L.marker(e.latlng, { 
+    draggable: true,
+    icon: L.divIcon({
+      className: 'radar-marker',
+      html: `
+        <div style="
+          width: 30px;
+          height: 30px;
+          background: #3B82F6;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 16px;
+        ">📍</div>
+      `,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    })
+  }).addTo(map);
+
+  radarMarker.bindPopup('🎯 Arrastra para ajustar posición').openPopup();
+
+  radarMarker.on('drag', (ev: any) => {
+    const pos = ev.target.getLatLng();
+    radarCircle!.setLatLng(pos);
+    if (radarPulse) radarPulse.setLatLng(pos);
+    radarCenter.value = pos;
+  });
+
+  startRadarPulse(e.latlng);
+};
+
+/* ================= RADAR ANIMATION ================= */
+const startRadarPulse = (center: L.LatLng) => {
+  if (radarPulse) map.removeLayer(radarPulse);
+
+  radarPulse = L.circle(center, {
+    radius: 0,
+    color: '#3B82F6',
+    opacity: 0.6,
+    fillOpacity: 0,
+    weight: 3
+  }).addTo(map);
+
+  if (pulseInterval) clearInterval(pulseInterval);
+
+  pulseInterval = window.setInterval(() => {
+    if (!radarPulse || !radarCenter.value) return;
+    
+    let r = 0;
+    const growInterval = setInterval(() => {
+      r += 50;
+      if (radarPulse) {
+        radarPulse.setRadius(r);
+        radarPulse.setStyle({ opacity: Math.max(0, 1 - r / radarRadius.value) });
+      }
+      if (r >= radarRadius.value) clearInterval(growInterval);
+    }, 30);
+  }, 2000);
+};
+
+/* ================= QUITAR PUNTO RADAR ================= */
+const removeRadarPoint = () => {
+  if (radarMarker) map.removeLayer(radarMarker);
+  if (radarCircle) map.removeLayer(radarCircle);
+  if (radarPulse) map.removeLayer(radarPulse);
+  if (pulseInterval) clearInterval(pulseInterval);
+
+  radarMarker = radarCircle = radarPulse = null;
+  pulseInterval = null;
+  radarCenter.value = null;
+  radarPlaced.value = false;
+  
+  // Volver a activar el cursor de selección
+  map.getContainer().style.cursor = 'crosshair';
+};
+
+/* ================= SLIDER ================= */
+const updateRadius = () => {
+  if (radarCircle) {
+    radarCircle.setRadius(radarRadius.value);
+  }
+};
+
+/* ================= SEARCH ================= */
+const search = () => {
+  if (!radarCenter.value) return;
+
+  radarCluster.clearLayers();
+  results.value = [];
+
+  props.productsConUbicacion.forEach(p => {
+    if (!p.location.is_active) return;
+
+    const pos = L.latLng(p.location.latitude, p.location.longitude);
+    const distance = radarCenter.value!.distanceTo(pos);
+    
+    if (distance <= radarRadius.value) {
+      const marker = L.marker(pos, {
+        icon: L.divIcon({
+          className: 'result-marker',
+          html: `
+            <div style="
+              width: 25px;
+              height: 25px;
+              background: #10B981;
+              border: 3px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            "></div>
+          `,
+          iconSize: [25, 25],
+          iconAnchor: [12, 12]
+        })
+      });
+
+      marker.bindPopup(`
+        <div class="text-sm">
+          <b>${p.name}</b><br>
+          <span class="text-xs text-gray-600">${p.codigo_inmueble}</span><br>
+          <span class="text-green-600 font-bold">Bs. ${p.price.toLocaleString()}</span><br>
+          <span class="text-xs text-gray-500">${distance.toFixed(0)}m del centro</span>
+        </div>
+      `);
+
+      marker.addTo(radarCluster);
+      results.value.push(p);
+    }
+  });
+
+  showPanel.value = true;
+  searchQuery.value = '';
+};
+
+/* ================= PANEL CLICK ================= */
+const focusProperty = (p: Product) => {
+  const pos = L.latLng(p.location.latitude, p.location.longitude);
+  map.setView(pos, 18, { animate: true });
+  
+  radarCluster.eachLayer((layer: any) => {
+    if (layer.getLatLng().equals(pos)) {
+      layer.openPopup();
+    }
+  });
+};
+
+/* ================= RESET RADAR COMPLETO ================= */
+const resetRadar = () => {
+  if (radarMarker) map.removeLayer(radarMarker);
+  if (radarCircle) map.removeLayer(radarCircle);
+  if (radarPulse) map.removeLayer(radarPulse);
+  if (pulseInterval) clearInterval(pulseInterval);
+
+  radarMarker = radarCircle = radarPulse = null;
+  pulseInterval = null;
+  radarCenter.value = null;
+  radarMode.value = false;
+  radarPlaced.value = false;
+
+  radarCluster.clearLayers();
+  showPanel.value = false;
+  results.value = [];
+  searchQuery.value = '';
+  
+  map.getContainer().style.cursor = '';
+};
 </script>
 
 <template>
-    <Head title="Mapa de Ubicaciones" />
-    
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="relative h-[calc(100vh-140px)]">
-            <!-- Mapa -->
-            <div ref="mapContainer" class="w-full h-full"></div>
+  <Head title="Radar de Propiedades" />
 
-            <!-- Controles superiores -->
-            <div class="absolute top-4 left-4 right-4 z-[1000] flex items-center justify-between gap-3">
-                <button
-                    @click="goBack"
-                    class="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all"
-                >
-                    <ArrowLeft :size="20" />
-                    <span class="font-semibold">Volver</span>
-                </button>
+  <AppLayout>
+    <div class="relative h-[calc(100vh-140px)]">
+      <div ref="mapRef" class="w-full h-full"></div>
 
-                <div class="flex items-center gap-2">
-                    <button
-                        @click="centerOnMyLocation"
-                        :disabled="isLocatingUser"
-                        :class="[
-                            'p-3 rounded-lg shadow-lg transition-all flex items-center gap-2',
-                            isLocatingUser 
-                                ? 'bg-blue-400 cursor-not-allowed' 
-                                : 'bg-blue-600 hover:bg-blue-700'
-                        ]"
-                        class="text-white"
-                        title="Centrar en mi ubicación"
-                    >
-                        <Navigation :size="24" :class="isLocatingUser ? 'animate-pulse' : ''" />
-                        <span v-if="isLocatingUser" class="text-sm font-medium">Ubicando...</span>
-                    </button>
-                </div>
+      <!-- CONTROLES SUPERIORES -->
+      <div class="absolute top-4 left-4 z-[1000] flex gap-2">
+        <!-- Volver -->
+        <button 
+          @click="router.visit('/ubicaciones')" 
+          class="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all"
+        >
+          <ArrowLeft :size="18" />
+          Volver
+        </button>
+        
+        <!-- Mi Ubicación -->
+        <button 
+          @click="locateMe"
+          :disabled="isLocatingUser"
+          :class="[
+            'px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all',
+            isLocatingUser 
+              ? 'bg-blue-400 cursor-not-allowed' 
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          ]"
+        >
+          <Navigation :size="18" :class="isLocatingUser ? 'animate-pulse' : ''" />
+          Mi Ubicación
+        </button>
+        
+        <!-- Activar Radar (solo si no está en modo radar) -->
+        <button 
+          v-if="!radarMode"
+          @click="activateRadarMode" 
+          class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all"
+        >
+          <Radar :size="18" />
+          Activar Radar
+        </button>
+
+        <!-- Quitar Punto (solo si el radar está colocado pero no hay resultados) -->
+        <button 
+          v-if="radarPlaced && !showPanel"
+          @click="removeRadarPoint" 
+          class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all"
+        >
+          <MapPin :size="18" />
+          Quitar Punto
+        </button>
+        
+        <!-- Quitar Radar Completo (cuando está en modo radar o hay resultados) -->
+        <button 
+          v-if="radarMode"
+          @click="resetRadar" 
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all"
+        >
+          <X :size="18" />
+          Quitar Radar
+        </button>
+      </div>
+
+      <!-- MENSAJE DE INSTRUCCIÓN -->
+      <div 
+        v-if="radarMode && !radarPlaced"
+        class="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-purple-600 text-white px-6 py-3 rounded-lg shadow-xl"
+      >
+        <p class="text-sm font-medium flex items-center gap-2">
+          <MapPin :size="18" />
+          Selecciona en el mapa donde quieres fijar el punto del radar
+        </p>
+      </div>
+
+      <!-- CONTROL DE RADIO (BARRA INFERIOR) -->
+      <div
+        v-if="radarPlaced && !showPanel"
+        class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-white p-5 rounded-xl shadow-2xl w-[500px]"
+      >
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-gray-800 text-lg">Radio de búsqueda</label>
+            <span class="bg-blue-600 text-white px-4 py-1.5 rounded-full font-bold text-lg">
+              {{ radarRadius }}m
+            </span>
+          </div>
+          
+          <input
+            type="range"
+            min="100"
+            max="5000"
+            step="50"
+            v-model.number="radarRadius"
+            @input="updateRadius"
+            class="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            style="
+              background: linear-gradient(to right, #3B82F6 0%, #3B82F6 var(--value), #E5E7EB var(--value), #E5E7EB 100%);
+            "
+            :style="{
+              '--value': ((radarRadius - 100) / (5000 - 100) * 100) + '%'
+            }"
+          />
+          
+          <div class="flex justify-between text-xs text-gray-500 font-medium">
+            <span>100m</span>
+            <span>2.5km</span>
+            <span>5km</span>
+          </div>
+
+          <button 
+            @click="search" 
+            class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3.5 rounded-lg font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+          >
+            ✓ LISTO - BUSCAR PROPIEDADES
+          </button>
+        </div>
+      </div>
+
+      <!-- PANEL LATERAL DE RESULTADOS -->
+      <transition name="slide">
+        <div
+          v-if="showPanel"
+          class="absolute right-0 top-0 h-full w-[400px] bg-white shadow-2xl z-[1000] flex flex-col"
+        >
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex justify-between items-center flex-shrink-0">
+            <div>
+              <h3 class="font-bold text-lg">📍 Propiedades encontradas</h3>
+              <p class="text-xs text-blue-100">{{ filteredResults.length }} resultados</p>
+            </div>
+            <button 
+              @click="showPanel = false"
+              class="hover:bg-white/20 p-1.5 rounded-lg transition-colors"
+            >
+              <X :size="24" />
+            </button>
+          </div>
+
+          <!-- Búsqueda -->
+          <div class="p-3 border-b bg-gray-50 flex-shrink-0">
+            <div class="relative">
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="16" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Buscar en resultados..."
+                class="w-full pl-10 pr-10 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+              <button
+                v-if="searchQuery"
+                @click="searchQuery = ''"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X :size="16" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista de resultados -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-3">
+            <div
+              v-for="p in filteredResults"
+              :key="p.id"
+              @click="focusProperty(p)"
+              class="cursor-pointer border-2 border-gray-200 hover:border-blue-500 p-4 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-[1.02] hover:shadow-md"
+            >
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800 text-sm line-clamp-2 flex-1">{{ p.name }}</h4>
+                <span class="text-blue-600 font-bold text-lg ml-2 flex-shrink-0">
+                  {{ (p.price / 1000).toFixed(0) }}k
+                </span>
+              </div>
+              
+              <p class="text-xs text-gray-600 mb-1">{{ p.codigo_inmueble }}</p>
+              
+              <div class="flex items-center justify-between text-xs">
+                <span v-if="p.category" class="bg-gray-100 px-2 py-1 rounded text-gray-700">
+                  {{ p.category }}
+                </span>
+                <span class="text-gray-500">
+                  📏 {{ radarCenter ? radarCenter.distanceTo(L.latLng(p.location.latitude, p.location.longitude)).toFixed(0) : '0' }}m
+                </span>
+              </div>
             </div>
 
-            <!-- Panel de Detalles del Producto -->
-            <Transition
-                enter-active-class="transition-transform duration-300"
-                enter-from-class="translate-x-full"
-                enter-to-class="translate-x-0"
-                leave-active-class="transition-transform duration-300"
-                leave-from-class="translate-x-0"
-                leave-to-class="translate-x-full"
+            <!-- Sin resultados -->
+            <div 
+              v-if="results.length === 0" 
+              class="text-center text-gray-500 py-12"
             >
-                <div
-                    v-if="selectedProduct"
-                    class="absolute top-0 right-0 h-full w-full md:w-96 bg-white shadow-2xl z-[1001] overflow-y-auto"
-                >
-                    <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 p-4 flex items-center justify-between">
-                        <h3 class="font-bold text-lg text-white">Detalles de la Propiedad</h3>
-                        <button
-                            @click="closeDetails"
-                            class="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
-                        >
-                            <X :size="24" />
-                        </button>
-                    </div>
+              <div class="text-6xl mb-3">🔍</div>
+              <p class="font-medium">No se encontraron propiedades</p>
+              <p class="text-sm mt-1">Intenta aumentar el radio de búsqueda</p>
+            </div>
 
-                    <div class="p-6">
-                        <div v-if="sortedImages.length > 0" class="mb-6 -mx-6 -mt-6">
-                            <div class="relative group">
-                                <img
-                                    :src="getImageUrl(sortedImages[currentImageIndex].image_path)"
-                                    :alt="sortedImages[currentImageIndex].original_name"
-                                    class="w-full h-64 object-cover"
-                                />
-                                
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-
-                                <template v-if="sortedImages.length > 1">
-                                    <button
-                                        @click="prevImage"
-                                        class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
-                                    >
-                                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-                                        </svg>
-                                    </button>
-
-                                    <button
-                                        @click="nextImage"
-                                        class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
-                                    >
-                                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </button>
-
-                                    <div class="absolute bottom-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
-                                        {{ currentImageIndex + 1 }} / {{ sortedImages.length }}
-                                    </div>
-                                </template>
-
-                                <div v-if="sortedImages[currentImageIndex].is_primary" class="absolute top-3 left-3">
-                                    <span class="inline-flex items-center gap-1 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-                                        <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                        </svg>
-                                        Principal
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div v-if="sortedImages.length > 1" class="px-4 py-3 bg-gray-50">
-                                <div class="flex gap-2 overflow-x-auto pb-2">
-                                    <button
-                                        v-for="(image, index) in sortedImages"
-                                        :key="image.id"
-                                        @click="goToImage(index)"
-                                        :class="[
-                                            'flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden transition-all border-2',
-                                            currentImageIndex === index 
-                                                ? 'border-blue-500 ring-2 ring-blue-200 scale-110' 
-                                                : 'border-transparent opacity-60 hover:opacity-100'
-                                        ]"
-                                    >
-                                        <img
-                                            :src="getImageUrl(image.image_path)"
-                                            :alt="`Thumbnail ${index + 1}`"
-                                            class="w-full h-full object-cover"
-                                        />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-else class="mb-4 w-full h-56 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center -mx-6 -mt-6">
-                            <div class="text-center">
-                                <MapPin :size="48" class="text-gray-400 mx-auto mb-2" />
-                                <span class="text-gray-400 text-sm">Sin imágenes disponibles</span>
-                            </div>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div>
-                                <h4 class="text-xl font-bold text-gray-900 mb-2">
-                                    {{ selectedProduct.name }}
-                                </h4>
-                                <div class="inline-flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
-                                    <span class="text-sm text-green-600 font-medium">Precio:</span>
-                                    <span class="text-2xl font-bold text-green-600">
-                                        Bs. {{ selectedProduct.price.toLocaleString() }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-gray-50 p-3 rounded-lg">
-                                    <p class="text-xs text-gray-500 mb-1">Código</p>
-                                    <p class="font-semibold text-gray-800">{{ selectedProduct.codigo_inmueble }}</p>
-                                </div>
-                                <div class="bg-gray-50 p-3 rounded-lg">
-                                    <p class="text-xs text-gray-500 mb-1">Categoría</p>
-                                    <p class="font-semibold text-gray-800">{{ selectedProduct.category || 'N/A' }}</p>
-                                </div>
-                            </div>
-
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <div class="flex items-start gap-2">
-                                    <MapPin :size="20" class="text-blue-600 mt-0.5 flex-shrink-0" />
-                                    <div class="flex-1">
-                                        <p class="text-xs text-blue-600 font-medium mb-1">Ubicación</p>
-                                        <p class="text-sm text-gray-700 mb-2">
-                                            {{ selectedProduct.location.address || 'Sin dirección especificada' }}
-                                        </p>
-                                        <p class="text-xs text-gray-500 font-mono">
-                                            {{ selectedProduct.location.latitude.toFixed(6) }}, 
-                                            {{ selectedProduct.location.longitude.toFixed(6) }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <a
-                                :href="`https://www.google.com/maps/search/?api=1&query=${selectedProduct.location.latitude},${selectedProduct.location.longitude}`"
-                                target="_blank"
-                                class="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
-                            >
-                                <Navigation :size="20" />
-                                Abrir en Google Maps
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </Transition>
+            <!-- Sin resultados filtrados -->
+            <div 
+              v-else-if="filteredResults.length === 0" 
+              class="text-center text-gray-500 py-12"
+            >
+              <div class="text-6xl mb-3">🔍</div>
+              <p class="font-medium">No hay coincidencias</p>
+              <p class="text-sm mt-1">Intenta con otros términos de búsqueda</p>
+            </div>
+          </div>
         </div>
-    </AppLayout>
+      </transition>
+    </div>
+  </AppLayout>
 </template>
+
+<style scoped>
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Scroll personalizado */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animación del panel */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(100%);
+}
+
+.slide-leave-to {
+  transform: translateX(100%);
+}
+
+/* Estilo del slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #3B82F6;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 3px solid white;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #3B82F6;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 3px solid white;
+}
+</style>
