@@ -40,4 +40,9 @@ class ProductCategory extends BaseModel
         return $this->hasMany(ProductSubCategory::class, 'category_id');
     }
 
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class, 'category_id');
+    }
+
 }

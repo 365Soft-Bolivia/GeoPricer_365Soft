@@ -359,6 +359,7 @@ class ProductLocationController extends Controller
 public function mapa(): Response
 {
         // ✅ Incluir relación 'images' además de 'location' y 'category'
+        // ✅ AGREGADO: Incluir campos de superficie y operación para cálculos de precio por m²
         $productsConUbicacion = Product::with(['location', 'category', 'images'])
             ->whereHas('location')
             ->get()
@@ -368,8 +369,13 @@ public function mapa(): Response
                     'name' => $product->name,
                     'codigo_inmueble' => $product->codigo_inmueble,
                     'price' => $product->price,
+                    'operacion' => $product->operacion,
                     'default_image' => $product->default_image,
                     'category' => $product->category?->category_name,
+                    'category_id' => $product->category_id,
+                    // ✅ AGREGADO: Campos de superficie para cálculos
+                    'superficie_util' => $product->superficie_util,
+                    'superficie_construida' => $product->superficie_construida,
                     'location' => [
                         'id' => $product->location->id,
                         'latitude' => $product->location->latitude,
@@ -390,9 +396,24 @@ public function mapa(): Response
                 ];
             });
 
-    return Inertia::render('Locations/LocationsMap', [
-        'productsConUbicacion' => $productsConUbicacion,
-    ]);
+        // ✅ AGREGADO: Obtener categorías disponibles para filtros
+        $categoriasDisponibles = Category::select('id', 'category_name')
+            ->whereHas('products', function ($query) {
+                $query->whereHas('location');
+            })
+            ->orderBy('category_name')
+            ->pluck('category_name', 'id')
+            ->toArray();
+
+        return Inertia::render('Locations/LocationsMap', [
+            'productsConUbicacion' => $productsConUbicacion,
+            'categoriasDisponibles' => $categoriasDisponibles,
+            'totalPropiedades' => $productsConUbicacion->count(),
+            'defaultCenter' => [
+                'lat' => -16.5000, // La Paz, Bolivia
+                'lng' => -68.1500,
+            ],
+        ]);
 }
 
 /**
