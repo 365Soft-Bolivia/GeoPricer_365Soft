@@ -8,22 +8,15 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * NOTA: Esta migración está vacía porque los campos 2FA
+     * ya están incluidos en la creación de la tabla users.
+     * Se mantiene por compatibilidad con el historial.
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->text('two_factor_secret')
-                ->after('password')
-                ->nullable();
-
-            $table->text('two_factor_recovery_codes')
-                ->after('two_factor_secret')
-                ->nullable();
-
-            $table->timestamp('two_factor_confirmed_at')
-                ->after('two_factor_recovery_codes')
-                ->nullable();
-        });
+        // Los campos two_factor ya existen en la tabla users
+        // No se realizan cambios para evitar duplicación
     }
 
     /**
@@ -31,12 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn([
-                'two_factor_secret',
-                'two_factor_recovery_codes',
-                'two_factor_confirmed_at',
-            ]);
-        });
+        // No hay cambios que revertir
     }
 };
