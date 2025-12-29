@@ -10,7 +10,7 @@ const { home } = publicRoutes;
 
 const navigation = [
     { name: 'Inicio', href: home().url },
-    { name: 'Propiedades', href: '/propiedades' },
+    // { name: 'Propiedades', href: '/propiedades' },
     { name: 'Sobre Nosotros', href: '/sobre-nosotros' },
     { name: 'Contacto', href: '/contacto' },
 ];
@@ -23,7 +23,7 @@ const navigation = [
                 <div class="flex items-center">
                     <Link :href="home()" class="flex items-center">
                         <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            🏠 Inmobiliaria
+                            🏠 Tu propiedad, su valor real
                         </span>
                     </Link>
                 </div>
@@ -45,7 +45,7 @@ const navigation = [
                         title="Ver mapa interactivo de propiedades"
                     >
                         <MapPin :size="18" />
-                        <span>Mapa Interactivo</span>
+                        <span>Mapa Interactivo de Avalúo</span>
                     </Link>
                 </div>
 
