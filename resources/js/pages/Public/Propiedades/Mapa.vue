@@ -765,7 +765,7 @@ const removeFullScreenStyles = () => {
 <template>
     <Head title="Mapa Interactivo de Propiedades" />
 
-    <div class="relative w-screen h-screen overflow-hidden" @click="closeCategoryDropdown">
+    <div class="relative w-screen h-screen overflow-hidden" @click="showCategoryDropdown = false">
         <!-- Mapa -->
         <div ref="mapContainer" class="absolute inset-0 w-full h-full"></div>
 
@@ -794,7 +794,7 @@ const removeFullScreenStyles = () => {
                 </button>
 
                 <!-- Dropdown de categorías (desktop) -->
-                <div class="relative">
+                <div class="relative category-dropdown-desktop">
                     <button
                         @click.stop="showCategoryDropdown = !showCategoryDropdown"
                         class="bg-white/95 hover:bg-white text-gray-700 px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all backdrop-blur-sm min-w-[160px]"
@@ -890,120 +890,91 @@ const removeFullScreenStyles = () => {
         </div>
 
         <!-- ===========================
-             CONTROLES MÓVIL (solo en pantallas < lg)
-             Posicionados como en tu imagen:
-             - Home + Propiedades arriba-izq
-             - Dropdown "Todas las categorías" arriba-der
-             - Badge contadora cerca del botón azul
-             - Botón azul (centerOnMyLocation) abajo-derecha
-             - Botón de ubicación (resetView) debajo/izquierda del botón azul
+             CONTROLES MÓVIL SIMPLE Y DIRECTO
              =========================== -->
-        <div class="map-mobile-controls lg:hidden" aria-hidden="false" @click.stop>
-          <!-- Top-left: casa + filtro (mantienen sus handlers) -->
-          <div class="mobile-top-left-controls">
-            <button
-              @click="goToHome"
-              class="mobile-icon btn-icon"
-              title="Inicio"
-            >
-              <Home :size="18" />
-            </button>
 
+        <!-- Controles superiores -->
+        <div class="fixed top-2 left-2 z-[1200] lg:hidden flex gap-2">
+          <button
+            @click="goToHome"
+            class="bg-white/95 hover:bg-white text-gray-700 p-2 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+            title="Inicio"
+          >
+            <Home :size="18" />
+          </button>
+          <button
+            @click="goToProperties"
+            class="bg-white/95 hover:bg-white text-gray-700 p-2 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+            title="Ver todas las propiedades"
+          >
+            <Filter :size="18" />
+          </button>
+        </div>
+
+        <!-- Dropdown categorías móvil - ULTRA SIMPLE -->
+        <div class="fixed top-2 right-2 z-[1200] lg:hidden" @click.stop>
+          <button
+            @click="showCategoryDropdown = !showCategoryDropdown"
+            class="bg-white/95 hover:bg-white text-gray-700 p-2 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+            title="Filtrar por categoría"
+          >
+            <Filter :size="16" />
+          </button>
+
+          <!-- Menú simple -->
+          <div
+            v-if="showCategoryDropdown"
+            class="absolute top-12 right-0 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[1201]"
+          >
             <button
-              @click="goToProperties"
-              class="mobile-icon btn-icon"
-              title="Propiedades"
+              @click="selectCategoria(null)"
+              class="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b"
             >
-              <Filter :size="18" />
+              Todas las categorías
+            </button>
+            <button
+              v-for="(nombre, id) in categoriasDisponibles"
+              :key="id"
+              @click="selectCategoria(parseInt(id as string))"
+              class="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+            >
+              {{ nombre }}
             </button>
           </div>
+        </div>
 
-          <!-- Top-right: dropdown compacto -->
-          <div class="mobile-top-right-categories">
-            <button
-              @click.stop="showCategoryDropdown = !showCategoryDropdown"
-              class="mobile-cats btn-small"
-              title="Filtrar por categoría"
-            >
-              <span class="truncate text-sm">{{ nombreCategoriaSeleccionada }}</span>
-              <ChevronDown :size="14" :class="{ 'rotate-180': showCategoryDropdown }" class="transition-transform ml-1" />
-            </button>
-
-            <!-- Dropdown (mobile) reusa tu menu -->
-            <div
-              v-if="showCategoryDropdown"
-              class="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-80 overflow-y-auto"
-              @click.stop
-            >
-              <div class="p-2">
-                <button
-                  @click="selectCategoria(null)"
-                  :class="[
-                      'w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between',
-                      !categoriaSeleccionada
-                          ? 'bg-blue-50 text-blue-700 font-medium'
-                          : 'hover:bg-gray-50 text-gray-700'
-                  ]"
-                >
-                  <span>Todas las categorías</span>
-                  <span v-if="!categoriaSeleccionada" class="text-blue-600">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                      </svg>
-                  </span>
-                </button>
-
-                <div class="border-t border-gray-100 my-1"></div>
-
-                <button
-                  v-for="(nombre, id) in categoriasDisponibles"
-                  :key="id"
-                  @click="selectCategoria(parseInt(id as string))"
-                  :class="[
-                      'w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between',
-                      categoriaSeleccionada === parseInt(id as string)
-                          ? 'bg-blue-50 text-blue-700 font-medium'
-                          : 'hover:bg-gray-50 text-gray-700'
-                  ]"
-                >
-                  <span class="truncate">{{ nombre }}</span>
-                  <span v-if="categoriaSeleccionada === parseInt(id as string)" class="text-blue-600 flex-shrink-0">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                      </svg>
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Badge contador (ubicado cerca del botón azul) -->
-          <div class="mobile-prop-count">
-            <div class="badge text-xs">
+        <!-- Contadores -->
+        <div class="fixed top-16 right-2 z-[1200] lg:hidden">
+          <div class="bg-white/95 px-3 py-1 rounded-lg shadow-lg backdrop-blur-sm">
+            <p class="text-xs font-semibold text-gray-700">
               {{ totalPropiedadesFiltradas }} de {{ totalPropiedades }}
-            </div>
+            </p>
           </div>
+        </div>
 
-          <!-- Botón azul (centerOnMyLocation) bottom-right -->
+        <!-- Botones inferiores -->
+        <div class="fixed bottom-4 right-4 z-[1200] lg:hidden flex flex-col gap-3">
+          <button
+            @click="resetView"
+            class="bg-white/95 hover:bg-white text-gray-700 p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+            title="Ver todas las propiedades"
+            aria-label="Ver todas las propiedades en el mapa"
+          >
+            <MapPin :size="18" />
+          </button>
           <button
             @click="centerOnMyLocation"
             :disabled="isLocatingUser"
             :class="[
-              'map-btn-blue',
-              isLocatingUser ? 'opacity-80 cursor-not-allowed' : ''
+              'p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm',
+              isLocatingUser
+                ? 'bg-blue-400/90 cursor-not-allowed'
+                : 'bg-blue-600/90 hover:bg-blue-700/90 text-white'
             ]"
             title="Centrar en mi ubicación"
+            aria-label="Centrar en mi ubicación actual"
           >
-            <Navigation :size="20" :class="isLocatingUser ? 'animate-pulse' : ''" />
-          </button>
-
-          <!-- Botón ubicación (resetView): debajo/izquierda del botón azul -->
-          <button
-            @click="resetView"
-            class="map-btn-loc"
-            title="Ver Todo"
-          >
-            <MapPin :size="18" />
+            <Navigation :size="18" :class="isLocatingUser ? 'animate-pulse' : ''" />
           </button>
         </div>
 
@@ -1185,112 +1156,5 @@ const removeFullScreenStyles = () => {
 </template>
 
 <style>
-/* MOBILE ONLY positions for map controls (no scoped) */
-@media (max-width: 1024px) {
-  .map-mobile-controls {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1200;
-  }
-
-  .map-mobile-controls > * {
-    pointer-events: auto;
-    position: absolute;
-  }
-
-  /* Top-left cluster: home + properties */
-  .mobile-top-left-controls {
-    left: 0.6rem;
-    top: 0.9rem;
-    display: flex;
-    gap: 0.45rem;
-    align-items: center;
-  }
-  .mobile-top-left-controls .btn-icon,
-  .mobile-top-left-controls .mobile-icon {
-    background: rgba(255,255,255,0.95);
-    border-radius: 0.5rem;
-    padding: 0.45rem;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-    border: 1px solid rgba(0,0,0,0.06);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Top-right: dropdown "Todas las categorías" */
-  .mobile-top-right-categories {
-    right: 0.6rem;
-    top: 0.9rem;
-  }
-  .mobile-top-right-categories .mobile-cats {
-    background: rgba(255,255,255,0.95);
-    padding: 0.45rem 0.6rem;
-    border-radius: 0.5rem;
-    font-size: 0.82rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-    border: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* Prop-count badge: ubícalo encima/derecha del botón azul */
-  .mobile-prop-count {
-    right: 4.6rem;
-    bottom: 7.7rem;
-    display: flex;
-    align-items: center;
-  }
-  .mobile-prop-count .badge {
-    background: rgba(255,255,255,0.95);
-    padding: 0.35rem 0.6rem;
-    border-radius: 9999px;
-    font-weight: 600;
-    font-size: 0.75rem;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.06);
-    border: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* BOTON AZUL (principal) bottom-right */
-  .map-btn-blue {
-    right: 1rem;
-    bottom: 3.6rem;
-    width: 46px;
-    height: 46px;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #2563eb;
-    color: white;
-    box-shadow: 0 10px 30px rgba(37,99,235,0.18);
-    border: none;
-    border-radius: 9999px;
-  }
-
-  /* BOTON UBICACION: un poco arriba/izquierda respecto del botón azul */
-  .map-btn-loc {
-    right: 1.3rem; /* distancia horizontal desde el borde derecho; ajusta si quieres */
-    bottom: 7.5rem; /* distancia vertical desde el borde inferior; ajusta si quieres */
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.95);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-    border: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* compact adjustments small screens */
-  @media (max-width: 420px) {
-    .map-btn-blue { right: 0.8rem; bottom: 1.95rem; width: 42px; height: 42px; }
-    .map-btn-loc { right: 1.0rem; bottom: 5.4rem; width: 36px; height: 36px; }
-    .mobile-prop-count { right: 4.0rem; bottom: 5.7rem; }
-    .mobile-top-right-categories .mobile-cats { padding: 0.35rem 0.5rem; font-size: 0.74rem; }
-  }
-}
+/* Sin estilos complejos - usamos Tailwind directamente */
 </style>

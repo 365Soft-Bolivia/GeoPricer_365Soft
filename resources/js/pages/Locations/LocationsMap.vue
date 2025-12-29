@@ -196,7 +196,7 @@ const resetView = () => {
   }
 };
 
-// Función para cerrar dropdowns al hacer clic fuera
+// Función para cerrar dropdowns
 const closeDropdowns = () => {
   showCategoryDropdown.value = false;
   showOperationDropdown.value = false;
@@ -828,7 +828,7 @@ const resetRadar = () => {
 <template>
   <Head title="Radar de Propiedades" />
 
-  <div class="relative w-screen h-screen overflow-hidden" @click="closeDropdowns">
+  <div class="relative w-screen h-screen overflow-hidden" @click="showCategoryDropdown = false; showOperationDropdown = false;">
     <!-- Mapa -->
     <div ref="mapContainer" class="absolute inset-0 w-full h-full"></div>
 
@@ -1025,82 +1025,112 @@ const resetRadar = () => {
       </div>
     </div>
 
-    <!-- CONTROLES MÓVIL -->
-    <div class="map-mobile-controls lg:hidden" aria-hidden="false" @click.stop>
-      <!-- Top-left: volver -->
-      <div class="mobile-top-left-controls">
+    <!-- CONTROLES MÓVIL SIMPLE -->
+    <!-- Botón volver -->
+    <div class="fixed top-2 left-2 z-[1200] lg:hidden">
+      <button
+        @click="goBack"
+        class="bg-white/95 hover:bg-white text-gray-700 p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+        title="Volver"
+        aria-label="Volver a la página anterior"
+      >
+        <ArrowLeft :size="18" />
+      </button>
+    </div>
+
+    <!-- Dropdown filtros - ULTRA SIMPLE -->
+    <div class="fixed top-2 right-2 z-[1200] lg:hidden flex gap-2" @click.stop>
+      <!-- Dropdown categorías -->
+      <div class="relative">
         <button
-          @click="goBack"
-          class="mobile-icon btn-icon"
-          title="Volver"
+          @click="showCategoryDropdown = !showCategoryDropdown"
+          class="bg-white/95 hover:bg-white text-gray-700 p-2 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+          title="Categorías"
         >
-          <ArrowLeft :size="18" />
+          <Filter :size="16" />
         </button>
-      </div>
 
-      <!-- Top-right: filtros compactos -->
-      <div class="mobile-top-filters">
-        <div class="flex gap-2">
-          <!-- Dropdown categorías compacto -->
-          <div class="relative">
-            <button
-              @click.stop="showCategoryDropdown = !showCategoryDropdown"
-              class="mobile-cats btn-small"
-              title="Categorías"
-            >
-              <Filter :size="14" />
-              <ChevronDown :size="12" :class="{ 'rotate-180': showCategoryDropdown }" class="transition-transform" />
-            </button>
-          </div>
-
-          <!-- Dropdown operaciones compacto -->
-          <div class="relative">
-            <button
-              @click.stop="showOperationDropdown = !showOperationDropdown"
-              class="mobile-ops btn-small"
-              title="Operaciones"
-            >
-              <DollarSign :size="14" />
-              <ChevronDown :size="12" :class="{ 'rotate-180': showOperationDropdown }" class="transition-transform" />
-            </button>
-          </div>
-
-          <!-- Limpiar filtros -->
+        <div
+          v-if="showCategoryDropdown"
+          class="absolute top-12 right-0 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-[1100]"
+        >
           <button
-            v-if="categoriaSeleccionada || operacionSeleccionada"
-            @click="resetFilters"
-            class="mobile-clear btn-small"
-            title="Limpiar"
+            @click="selectCategoria(null)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b"
           >
-            <X :size="14" />
+            Todas
+          </button>
+          <button
+            v-for="(nombre, id) in categoriasDisponibles"
+            :key="id"
+            @click="selectCategoria(parseInt(id as string))"
+            class="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+          >
+            {{ nombre }}
           </button>
         </div>
       </div>
 
-      <!-- Badge contador -->
-      <div class="mobile-prop-count">
-        <div class="badge text-xs">
-          {{ totalPropiedadesFiltradas }}/{{ totalPropiedades }}
+      <!-- Dropdown operaciones -->
+      <div class="relative">
+        <button
+          @click="showOperationDropdown = !showOperationDropdown"
+          class="bg-white/95 hover:bg-white text-gray-700 p-2 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+          title="Operaciones"
+        >
+          <DollarSign :size="16" />
+        </button>
+
+        <div
+          v-if="showOperationDropdown"
+          class="absolute top-12 right-0 w-36 bg-white rounded-lg shadow-xl border border-gray-200 z-[1100]"
+        >
+          <button
+            @click="selectOperacion(null)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b"
+          >
+            Todas
+          </button>
+          <button
+            v-for="op in operacionesDisponibles"
+            :key="op.value"
+            @click="selectOperacion(op.value)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+          >
+            {{ op.label }}
+          </button>
         </div>
       </div>
 
-      <!-- Botones inferiores -->
-      <!-- Mi Ubicación -->
+      <!-- Limpiar filtros -->
       <button
-        @click="locateMe"
-        :disabled="isLocatingUser"
-        :class="['map-btn-blue', isLocatingUser ? 'opacity-80 cursor-not-allowed' : '']"
-        title="Mi ubicación"
+        v-if="categoriaSeleccionada || operacionSeleccionada"
+        @click="resetFilters"
+        class="bg-red-500/90 hover:bg-red-600/90 text-white p-2 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+        title="Limpiar filtros"
       >
-        <Navigation :size="20" :class="isLocatingUser ? 'animate-pulse' : ''" />
+        <X :size="16" />
       </button>
+    </div>
 
-      <!-- Radar / Quitar Radar (Móvil) -->
+    <!-- Contador -->
+    <div class="fixed top-16 right-2 z-[1200] lg:hidden">
+      <div class="bg-white/95 px-3 py-1 rounded-lg shadow-lg backdrop-blur-sm">
+        <p class="text-xs font-semibold text-gray-700">
+          {{ totalPropiedadesFiltradas }}/{{ totalPropiedades }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Botones inferiores -->
+    <div class="fixed bottom-4 right-4 z-[1200] lg:hidden flex flex-col gap-3">
+      <!-- Radar / Quitar Radar -->
       <button
         v-if="!radarMode"
         @click="activateRadarMode"
-        class="map-btn-radar"
+        class="bg-purple-600/90 hover:bg-purple-700/90 text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
         title="Activar radar"
+        aria-label="Activar modo radar para buscar propiedades"
       >
         <Radar :size="18" />
       </button>
@@ -1108,8 +1138,9 @@ const resetRadar = () => {
       <button
         v-if="radarMode"
         @click="resetRadar"
-        class="map-btn-radar-active"
+        class="bg-red-600/90 hover:bg-red-700/90 text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm animate-pulse"
         title="Quitar radar"
+        aria-label="Desactivar modo radar"
       >
         <X :size="18" />
       </button>
@@ -1117,10 +1148,25 @@ const resetRadar = () => {
       <!-- Ver todo -->
       <button
         @click="resetView"
-        class="map-btn-view"
+        class="bg-white/95 hover:bg-white text-gray-700 p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
         title="Ver todo"
+        aria-label="Ver todas las propiedades en el mapa"
       >
         <MapPin :size="18" />
+      </button>
+
+      <!-- Mi ubicación -->
+      <button
+        @click="locateMe"
+        :disabled="isLocatingUser"
+        :class="[
+          'p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm',
+          isLocatingUser ? 'bg-blue-400/90 cursor-not-allowed' : 'bg-blue-600/90 hover:bg-blue-700/90 text-white'
+        ]"
+        title="Mi ubicación"
+        aria-label="Centrar en mi ubicación actual"
+      >
+        <Navigation :size="18" :class="isLocatingUser ? 'animate-pulse' : ''" />
       </button>
     </div>
 
@@ -1180,53 +1226,53 @@ const resetRadar = () => {
     <transition name="slide">
       <div
         v-if="showPanel"
-        class="absolute right-0 top-0 h-full w-80 sm:w-96 bg-white shadow-2xl z-[1000] flex flex-col"
+        class="absolute right-0 top-0 h-full w-full sm:w-80 md:w-96 bg-white shadow-2xl z-[1300] flex flex-col"
       >
         <!-- Header Compacto -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex justify-between items-center flex-shrink-0">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 flex justify-between items-center flex-shrink-0">
           <div>
-            <h3 class="font-bold text-base">📍 Propiedades encontradas</h3>
+            <h3 class="font-bold text-sm sm:text-base">📍 Propiedades encontradas</h3>
             <p class="text-xs text-blue-100">{{ filteredResults.length }} resultados</p>
           </div>
           <button
             @click="showPanel = false"
-            class="hover:bg-white/20 p-1 rounded-lg transition-colors"
+            class="hover:bg-white/20 p-2 sm:p-1 rounded-lg transition-colors"
           >
             <X :size="20" />
           </button>
         </div>
 
         <!-- Búsqueda Compacta -->
-        <div class="p-2 border-b bg-gray-50 flex-shrink-0">
+        <div class="p-3 sm:p-2 border-b bg-gray-50 flex-shrink-0">
           <div class="relative">
-            <Search class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" :size="14" />
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="16" />
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Buscar en resultados..."
-              class="w-full pl-8 pr-8 py-1.5 text-xs border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              class="w-full pl-10 pr-10 py-2 sm:py-1.5 text-sm sm:text-xs border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
             <button
               v-if="searchQuery"
               @click="searchQuery = ''"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              <X :size="14" />
+              <X :size="16" />
             </button>
           </div>
         </div>
 
         <!-- Lista de resultados compacta -->
-        <div class="flex-1 overflow-y-auto p-3 space-y-2">
+        <div class="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2">
           <div
             v-for="p in filteredResults"
             :key="p.id"
             @click="focusProperty(p)"
-            class="cursor-pointer border border-gray-200 hover:border-blue-500 p-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-[1.01] hover:shadow-sm"
+            class="cursor-pointer border border-gray-200 hover:border-blue-500 p-2 sm:p-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-[1.01] hover:shadow-sm"
           >
-            <div class="flex justify-between items-start mb-2">
-              <h4 class="font-bold text-gray-800 text-xs line-clamp-2 flex-1">{{ p.name }}</h4>
-              <span class="text-green-600 font-bold text-sm ml-2 flex-shrink-0">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
+              <h4 class="font-bold text-gray-800 text-xs sm:text-sm line-clamp-2 flex-1">{{ p.name }}</h4>
+              <span class="text-green-600 font-bold text-sm sm:text-base ml-0 sm:ml-2 flex-shrink-0">
                 Bs. {{ (p.price / 1000).toFixed(0) }}k
               </span>
             </div>
@@ -1235,10 +1281,10 @@ const resetRadar = () => {
 
             <!-- Superficie compacta -->
             <div class="bg-gray-50 rounded-lg p-2 mb-2">
-              <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div>
                   <p class="text-blue-600 font-medium mb-1">📐 Útil</p>
-                  <p class="font-bold text-blue-800 text-xs">
+                  <p class="font-bold text-blue-800 text-sm sm:text-xs">
                     {{ p.superficie_util ? p.superficie_util.toLocaleString() + ' m²' : 'N/A' }}
                   </p>
                   <p class="text-blue-700 text-xs" v-if="getPricePerSqmUtil(p)">
@@ -1247,7 +1293,7 @@ const resetRadar = () => {
                 </div>
                 <div>
                   <p class="text-orange-600 font-medium mb-1">🏢 Constr.</p>
-                  <p class="font-bold text-orange-800 text-xs">
+                  <p class="font-bold text-orange-800 text-sm sm:text-xs">
                     {{ p.superficie_construida ? p.superficie_construida.toLocaleString() + ' m²' : 'N/A' }}
                   </p>
                   <p class="text-orange-700 text-xs" v-if="getPricePerSqmConstruida(p)">
@@ -1256,9 +1302,9 @@ const resetRadar = () => {
                 </div>
               </div>
             </div>
-              
-              <div class="flex items-center justify-between text-xs">
-                <span v-if="p.category" class="bg-gray-100 px-2 py-1 rounded text-gray-700">
+
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs gap-1">
+                <span v-if="p.category" class="bg-gray-100 px-2 py-1 rounded text-gray-700 inline-block w-fit">
                   {{ p.category }}
                 </span>
                 <span class="text-gray-500">
@@ -1291,18 +1337,18 @@ const resetRadar = () => {
           <!-- Footer compacto con promedios -->
         <div
           v-if="averagePricePerSqmUtil || averagePricePerSqmConstruida"
-          class="border-t bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 flex-shrink-0"
+          class="border-t bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-2 flex-shrink-0"
         >
-          <p class="text-center text-xs font-bold text-blue-100 mb-2">📊 Promedio Bs/m² en la zona</p>
+          <p class="text-center text-xs sm:text-sm font-bold text-blue-100 mb-3 sm:mb-2">📊 Promedio Bs/m² en la zona</p>
 
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
             <!-- Promedio Útil -->
             <div
               v-if="averagePricePerSqmUtil"
-              class="bg-white/10 rounded p-2 backdrop-blur-sm text-center"
+              class="bg-white/10 rounded-lg sm:rounded p-3 sm:p-2 backdrop-blur-sm text-center"
             >
-              <p class="text-xs text-blue-100 mb-1">📐 Útil</p>
-              <p class="text-sm font-bold text-white">
+              <p class="text-sm sm:text-xs text-blue-100 mb-1">📐 Útil</p>
+              <p class="text-base sm:text-sm font-bold text-white">
                 {{ averagePricePerSqmUtil.toFixed(0) }}
               </p>
               <p class="text-xs text-blue-100 opacity-75">
@@ -1313,10 +1359,10 @@ const resetRadar = () => {
             <!-- Promedio Construida -->
             <div
               v-if="averagePricePerSqmConstruida"
-              class="bg-white/10 rounded p-2 backdrop-blur-sm text-center"
+              class="bg-white/10 rounded-lg sm:rounded p-3 sm:p-2 backdrop-blur-sm text-center"
             >
-              <p class="text-xs text-blue-100 mb-1">🏢 Constr.</p>
-              <p class="text-sm font-bold text-white">
+              <p class="text-sm sm:text-xs text-blue-100 mb-1">🏢 Constr.</p>
+              <p class="text-base sm:text-sm font-bold text-white">
                 {{ averagePricePerSqmConstruida.toFixed(0) }}
               </p>
               <p class="text-xs text-blue-100 opacity-75">
@@ -1332,27 +1378,6 @@ const resetRadar = () => {
 </template>
 
 <style>
-/* NO SCOPED - Estilos para controles móviles */
-
-/* Scroll personalizado */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 4px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 2px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
 /* Animación del panel */
 .slide-enter-active,
 .slide-leave-active {
@@ -1400,172 +1425,5 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   border: 2px solid white;
-}
-
-/* Estilos para controles móviles */
-@media (max-width: 1024px) {
-  .map-mobile-controls {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1200;
-  }
-
-  .map-mobile-controls > * {
-    pointer-events: auto;
-    position: absolute;
-  }
-
-  /* Top-left: volver */
-  .mobile-top-left-controls {
-    left: 0.5rem;
-    top: 0.5rem;
-  }
-
-  .mobile-icon,
-  .mobile-top-left-controls .btn-icon {
-    background: rgba(255,255,255,0.95);
-    border-radius: 0.5rem;
-    padding: 0.4rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid rgba(0,0,0,0.06);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Top-right: filtros */
-  .mobile-top-filters {
-    right: 0.5rem;
-    top: 0.5rem;
-    display: flex;
-    gap: 0.3rem;
-  }
-
-  .mobile-cats,
-  .mobile-ops,
-  .mobile-clear,
-  .mobile-top-filters .btn-small {
-    background: rgba(255,255,255,0.95);
-    padding: 0.4rem 0.5rem;
-    border-radius: 0.4rem;
-    font-size: 0.75rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* Badge contador */
-  .mobile-prop-count {
-    right: 0.5rem;
-    top: 3rem;
-  }
-
-  .mobile-prop-count .badge {
-    background: rgba(255,255,255,0.95);
-    padding: 0.3rem 0.5rem;
-    border-radius: 9999px;
-    font-weight: 600;
-    font-size: 0.7rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* Botones inferiores */
-  .map-btn-blue {
-    right: 0.5rem;
-    bottom: 0.5rem;
-    width: 48px;
-    height: 48px;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #2563eb;
-    color: white;
-    box-shadow: 0 8px 25px rgba(37,99,235,0.2);
-    border: none;
-  }
-
-  .map-btn-radar {
-    right: 0.5rem;
-    bottom: 3.5rem;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #7c3aed;
-    color: white;
-    box-shadow: 0 6px 20px rgba(124,58,237,0.2);
-    border: none;
-  }
-
-  .map-btn-radar-active {
-    right: 0.5rem;
-    bottom: 3.5rem;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #dc2626;
-    color: white;
-    box-shadow: 0 6px 20px rgba(220,38,38,0.3);
-    border: none;
-    animation: pulse-red 2s infinite;
-  }
-
-  @keyframes pulse-red {
-    0% { box-shadow: 0 6px 20px rgba(220,38,38,0.3); }
-    50% { box-shadow: 0 6px 30px rgba(220,38,38,0.5); }
-    100% { box-shadow: 0 6px 20px rgba(220,38,38,0.3); }
-  }
-
-  .map-btn-view {
-    right: 3.5rem;
-    bottom: 0.5rem;
-    width: 42px;
-    height: 42px;
-    border-radius: 0.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.95);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    border: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* Ajustes para pantallas muy pequeñas */
-  @media (max-width: 380px) {
-    .map-btn-blue { right: 0.3rem; bottom: 0.3rem; width: 44px; height: 44px; }
-    .map-btn-radar { right: 0.3rem; bottom: 3.2rem; width: 38px; height: 38px; }
-    .map-btn-view { right: 3.2rem; bottom: 0.3rem; width: 38px; height: 38px; }
-    .mobile-prop-count { right: 0.3rem; top: 2.8rem; }
-    .mobile-top-filters { right: 0.3rem; top: 0.3rem; }
-    .mobile-top-left-controls { left: 0.3rem; top: 0.3rem; }
-  }
-}
-
-/* Dropdowns para móviles */
-@media (max-width: 1024px) {
-  .mobile-top-filters .relative div {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 0.3rem;
-    z-index: 1300;
-  }
-
-  .mobile-top-filters .absolute {
-    min-width: 200px;
-    max-width: 250px;
-    max-height: 60vh;
-    overflow-y: auto;
-  }
 }
 </style>
