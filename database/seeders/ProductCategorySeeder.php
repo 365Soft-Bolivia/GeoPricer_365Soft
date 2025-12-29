@@ -21,7 +21,7 @@ class ProductCategorySeeder extends Seeder
         foreach ($categories as $category) {
             ProductCategory::create([
                'category_name' => $category,
-               'company_id' => $this->command->option('companyId')
+               'company_id' => 1
             ]);
         }
     }
