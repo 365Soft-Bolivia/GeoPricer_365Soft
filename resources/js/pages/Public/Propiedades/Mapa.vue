@@ -1351,37 +1351,53 @@ const resetRadar = () => {
         <!-- Footer compacto con promedios -->
         <div
           v-if="averagePricePerSqmUtil || averagePricePerSqmConstruida"
-          class="border-t bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-2 flex-shrink-0"
+          class="border-t bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sm:p-3 flex-shrink-0"
         >
-          <p class="text-center text-xs sm:text-sm font-bold text-blue-100 mb-3 sm:mb-2">📊 Promedio $US/m² en la zona</p>
+          <p class="text-center text-sm sm:text-xs font-bold text-blue-100 mb-3 sm:mb-2">📊 Precio promedio en la zona</p>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <!-- Promedio Útil -->
             <div
               v-if="averagePricePerSqmUtil"
-              class="bg-white/10 rounded-lg sm:rounded p-3 sm:p-2 backdrop-blur-sm text-center"
+              class="bg-white/10 rounded-lg p-4 sm:p-3 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-colors"
             >
-              <p class="text-sm sm:text-xs text-blue-100 mb-1">📐 Útil</p>
-              <p class="text-base sm:text-sm font-bold text-white">
-                {{ averagePricePerSqmUtil.toFixed(0) }}
-              </p>
-              <p class="text-xs text-blue-100 opacity-75">
-                {{ filteredResults.filter(p => p.superficie_util && p.superficie_util > 0).length }} props
-              </p>
+              <div class="flex items-center justify-center gap-2 mb-2">
+                <span class="text-lg sm:text-base">📐</span>
+                <p class="text-xs sm:text-xs text-blue-100 font-medium">Superficie Útil</p>
+              </div>
+              <div class="mb-2">
+                <p class="text-2xl sm:text-lg font-extrabold text-white leading-tight">
+                  $US {{ averagePricePerSqmUtil.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
+                </p>
+                <p class="text-xs text-blue-200 mt-1">por metro cuadrado</p>
+              </div>
+              <div class="flex items-center justify-center gap-1 text-xs text-blue-100">
+                <span class="bg-white/20 px-2 py-0.5 rounded-full">
+                  {{ filteredResults.filter(p => p.superficie_util && p.superficie_util > 0).length }} propiedades
+                </span>
+              </div>
             </div>
 
             <!-- Promedio Construida -->
             <div
               v-if="averagePricePerSqmConstruida"
-              class="bg-white/10 rounded-lg sm:rounded p-3 sm:p-2 backdrop-blur-sm text-center"
+              class="bg-white/10 rounded-lg p-4 sm:p-3 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-colors"
             >
-              <p class="text-sm sm:text-xs text-blue-100 mb-1">🏢 Constr.</p>
-              <p class="text-base sm:text-sm font-bold text-white">
-                {{ averagePricePerSqmConstruida.toFixed(0) }}
-              </p>
-              <p class="text-xs text-blue-100 opacity-75">
-                {{ filteredResults.filter(p => p.superficie_construida && p.superficie_construida > 0).length }} props
-              </p>
+              <div class="flex items-center justify-center gap-2 mb-2">
+                <span class="text-lg sm:text-base">🏢</span>
+                <p class="text-xs sm:text-xs text-blue-100 font-medium">Superficie Construida</p>
+              </div>
+              <div class="mb-2">
+                <p class="text-2xl sm:text-lg font-extrabold text-white leading-tight">
+                  $US {{ averagePricePerSqmConstruida.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
+                </p>
+                <p class="text-xs text-blue-200 mt-1">por metro cuadrado</p>
+              </div>
+              <div class="flex items-center justify-center gap-1 text-xs text-blue-100">
+                <span class="bg-white/20 px-2 py-0.5 rounded-full">
+                  {{ filteredResults.filter(p => p.superficie_construida && p.superficie_construida > 0).length }} propiedades
+                </span>
+              </div>
             </div>
           </div>
         </div>
