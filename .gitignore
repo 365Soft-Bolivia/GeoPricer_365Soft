@@ -74,3 +74,5 @@ yarn-error.log
 /.claude-projectfiles
 /.claude-scriptfiles
 CLAUDE.md 
+
+/docs/
