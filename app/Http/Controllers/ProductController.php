@@ -81,7 +81,8 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'codigo_inmueble' => 'required|string|max:255|unique:products',
-            'price' => 'required|numeric|min:0',
+            'price_usd' => 'nullable|numeric|min:0',
+            'price_bob' => 'nullable|numeric|min:0',
             'superficie_util' => 'nullable|numeric|min:0',
             'superficie_construida' => 'nullable|numeric|min:0',
             'ambientes' => 'nullable|integer|min:0',
@@ -105,9 +106,10 @@ class ProductController extends Controller
             'name.required' => 'El nombre es obligatorio.',
             'codigo_inmueble.required' => 'El código de inmueble es obligatorio.',
             'codigo_inmueble.unique' => 'Este código de inmueble ya está registrado.',
-            'price.required' => 'El precio es obligatorio.',
-            'price.numeric' => 'El precio debe ser un número válido.',
-            'price.min' => 'El precio no puede ser negativo.',
+            'price_usd.numeric' => 'El precio USD debe ser un número válido.',
+            'price_usd.min' => 'El precio USD no puede ser negativo.',
+            'price_bob.numeric' => 'El precio BOB debe ser un número válido.',
+            'price_bob.min' => 'El precio BOB no puede ser negativo.',
             'operacion.required' => 'El tipo de operación es obligatorio.',
             'operacion.in' => 'El tipo de operación debe ser: venta, alquiler o anticrético.',
             'ano_construccion.digits' => 'El año de construcción debe tener 4 dígitos.',
@@ -117,6 +119,13 @@ class ProductController extends Controller
             'sku.unique' => 'Este SKU ya está registrado.',
             'category_id.exists' => 'La categoría seleccionada no existe.',
         ]);
+
+        // Validar que al menos un precio esté presente
+        if (!$request->price_usd && !$request->price_bob) {
+            return redirect()->back()
+                ->withErrors(['price_usd' => 'Debes ingresar al menos un precio (USD o BOB).', 'price_bob' => 'Debes ingresar al menos un precio (USD o BOB).'])
+                ->withInput();
+        }
 
         // Agregar campos automáticos
         $validated['estado'] = 1;
@@ -135,7 +144,8 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'codigo_inmueble' => 'required|string|max:255|unique:products,codigo_inmueble,' . $product->id,
-            'price' => 'required|numeric|min:0',
+            'price_usd' => 'nullable|numeric|min:0',
+            'price_bob' => 'nullable|numeric|min:0',
             'superficie_util' => 'nullable|numeric|min:0',
             'superficie_construida' => 'nullable|numeric|min:0',
             'ambientes' => 'nullable|integer|min:0',
@@ -159,9 +169,10 @@ class ProductController extends Controller
             'name.required' => 'El nombre es obligatorio.',
             'codigo_inmueble.required' => 'El código de inmueble es obligatorio.',
             'codigo_inmueble.unique' => 'Este código de inmueble ya está registrado.',
-            'price.required' => 'El precio es obligatorio.',
-            'price.numeric' => 'El precio debe ser un número válido.',
-            'price.min' => 'El precio no puede ser negativo.',
+            'price_usd.numeric' => 'El precio USD debe ser un número válido.',
+            'price_usd.min' => 'El precio USD no puede ser negativo.',
+            'price_bob.numeric' => 'El precio BOB debe ser un número válido.',
+            'price_bob.min' => 'El precio BOB no puede ser negativo.',
             'operacion.required' => 'El tipo de operación es obligatorio.',
             'operacion.in' => 'El tipo de operación debe ser: venta, alquiler o anticrético.',
             'ano_construccion.digits' => 'El año de construcción debe tener 4 dígitos.',
@@ -171,6 +182,13 @@ class ProductController extends Controller
             'sku.unique' => 'Este SKU ya está registrado.',
             'category_id.exists' => 'La categoría seleccionada no existe.',
         ]);
+
+        // Validar que al menos un precio esté presente
+        if (!$request->price_usd && !$request->price_bob) {
+            return redirect()->back()
+                ->withErrors(['price_usd' => 'Debes ingresar al menos un precio (USD o BOB).', 'price_bob' => 'Debes ingresar al menos un precio (USD o BOB).'])
+                ->withInput();
+        }
 
         $validated['last_updated_by'] = auth()->id();
 

@@ -25,7 +25,8 @@ interface Propiedad {
     id: number;
     name: string;
     codigo_inmueble: string;
-    price: number;
+    price_usd?: number | null;
+    price_bob?: number | null;
     descripcion?: string;
     direccion?: string;
     superficie_util?: number;
@@ -101,12 +102,42 @@ const closeLightbox = () => {
 };
 
 // Formatear precio
-const formatPrice = (price: number) => {
+const formatPrice = (price: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('es-BO', {
         style: 'currency',
-        currency: 'USD',
+        currency: currency,
         minimumFractionDigits: 0
     }).format(price);
+};
+
+// Obtener el precio principal para mostrar (prioriza USD)
+const getMainPrice = () => {
+    if (props.propiedad.price_usd) {
+        return {
+            amount: props.propiedad.price_usd,
+            currency: 'USD',
+            formatted: formatPrice(props.propiedad.price_usd, 'USD')
+        };
+    }
+    if (props.propiedad.price_bob) {
+        return {
+            amount: props.propiedad.price_bob,
+            currency: 'BOB',
+            formatted: formatPrice(props.propiedad.price_bob, 'BOB')
+        };
+    }
+    return null;
+};
+
+// Obtener precio para el título de la página
+const getTitlePrice = () => {
+    if (props.propiedad.price_usd) {
+        return formatPrice(props.propiedad.price_usd, 'USD');
+    }
+    if (props.propiedad.price_bob) {
+        return formatPrice(props.propiedad.price_bob, 'BOB');
+    }
+    return 'Precio no disponible';
 };
 
 const defaultMessage = `Hola, me interesa la propiedad ID: ${props.propiedad.codigo_inmueble} - ${props.propiedad.name}`;
@@ -248,7 +279,7 @@ const breadcrumbs = computed(() => [
 </script>
 
 <template>
-    <Head :title="`${propiedad.name} - ${formatPrice(propiedad.price)}`" />
+    <Head :title="`${propiedad.name} - ${getTitlePrice()}`" />
 
     <div class="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <!-- Breadcrumbs -->
@@ -287,10 +318,14 @@ const breadcrumbs = computed(() => [
                     
                     <div class="text-right">
                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Precio {{ propiedad.operacion }}</p>
-                        <p class="text-3xl md:text-4xl font-bold text-blue-600 dark:text-blue-400">
-                            {{ formatPrice(propiedad.price) }}
+                        <p v-if="getMainPrice()" class="text-3xl md:text-4xl font-bold text-blue-600 dark:text-blue-400">
+                            {{ getMainPrice()?.formatted }}
+                        </p>
+                        <p v-if="propiedad.price_bob && propiedad.price_usd" class="text-sm md:text-base font-semibold text-green-600 dark:text-green-400 mt-1">
+                            {{ formatPrice(propiedad.price_bob!, 'BOB') }}
                         </p>
                         <p v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500 mt-1">/mes</p>
+                        <p v-if="!getMainPrice()" class="text-xl text-gray-400">Precio no disponible</p>
                     </div>
                 </div>
             </div>

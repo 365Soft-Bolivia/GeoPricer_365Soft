@@ -25,7 +25,8 @@ interface Product {
   id: number;
   name: string;
   codigo_inmueble: string;
-  price: number;
+  price_usd?: number | null;
+  price_bob?: number | null;
   operacion: string;
   category?: string;
   category_id?: number | null;
@@ -98,11 +99,64 @@ const nombreOperacionSeleccionada = computed(() => {
 const productosFiltrados = computed(() => {
   return props.productsConUbicacion.filter(product => {
     if (!product.location.is_active) return false;
-    if (categoriaSeleccionada.value && product.category_id !== categoriaSeleccionada.value) return false;
-    if (operacionSeleccionada.value && product.operacion !== operacionSeleccionada.value) return false;
+
+    // Filtro por categoría
+    if (categoriaSeleccionada.value && product.category_id !== categoriaSeleccionada.value) {
+      return false;
+    }
+
+    // Filtro por operación
+    if (operacionSeleccionada.value && product.operacion !== operacionSeleccionada.value) {
+      return false;
+    }
+
+    // Búsqueda por texto
+    if (searchQuery.value) {
+      const query = searchQuery.value.toLowerCase();
+      return (
+        product.name.toLowerCase().includes(query) ||
+        product.codigo_inmueble.toLowerCase().includes(query)
+      );
+    }
+
     return true;
   });
 });
+
+/* ================= HELPER FUNCTIONS ================= */
+const formatPrice = (price?: number | null, currency: string = '$') => {
+  if (!price) return '';
+  return `${currency}${price.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
+
+const getPriceDisplay = (product: Product) => {
+  const prices = [];
+  if (product.price_usd) {
+    prices.push(`<span class="text-green-600 font-bold">${formatPrice(product.price_usd, '$')} USD</span>`);
+  }
+  if (product.price_bob) {
+    prices.push(`<span class="text-blue-600 font-bold">${formatPrice(product.price_bob, 'Bs.')} BOB</span>`);
+  }
+  return prices.join('<br>') || '<span class="text-gray-400">Precio no disponible</span>';
+};
+
+// Calcular precio por metro cuadrado de superficie útil
+const getPricePerSqmUtil = (product: Product) => {
+  if (!product.superficie_util || product.superficie_util <= 0) return null;
+  // Priorizar precio USD para cálculos
+  const price = product.price_usd || product.price_bob;
+  if (!price) return null;
+  return price / product.superficie_util;
+};
+
+// Calcular precio por metro cuadrado de superficie construida
+const getPricePerSqmConstruida = (product: Product) => {
+  if (!product.superficie_construida || product.superficie_construida <= 0) return null;
+  // Priorizar precio USD para cálculos
+  const price = product.price_usd || product.price_bob;
+  if (!price) return null;
+  return price / product.superficie_construida;
+};
 
 const totalPropiedadesFiltradas = computed(() => {
   return productosFiltrados.value.length;
@@ -120,18 +174,6 @@ const filteredResults = computed(() => {
   );
 });
 
-// Calcular precio por metro cuadrado de superficie útil
-const getPricePerSqmUtil = (product: Product) => {
-  if (!product.superficie_util || product.superficie_util <= 0) return null;
-  return product.price / product.superficie_util;
-};
-
-// Calcular precio por metro cuadrado de superficie construida
-const getPricePerSqmConstruida = (product: Product) => {
-  if (!product.superficie_construida || product.superficie_construida <= 0) return null;
-  return product.price / product.superficie_construida;
-};
-
 // Calcular promedio de precio por m² útil de la zona
 const averagePricePerSqmUtil = computed(() => {
   const validProducts = filteredResults.value.filter(p => p.superficie_util && p.superficie_util > 0);
@@ -139,10 +181,15 @@ const averagePricePerSqmUtil = computed(() => {
   if (validProducts.length === 0) return null;
 
   const sum = validProducts.reduce((acc, p) => {
-    return acc + (p.price / p.superficie_util!);
+    const price = p.price_usd || p.price_bob;
+    if (!price) return acc;
+    return acc + (price / p.superficie_util!);
   }, 0);
 
-  return sum / validProducts.length;
+  const validCount = validProducts.filter(p => p.price_usd || p.price_bob).length;
+  if (validCount === 0) return null;
+
+  return sum / validCount;
 });
 
 // Calcular promedio de precio por m² construido de la zona
@@ -152,10 +199,15 @@ const averagePricePerSqmConstruida = computed(() => {
   if (validProducts.length === 0) return null;
 
   const sum = validProducts.reduce((acc, p) => {
-    return acc + (p.price / p.superficie_construida!);
+    const price = p.price_usd || p.price_bob;
+    if (!price) return acc;
+    return acc + (price / p.superficie_construida!);
   }, 0);
 
-  return sum / validProducts.length;
+  const validCount = validProducts.filter(p => p.price_usd || p.price_bob).length;
+  if (validCount === 0) return null;
+
+  return sum / validCount;
 });
 
 // Funciones de navegación
@@ -317,7 +369,7 @@ const updateMarkers = () => {
       <div class="text-sm">
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
-        <span class="text-green-600 font-bold">$US ${product.price.toLocaleString()}</span><br>
+        ${getPriceDisplay(product)}<br>
         <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
       </div>
     `);
@@ -724,7 +776,7 @@ const updateRadarMarkers = () => {
       <div class="text-sm">
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
-        <span class="text-green-600 font-bold">$US ${product.price.toLocaleString()}</span><br>
+        ${getPriceDisplay(product)}<br>
         <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
       </div>
     `);
@@ -776,7 +828,7 @@ const updateRadarMarkers = () => {
       <div class="text-sm">
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
-        <span class="text-green-600 font-bold">$US ${product.price.toLocaleString()}</span><br>
+        ${getPriceDisplay(product)}<br>
         <span class="text-xs text-blue-600">📏 ${distance.toFixed(0)}m del centro</span><br>
         <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
         ${product.operacion ? `<br><span class="text-xs text-purple-600">${getOperacionIcon(product.operacion)} ${product.operacion}</span>` : ''}

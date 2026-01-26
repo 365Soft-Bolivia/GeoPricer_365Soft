@@ -15,7 +15,8 @@ interface Producto {
   id: number;
   name: string;
   codigo_inmueble: string;
-  price: number;
+  price_usd?: number | null;
+  price_bob?: number | null;
   superficie_util?: number;
   superficie_construida?: number;
   ambientes?: number;
@@ -85,11 +86,10 @@ const handleProductUpdated = () => {
   router.reload({ only: ['productos'] });
 };
 
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('es-BO', {
-    style: 'currency',
-    currency: 'BOB'
-  }).format(price);
+const formatPrice = (price?: number | null, currency: string = '$') => {
+  if (!price) return '';
+  const symbol = currency === '$' ? '$' : 'Bs.';
+  return `${symbol}${price.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const formatDate = (date: string) => {
@@ -144,8 +144,16 @@ const formatDate = (date: string) => {
               </span>
               <span v-else class="text-gray-400">Sin categoría</span>
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-              {{ formatPrice(producto.price) }}
+            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+              <div v-if="producto.price_usd || producto.price_bob">
+                <div v-if="producto.price_usd" class="text-green-600 font-semibold">
+                  {{ formatPrice(producto.price_usd, '$') }}
+                </div>
+                <div v-if="producto.price_bob" class="text-blue-600 font-semibold">
+                  {{ formatPrice(producto.price_bob, 'Bs.') }}
+                </div>
+              </div>
+              <span v-else class="text-gray-400">Sin precio</span>
             </td>
             <td class="whitespace-nowrap px-6 py-4 text-sm">
               <span 

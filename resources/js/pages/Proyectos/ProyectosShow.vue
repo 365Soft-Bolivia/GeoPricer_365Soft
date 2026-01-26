@@ -26,7 +26,8 @@ interface Producto {
   id: number;
   name: string;
   codigo_inmueble: string;
-  price: number;
+  price_usd?: number | null;
+  price_bob?: number | null;
   superficie_util?: number;
   superficie_construida?: number;
   ambientes?: number;
@@ -61,12 +62,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const currentTab = ref<'imagenes' | 'general' | 'detalles' | 'otros'>('imagenes');
 
-const formatPrice = (price?: number) => {
-  if (!price) return 'No especificado';
-  return new Intl.NumberFormat('es-BO', {
-    style: 'currency',
-    currency: 'BOB'
-  }).format(price);
+const formatPrice = (price?: number | null, symbol: string = '$') => {
+  if (!price) return '';
+  return `${symbol}${price.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const formatDate = (date: string) => {
@@ -223,16 +221,35 @@ const handleImageUploaded = () => {
           <!-- Tab: General (igual que antes) -->
           <div v-show="currentTab === 'general'" class="space-y-6">
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <!-- Precio Principal -->
+              <!-- Precios -->
               <div class="lg:col-span-2">
                 <div class="rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 p-6 dark:from-green-900/20 dark:to-emerald-900/20">
                   <div class="flex items-center justify-between">
-                    <div>
+                    <div class="flex-1">
                       <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Precio</p>
-                      <p class="mt-2 text-4xl font-bold text-green-600 dark:text-green-400">
-                        {{ formatPrice(producto.price) }}
+
+                      <!-- Precio USD -->
+                      <div v-if="producto.price_usd" class="mt-2">
+                        <p class="text-3xl font-bold text-green-600 dark:text-green-400">
+                          {{ formatPrice(producto.price_usd, '$') }}
+                        </p>
+                        <p class="text-sm text-green-600 dark:text-green-400">USD</p>
+                      </div>
+
+                      <!-- Precio BOB -->
+                      <div v-if="producto.price_bob" class="mt-2" :class="{ 'pt-2': producto.price_usd }">
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {{ formatPrice(producto.price_bob, 'Bs.') }}
+                        </p>
+                        <p class="text-sm text-blue-600 dark:text-blue-400">BOB</p>
+                      </div>
+
+                      <!-- Sin precio -->
+                      <p v-if="!producto.price_usd && !producto.price_bob" class="mt-2 text-2xl font-bold text-gray-400">
+                        Precio no disponible
                       </p>
                     </div>
+
                     <div class="rounded-lg bg-green-600 p-4">
                       <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

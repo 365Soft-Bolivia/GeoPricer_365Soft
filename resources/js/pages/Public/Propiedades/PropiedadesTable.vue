@@ -19,7 +19,8 @@ interface Product {
     id: number;
     name: string;
     codigo_inmueble: string;
-    price: number;
+    price_usd?: number | null;
+    price_bob?: number | null;
     descripcion?: string;
     direccion?: string;
     superficie_util?: number;
@@ -81,7 +82,41 @@ const getImageUrl = (imagePath: string) => {
     return `/storage/${imagePath}`;
 };
 
+// Helper para formatear precio
+const formatPrice = (price: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('es-BO', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 0
+    }).format(price);
+};
 
+// Obtener el precio principal para mostrar (prioriza USD)
+const getMainPrice = (propiedad: Product) => {
+    if (propiedad.price_usd) {
+        return {
+            amount: propiedad.price_usd,
+            currency: 'USD',
+            formatted: formatPrice(propiedad.price_usd, 'USD')
+        };
+    }
+    if (propiedad.price_bob) {
+        return {
+            amount: propiedad.price_bob,
+            currency: 'BOB',
+            formatted: formatPrice(propiedad.price_bob, 'BOB')
+        };
+    }
+    return null;
+};
+
+// Obtener precio secundario para mostrar (si tiene ambos precios)
+const getSecondaryPrice = (propiedad: Product) => {
+    if (propiedad.price_bob && propiedad.price_usd) {
+        return formatPrice(propiedad.price_bob, 'BOB');
+    }
+    return null;
+};
 
 // Lógica de navegación de imágenes para cada propiedad
 const favoriteProperties = ref<Set<number>>(new Set());
@@ -208,13 +243,19 @@ const total = computed(() => props.pagination?.total || 0);
 
                     <!-- Precio -->
                     <div class="flex flex-col gap-2">
-                        <div class="flex items-baseline gap-2">
+                        <div v-if="getMainPrice(propiedad)" class="flex items-baseline gap-2">
                             <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                ${{ Number(propiedad.price).toLocaleString() }}
+                                {{ getMainPrice(propiedad)?.formatted }}
                             </span>
                             <span v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500">
                                 /mes
                             </span>
+                        </div>
+                        <div v-if="getSecondaryPrice(propiedad)" class="text-base font-semibold text-green-600 dark:text-green-400">
+                            {{ getSecondaryPrice(propiedad) }}
+                        </div>
+                        <div v-if="!getMainPrice(propiedad)" class="text-lg text-gray-400">
+                            Precio no disponible
                         </div>
 
                         <!-- Badges de operación y categoría -->
@@ -391,11 +432,17 @@ const total = computed(() => props.pagination?.total || 0);
                                 </div>
                             </div>
                             <div class="text-right sm:text-left">
-                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                    ${{ Number(propiedad.price).toLocaleString() }}
+                                <div v-if="getMainPrice(propiedad)" class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                    {{ getMainPrice(propiedad)?.formatted }}
+                                </div>
+                                <div v-if="getSecondaryPrice(propiedad)" class="text-base font-semibold text-green-600 dark:text-green-400 mt-1">
+                                    {{ getSecondaryPrice(propiedad) }}
                                 </div>
                                 <div v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500">
                                     /mes
+                                </div>
+                                <div v-if="!getMainPrice(propiedad)" class="text-lg text-gray-400">
+                                    Precio no disponible
                                 </div>
                                 <!-- Badges de operación y categoría -->
                                 <div class="flex flex-wrap gap-2 mt-2">

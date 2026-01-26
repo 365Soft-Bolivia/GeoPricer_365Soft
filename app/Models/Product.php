@@ -84,13 +84,23 @@ class Product extends BaseModel
     protected $table = 'products';
     const FILE_PATH = 'products';
 
+    // Constantes de moneda (para símbolos)
+    const CURRENCY_USD = 'USD';
+    const CURRENCY_BOB = 'BOB';
+
+    const CURRENCY_SYMBOLS = [
+        self::CURRENCY_USD => '$',
+        self::CURRENCY_BOB => 'Bs.',
+    ];
+
     /**
      * CAMPOS PERMITIDOS
      */
     protected $fillable = [
         'name',
         'codigo_inmueble',
-        'price',
+        'price_usd',
+        'price_bob',
         'description',
         'taxes',
         'allow_purchase',
@@ -117,11 +127,13 @@ class Product extends BaseModel
         'company_id',
     ];
 
-    protected $appends = ['total_amount', 'image_url', 'download_file_url', 'image'];
+    protected $appends = ['total_amount', 'image_url', 'download_file_url', 'image', 'formatted_price_usd', 'formatted_price_bob', 'display_price'];
 
     protected $with = ['tax'];
 
     protected $casts = [
+        'price_usd' => 'decimal:2',
+        'price_bob' => 'decimal:2',
         'comision' => 'float',
         'is_public' => 'boolean',
     ];
@@ -272,11 +284,12 @@ class Product extends BaseModel
 
     public function scopeByPriceRange($query, $min = null, $max = null)
     {
+        // Filtrar por precio USD (moneda principal)
         if ($min !== null) {
-            $query->where('price', '>=', $min);
+            $query->where('price_usd', '>=', $min);
         }
         if ($max !== null) {
-            $query->where('price', '<=', $max);
+            $query->where('price_usd', '<=', $max);
         }
         return $query;
     }
@@ -367,5 +380,102 @@ class Product extends BaseModel
             'category',
             'addedBy'
         ]);
+    }
+
+    /**
+     * Obtener el precio USD formateado
+     */
+    public function getFormattedPriceUsdAttribute(): string
+    {
+        if (!$this->price_usd) return '';
+
+        $symbol = self::CURRENCY_SYMBOLS['USD'];
+        $price = number_format((float)$this->price_usd, 2, ',', '.');
+
+        return "{$symbol}{$price}";
+    }
+
+    /**
+     * Obtener el precio BOB formateado
+     */
+    public function getFormattedPriceBobAttribute(): string
+    {
+        if (!$this->price_bob) return '';
+
+        $symbol = self::CURRENCY_SYMBOLS['BOB'];
+        $price = number_format((float)$this->price_bob, 2, ',', '.');
+
+        return "{$symbol}{$price}";
+    }
+
+    /**
+     * Obtener precio para mostrar (prioriza USD, si no existe muestra BOB)
+     */
+    public function getDisplayPriceAttribute(): string
+    {
+        if ($this->price_usd) {
+            return $this->formatted_price_usd;
+        }
+
+        if ($this->price_bob) {
+            return $this->formatted_price_bob;
+        }
+
+        return 'Precio no disponible';
+    }
+
+    /**
+     * Scope para filtrar por rango de precios USD
+     */
+    public function scopeByPriceUsdRange($query, $min = null, $max = null)
+    {
+        if ($min !== null) {
+            $query->where('price_usd', '>=', $min);
+        }
+        if ($max !== null) {
+            $query->where('price_usd', '<=', $max);
+        }
+        return $query;
+    }
+
+    /**
+     * Scope para filtrar por rango de precios BOB
+     */
+    public function scopeByPriceBobRange($query, $min = null, $max = null)
+    {
+        if ($min !== null) {
+            $query->where('price_bob', '>=', $min);
+        }
+        if ($max !== null) {
+            $query->where('price_bob', '<=', $max);
+        }
+        return $query;
+    }
+
+    /**
+     * Scope para filtrar propiedades que tienen precio en alguna moneda
+     */
+    public function scopeHasPrice($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNotNull('price_usd')
+              ->orWhereNotNull('price_bob');
+        });
+    }
+
+    /**
+     * Scope para filtrar propiedades con precio USD
+     */
+    public function scopeHasPriceUsd($query)
+    {
+        return $query->whereNotNull('price_usd');
+    }
+
+    /**
+     * Scope para filtrar propiedades con precio BOB
+     */
+    public function scopeHasPriceBob($query)
+    {
+        return $query->whereNotNull('price_bob');
     }
 }

@@ -12,7 +12,8 @@ interface Producto {
   id: number;
   name: string;
   codigo_inmueble: string;
-  price: number;
+  price_usd?: number | null;
+  price_bob?: number | null;
   superficie_util?: number;
   superficie_construida?: number;
   ambientes?: number;
@@ -51,7 +52,8 @@ const { proyectos } = admin;
 const form = useForm({
   name: props.product.name,
   codigo_inmueble: props.product.codigo_inmueble,
-  price: props.product.price,
+  price_usd: props.product.price_usd || null,
+  price_bob: props.product.price_bob || null,
   superficie_util: props.product.superficie_util || null,
   superficie_construida: props.product.superficie_construida || null,
   ambientes: props.product.ambientes || null,
@@ -230,20 +232,41 @@ const submit = () => {
 
                     <div>
                       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Precio (BOB) <span class="text-red-500">*</span>
+                        Precio USD <span class="text-gray-400">(opcional)</span>
                       </label>
                       <div class="relative mt-1">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">Bs.</span>
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 font-medium">$</span>
                         <input
-                          v-model.number="form.price"
+                          v-model.number="form.price_usd"
                           type="number"
                           step="0.01"
                           min="0"
-                          required
+                          placeholder="0.00"
                           class="block w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
                         />
                       </div>
-                      <p v-if="form.errors.price" class="mt-1 text-sm text-red-600">{{ form.errors.price }}</p>
+                      <p v-if="form.errors.price_usd" class="mt-1 text-sm text-red-600">{{ form.errors.price_usd }}</p>
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Precio BOB <span class="text-gray-400">(opcional)</span>
+                      </label>
+                      <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 font-medium">Bs.</span>
+                        <input
+                          v-model.number="form.price_bob"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          class="block w-full rounded-md border border-gray-300 py-2 pl-12 pr-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
+                        />
+                      </div>
+                      <p v-if="form.errors.price_bob" class="mt-1 text-sm text-red-600">{{ form.errors.price_bob }}</p>
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Al menos un precio es obligatorio (USD o BOB)
+                      </p>
                     </div>
 
                     <div>
