@@ -409,7 +409,7 @@ watch(() => props.filtros, (newFilters) => {
         <!-- SIDEBAR -->
         <aside
           :class="[
-            'bg-white/80 dark:bg-[#0d1b2a] text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700 backdrop-blur-sm transition-all duration-300 ease-in-out z-30 max-h-screen overflow-y-auto',
+            'bg-white/80 dark:bg-[#1e2d4d] text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700 backdrop-blur-sm transition-all duration-300 ease-in-out z-30 max-h-screen overflow-y-auto',
             sidebarCollapsed ? 'w-16' : 'w-80',
             sidebarCollapsed ? 'fixed -translate-x-full lg:relative lg:translate-x-0' : 'fixed lg:relative'
           ]"

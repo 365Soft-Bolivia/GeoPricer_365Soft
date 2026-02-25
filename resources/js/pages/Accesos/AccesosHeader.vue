@@ -98,10 +98,10 @@ const goToRoles = () => {
   <div class="px-6 pb-6">
     <div class="flex items-center justify-between pb-4 border-b-2 border-gray-200 dark:border-gray-700">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
           Gestión de Accesos
         </h1>
-        <p class="mt-2 text-base text-gray-700 dark:text-gray-300">
+        <p class="mt-2 text-base text-gray-700 dark:text-gray-300" style="font-family: 'Montserrat', sans-serif; font-weight: 400;">
           Administra usuarios y sus roles en el sistema
         </p>
       </div>
@@ -150,7 +150,7 @@ const goToRoles = () => {
     <Dialog v-model:open="showCreateDialog">
       <DialogContent class="sm:max-w-[500px] dark:bg-gray-900" :show-close="false">
         <DialogHeader>
-          <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+          <DialogTitle style="font-family: 'Montserrat', sans-serif; font-weight: 600;">Crear Nuevo Usuario</DialogTitle>
         </DialogHeader>
         <AccesosCreateForm 
           :roles="roles"

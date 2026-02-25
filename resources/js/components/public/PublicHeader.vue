@@ -10,77 +10,87 @@ const { home } = publicRoutes;
 
 const navigation = [
     { name: 'Inicio', href: home().url },
-    // { name: 'Propiedades', href: '/propiedades' },
-    { name: 'Sobre Nosotros', href: '/sobre-nosotros' },
-    { name: 'Contacto', href: '/contacto' },
 ];
 </script>
 
 <template>
-    <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
+    <header class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] shadow-2xl sticky top-0 z-50 border-b-4 border-[#FAB90E]">
         <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex h-16 justify-between items-center">
+            <div class="flex h-20 justify-between items-center">
+                <!-- Logo -->
                 <div class="flex items-center">
-                    <Link :href="home()" class="flex items-center">
-                        <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            🏠 Tu propiedad, su valor real
-                        </span>
+                    <Link :href="home()" class="flex items-center group">
+                        <div class="bg-white p-2 rounded-lg mr-3 shadow-lg group-hover:scale-110 transition-transform">
+                            <img src="/logoalfa.png" alt="Alfa Inmobiliaria Bolivia" class="h-14 w-auto object-contain" />
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-2xl font-bold text-white tracking-tight" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
+                                Alfa Inmobiliaria
+                            </span>
+                            <span class="text-xs text-[#FAB90E] font-semibold tracking-wider" style="font-family: 'Montserrat', sans-serif; font-weight: 600;">
+                                BOLIVIA
+                            </span>
+                        </div>
                     </Link>
                 </div>
 
-                <div class="hidden md:flex md:items-center md:space-x-8">
+                <!-- Navegación Desktop -->
+                <div class="hidden md:flex md:items-center md:space-x-1">
                     <Link
                         v-for="item in navigation"
                         :key="item.name"
                         :href="item.href"
-                        class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 text-sm font-medium transition-colors"
+                        class="text-white/90 hover:text-white hover:bg-white/10 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 relative group"
                     >
                         {{ item.name }}
+                        <span class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-[#FAB90E] group-hover:w-full transition-all duration-300"></span>
                     </Link>
 
-                    <!-- Botón especial para el mapa interactivo -->
+                    <!-- Botón CTA Mapa -->
                     <Link
                         href="/mapa-propiedades"
-                        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-md hover:shadow-lg"
+                        class="flex items-center gap-2 bg-[#FAB90E] hover:bg-[#ffc932] text-[#212121] px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ml-4"
                         title="Ver mapa interactivo de propiedades"
                     >
-                        <MapPin :size="18" />
-                        <span>Mapa Interactivo de Avalúo</span>
+                        <MapPin :size="18" class="animate-pulse" />
+                        <span>Mapa Interactivo</span>
                     </Link>
                 </div>
 
+                <!-- Botón Menú Móvil -->
                 <div class="md:hidden">
                     <button
                         @click="mobileMenuOpen = !mobileMenuOpen"
-                        class="text-gray-700 dark:text-gray-300 hover:text-blue-600"
+                        class="text-white hover:text-[#FAB90E] p-2 rounded-lg hover:bg-white/10 transition-all"
                     >
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16" />
+                            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
             </div>
 
-            <div v-if="mobileMenuOpen" class="md:hidden pb-4">
-                <div class="flex flex-col space-y-2">
+            <!-- Menú Móvil -->
+            <div v-if="mobileMenuOpen" class="md:hidden pb-6 animate-fade-in">
+                <div class="flex flex-col space-y-2 bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
                     <Link
                         v-for="item in navigation"
                         :key="item.name"
                         :href="item.href"
-                        class="text-gray-700 dark:text-gray-300 hover:text-blue-600 px-3 py-2 text-base font-medium"
+                        class="text-white hover:text-[#FAB90E] hover:bg-white/10 px-4 py-3 rounded-lg text-base font-semibold transition-all"
                         @click="mobileMenuOpen = false"
                     >
                         {{ item.name }}
                     </Link>
 
-                    <!-- Botón del mapa en versión móvil -->
+                    <!-- Botón CTA móvil -->
                     <Link
                         href="/mapa-propiedades"
-                        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg text-base font-medium transition-colors shadow-md hover:shadow-lg"
+                        class="flex items-center justify-center gap-2 bg-[#FAB90E] hover:bg-[#ffc932] text-[#212121] px-4 py-3 rounded-xl text-base font-bold transition-all shadow-lg mt-2"
                         @click="mobileMenuOpen = false"
                     >
-                        <MapPin :size="20" />
+                        <MapPin :size="20" class="animate-pulse" />
                         <span>Mapa Interactivo</span>
                     </Link>
                 </div>
@@ -88,3 +98,20 @@ const navigation = [
         </nav>
     </header>
 </template>
+
+<style scoped>
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+}
+</style>

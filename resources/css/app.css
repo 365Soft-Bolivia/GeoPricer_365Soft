@@ -1,16 +1,24 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Import Google Fonts - Montserrat */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    /* Tipografía Corporativa Alfa Inmobiliaria Bolivia */
     --font-sans:
-        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
+        'Montserrat', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+
+    --font-serif:
+        'Georgia Pro', 'Georgia', ui-serif, serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -81,90 +89,103 @@
     }
 }
 :root {
-    --background: #ffffff;            /* white-50: Fondo general */
-    --foreground: #292929;            /* white-950: Texto principal */
+    /* Paleta Corporativa Alfa Inmobiliaria Bolivia */
+    --background: #F5F5F5;            /* Gris neutro: Fondo principal */
+    --foreground: #212121;            /* Negro elegante: Texto principal */
 
-    --card: #efefef;                  /* white-100 */
-    --card-foreground: #292929;       /* white-950 */
+    --card: #ffffff;                  /* Blanco para contraste */
+    --card-foreground: #212121;       /* Negro elegante */
 
-    --popover: #dcdcdc;               /* white-200 */
-    --popover-foreground: #292929;    /* white-950 */
+    --popover: #F5F5F5;               /* Gris neutro */
+    --popover-foreground: #212121;    /* Negro elegante */
 
-    --primary: #7c7c7c;               /* white-500: Botones / énfasis */
+    --primary: #233C7A;               /* Azul Alfa: Color principal (60%) */
     --primary-foreground: #ffffff;    /* Blanco para contraste */
 
-    --secondary: #656565;             /* white-600 */
-    --secondary-foreground: #ffffff;
+    --secondary: #E0081D;             /* Rojo Alfa: Color secundario (30%) */
+    --secondary-foreground: #ffffff;  /* Blanco para contraste */
 
-    --muted: #dcdcdc;                 /* white-200 */
-    --muted-foreground: #3d3d3d;      /* white-900 */
+    --muted: #F5F5F5;                 /* Gris neutro: Fondos secundarios */
+    --muted-foreground: #212121;      /* Negro elegante */
 
-    --accent: #bdbdbd;                /* white-300 */
-    --accent-foreground: #292929;     /* white-950 */
+    --accent: #FAB90E;                /* Amarillo Alfa: Acento (10%) */
+    --accent-foreground: #212121;     /* Negro elegante para contraste */
 
-    --destructive: #C62828;           /* Mantengo rojo para alertas */
+    --destructive: #E0081D;           /* Rojo Alfa: Alertas y acciones destructivas */
     --destructive-foreground: #ffffff;
 
-    --border: #525252;                /* white-700 */
-    --input: #ffffff;                 /* Blanco */
-    --ring: #989898;                  /* white-400 */
+    --border: #d4d4d4;                /* Gris más oscuro: Bordes y separadores */
+    --input: #ffffff;                 /* Blanco: Inputs */
+    --ring: #233C7A;                  /* Azul Alfa: Focus ring */
 
-    /* Gráficos */
-    --chart-1: #7c7c7c;               /* white-500 */
-    --chart-2: #bdbdbd;               /* white-300 */
-    --chart-3: #656565;               /* white-600 */
-    --chart-4: #dcdcdc;               /* white-200 */
-    --chart-5: #525252;               /* white-700 */
+    /* Gráficos con paleta corporativa */
+    --chart-1: #233C7A;               /* Azul Alfa */
+    --chart-2: #E0081D;               /* Rojo Alfa */
+    --chart-3: #FAB90E;               /* Amarillo Alfa */
+    --chart-4: #F5F5F5;               /* Gris neutro */
+    --chart-5: #212121;               /* Negro elegante */
 
     --radius: 0.5rem;
 
-    /* Sidebar */
-    --sidebar-background: #ffffff;    /* white-50 */
-    --sidebar-foreground: #292929;    /* white-950 */
-    --sidebar-primary: #7c7c7c;       /* white-500 */
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #656565;        /* white-600 */
+    /* Sidebar con paleta corporativa */
+    --sidebar-background: #233C7A;    /* Azul Alfa */
+    --sidebar-foreground: #ffffff;    /* Blanco */
+    --sidebar-primary: #FAB90E;       /* Amarillo Alfa */
+    --sidebar-primary-foreground: #212121;
+    --sidebar-accent: #E0081D;        /* Rojo Alfa */
     --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #525252;        /* white-700 */
-    --sidebar-ring: #989898;          /* white-400 */
-    --sidebar: #ffffff;               /* white-50 */
+    --sidebar-border: #F5F5F5;        /* Gris neutro */
+    --sidebar-ring: #FAB90E;          /* Amarillo Alfa */
+    --sidebar: #233C7A;               /* Azul Alfa */
 }
 
 
 .dark {
-    --background: hsl(0 0% 3.9%);
-    --foreground: hsl(0 0% 98%);
-    --card: hsl(0 0% 3.9%);
-    --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(0 0% 3.9%);
-    --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(0 0% 9%);
-    --secondary: hsl(0 0% 14.9%);
-    --secondary-foreground: hsl(0 0% 98%);
-    --muted: hsl(0 0% 16.08%);
-    --muted-foreground: hsl(0 0% 63.9%);
-    --accent: hsl(0 0% 14.9%);
-    --accent-foreground: hsl(0 0% 98%);
-    --destructive: hsl(0 84% 60%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 14.9%);
-    --input: hsl(0 0% 14.9%);
-    --ring: hsl(0 0% 83.1%);
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(160 60% 45%);
-    --chart-3: hsl(30 80% 55%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
-    --sidebar-background: hsl(0 0% 7%);
-    --sidebar-foreground: hsl(0 0% 95.9%);
-    --sidebar-primary: hsl(360, 100%, 100%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(0 0% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(0 0% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(240 5.9% 10%);
+    /* Paleta Corporativa Alfa Inmobiliaria Bolivia - Modo Oscuro */
+    --background: #1a1a1a;            /* Fondo muy oscuro */
+    --foreground: #F5F5F5;            /* Gris neutro claro: Texto principal */
+
+    --card: #2a2a2a;                  /* Fondo de cards */
+    --card-foreground: #F5F5F5;       /* Gris neutro claro */
+
+    --popover: #2a2a2a;               /* Fondo popover */
+    --popover-foreground: #F5F5F5;    /* Gris neutro claro */
+
+    --primary: #4a6db5;               /* Azul Alfa aclarado para modo oscuro */
+    --primary-foreground: #ffffff;
+
+    --secondary: #ff1a2e;             /* Rojo Alfa aclarado para modo oscuro */
+    --secondary-foreground: #ffffff;
+
+    --muted: #2a2a2a;                 /* Fondos secundarios oscuros */
+    --muted-foreground: #F5F5F5;      /* Gris neutro claro */
+
+    --accent: #ffc932;                /* Amarillo Alfa aclarado para modo oscuro */
+    --accent-foreground: #212121;     /* Negro elegante para contraste */
+
+    --destructive: #ff1a2e;           /* Rojo Alfo aclarado: Alertas */
+    --destructive-foreground: #ffffff;
+
+    --border: #404040;                /* Bordes oscuros */
+    --input: #2a2a2a;                 /* Inputs oscuros */
+    --ring: #4a6db5;                  /* Azul Alfa aclarado: Focus ring */
+
+    /* Gráficos con paleta corporativa - Modo oscuro */
+    --chart-1: #4a6db5;               /* Azul Alfa aclarado */
+    --chart-2: #ff1a2e;               /* Rojo Alfa aclarado */
+    --chart-3: #ffc932;               /* Amarillo Alfa aclarado */
+    --chart-4: #F5F5F5;               /* Gris neutro */
+    --chart-5: #ffffff;               /* Blanco */
+
+    --sidebar-background: #1e2d4d;    /* Azul Alfa muy oscuro */
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #ffc932;       /* Amarillo Alfa aclarado */
+    --sidebar-primary-foreground: #212121;
+    --sidebar-accent: #ff1a2e;        /* Rojo Alfa aclarado */
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #404040;
+    --sidebar-ring: #ffc932;
+    --sidebar: #1e2d4d;               /* Azul Alfa muy oscuro */
 }
 
 @layer base {
@@ -173,6 +194,58 @@
     }
     body {
         @apply bg-background text-foreground;
+    }
+
+    /* Tipografía Corporativa Alfa Inmobiliaria Bolivia */
+    h1, .h1 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700; /* Bold */
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+
+    h2, .h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600; /* SemiBold */
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+    }
+
+    h3, .h3 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600; /* SemiBold */
+        letter-spacing: 0;
+        line-height: 1.4;
+    }
+
+    h4, .h4 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 500; /* Medium */
+        line-height: 1.4;
+    }
+
+    /* Tipografía secundaria - Georgia Pro Italic */
+    .font-serif-secondary {
+        font-family: 'Georgia Pro', 'Georgia', serif;
+        font-style: italic;
+        font-weight: 400;
+        line-height: 1.6;
+    }
+
+    /* Subtítulos alternativos elegantes */
+    .subtitle-elegant {
+        font-family: 'Georgia Pro', 'Georgia', serif;
+        font-style: italic;
+        font-weight: 400;
+        color: inherit;
+        opacity: 0.9;
+    }
+
+    /* Textos corporativos institucionales */
+    .text-institutional {
+        font-family: 'Georgia Pro', 'Georgia', serif;
+        font-style: italic;
+        line-height: 1.7;
     }
 }
 

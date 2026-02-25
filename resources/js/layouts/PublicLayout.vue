@@ -37,7 +37,7 @@ onMounted(() => {
     <Toast position="top-right" />
     <ConfirmDialog />
 
-    <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-screen flex flex-col bg-[#F5F5F5] dark:bg-[#1a1a1a]">
         <!-- Header -->
         <PublicHeader />
 

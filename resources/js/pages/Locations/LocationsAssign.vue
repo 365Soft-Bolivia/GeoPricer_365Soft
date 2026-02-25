@@ -28,7 +28,8 @@ interface Product {
     id: number;
     name: string;
     codigo_inmueble: string;
-    price: number;
+    price_usd?: number | null;
+    price_bob?: number | null;
     default_image: string | null;
     category: string | null;
     operacion?: string;
@@ -498,11 +499,16 @@ onUnmounted(() => {
                                 {{ product.name }}
                             </p>
                             <p class="text-[9px] text-gray-500">{{ product.codigo_inmueble }}</p>
-                            <div class="flex justify-between items-center text-[9px] text-gray-700 mt-1">
-                                <span class="truncate">{{ product.category || 'N/A' }}</span>
-                                <span class="text-green-600 font-bold ml-1 flex-shrink-0">
-                                    {{ (product.price / 1000).toFixed(0) }}k
-                                </span>
+                            <div class="flex flex-col gap-0.5 text-[9px] mt-1">
+                                <span class="truncate text-gray-700">{{ product.category || 'N/A' }}</span>
+                                <div class="space-y-0.5">
+                                    <p v-if="product.price_usd" class="text-green-600 font-bold text-[9px]">
+                                        ${{ (product.price_usd / 1000).toFixed(0) }}k
+                                    </p>
+                                    <p v-if="product.price_bob" class="text-blue-600 font-semibold text-[9px]">
+                                        Bs. {{ (product.price_bob / 1000).toFixed(0) }}k
+                                    </p>
+                                </div>
                             </div>
                         </button>
                     </div>

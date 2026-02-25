@@ -3,51 +3,67 @@
    Edita aquí los colores, bordes, y estilos
    ============================================ */
 
-/* 1️⃣ VARIABLES DE COLOR - Cambia estos valores */
+/* 1️⃣ VARIABLES DE COLOR - Paleta Corporativa Alfa Inmobiliaria Bolivia */
 :root {
-  /* Colores principales - usan las variables de app.css */
-  --primary-color: var(--color-primary);
-  --primary-hover: var(--color-secondary);
-  --primary-color-text: var(--color-primary-foreground);
+  /* Colores principales - Paleta Corporativa */
+  --primary-color: #233C7A;               /* Azul Alfa */
+  --primary-hover: #1e3263;               /* Azul Alfa más oscuro para hover */
+  --primary-color-text: #ffffff;          /* Blanco para contraste */
 
   /* Colores de fondo */
-  --surface-ground: var(--color-background);
-  --surface-card: var(--color-card);
+  --surface-ground: #F5F5F5;              /* Gris neutro */
+  --surface-card: #ffffff;                /* Blanco */
 
   /* Colores de texto */
-  --text-color: var(--color-foreground);
-  --text-color-secondary: var(--color-muted-foreground);
+  --text-color: #212121;                  /* Negro elegante */
+  --text-color-secondary: #525252;        /* Gris para texto secundario */
 
   /* Bordes */
-  --border-color: var(--color-border);
-  --border-radius: var(--radius);
-  --border-radius-sm: var(--radius-sm);
-  --border-radius-lg: var(--radius-lg);
+  --border-color: #d4d4d4;                /* Gris para bordes */
+  --border-radius: 0.5rem;
+  --border-radius-sm: calc(0.5rem - 2px);
+  --border-radius-lg: calc(0.5rem + 2px);
 
-  /* Colores de estado */
-  --success-color: #10b981;
-  /* Verde éxito */
+  /* Colores de estado - Paleta Corporativa */
+  --success-color: #10b981;               /* Verde éxito (mantenido) */
   --success-hover: #059669;
-  --danger-color: var(--color-destructive);
-  --danger-hover: #dc2626;
-  --warning-color: #f59e0b;
-  /* Amarillo advertencia */
-  --info-color: var(--color-accent);
-  --secondary-color: var(--color-secondary);
+  --danger-color: #E0081D;                /* Rojo Alfa: Alertas y errores */
+  --danger-hover: #b30612;                /* Rojo Alfa más oscuro */
+  --warning-color: #FAB90E;               /* Amarillo Alfa: Advertencias */
+  --warning-hover: #e5a600;               /* Amarillo Alfa más oscuro */
+  --info-color: #233C7A;                  /* Azul Alfa: Información */
+  --info-hover: #1e3263;                  /* Azul Alfa más oscuro */
+  --secondary-color: #E0081D;             /* Rojo Alfa: Secundario */
 
-  /* Sombras con tonos cálidos */
-  --shadow-sm: 0 1px 2px 0 rgba(50, 34, 22, 0.05);
-  --shadow: 0 1px 3px 0 rgba(50, 34, 22, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(50, 34, 22, 0.1);
+  /* Sombras con tonos neutrales */
+  --shadow-sm: 0 1px 2px 0 rgba(33, 33, 33, 0.05);
+  --shadow: 0 1px 3px 0 rgba(33, 33, 33, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(33, 33, 33, 0.1);
 }
 
-/* Modo oscuro */
+/* Modo oscuro - Paleta Corporativa */
 .dark {
-  --surface-ground: #111827;
-  --surface-card: #1f2937;
-  --text-color: #f9fafb;
-  --text-color-secondary: #9ca3af;
-  --border-color: #374151;
+  --surface-ground: #1a1a1a;             /* Fondo muy oscuro */
+  --surface-card: #2a2a2a;               /* Fondo de cards */
+  --text-color: #F5F5F5;                 /* Gris neutro claro */
+  --text-color-secondary: #d4d4d4;       /* Gris para texto secundario */
+  --border-color: #404040;               /* Bordes oscuros */
+
+  /* Colores principales - Modo oscuro */
+  --primary-color: #4a6db5;              /* Azul Alfa aclarado */
+  --primary-hover: #5a7dc5;
+  --primary-color-text: #ffffff;
+
+  /* Colores de estado - Modo oscuro */
+  --success-color: #34d399;              /* Verde éxito aclarado */
+  --success-hover: #10b981;
+  --danger-color: #ff1a2e;               /* Rojo Alfa aclarado */
+  --danger-hover: #ff3344;
+  --warning-color: #ffc932;              /* Amarillo Alfa aclarado */
+  --warning-hover: #ffd54d;
+  --info-color: #4a6db5;                /* Azul Alfa aclarado */
+  --info-hover: #5a7dc5;
+  --secondary-color: #ff1a2e;            /* Rojo Alfa aclarado */
 }
 
 /* 2️⃣ BOTONES - Personaliza aquí */

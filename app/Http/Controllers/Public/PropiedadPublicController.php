@@ -39,15 +39,66 @@ class PropiedadPublicController extends Controller
     /**
      * Vista del mapa interactivo con todas las propiedades públicas con ubicación
      */
-    public function mapa(): Response
+    public function mapa(Request $request): Response
     {
-        // Obtener solo propiedades públicas que tengan ubicación activa
-        $productsConUbicacion = Product::with(['location', 'category', 'images'])
+        // Construir query base
+        $query = Product::with(['location', 'category', 'images'])
             ->where('is_public', true)
             ->whereHas('location', function ($query) {
                 $query->where('is_active', true);
-            })
-            ->get()
+            });
+
+        // Aplicar filtros si se proporcionaron
+        if ($request->has('categoria') && $request->get('categoria')) {
+            $categoria = $request->get('categoria');
+            $query->where('category_id', $categoria);
+            \Log::info('Filtro categoría aplicado:', ['categoria' => $categoria]);
+        }
+
+        if ($request->has('operacion') && $request->get('operacion')) {
+            $operacion = $request->get('operacion');
+            $query->where('operacion', $operacion);
+            \Log::info('Filtro operación aplicado:', ['operacion' => $operacion]);
+        }
+
+        if ($request->has('precio_min') && $request->get('precio_min')) {
+            $precioMin = $request->get('precio_min');
+            $query->where('price_usd', '>=', $precioMin);
+            \Log::info('Filtro precio_min aplicado:', ['precio_min' => $precioMin]);
+        }
+
+        if ($request->has('precio_max') && $request->get('precio_max')) {
+            $precioMax = $request->get('precio_max');
+            $query->where('price_usd', '<=', $precioMax);
+            \Log::info('Filtro precio_max aplicado:', ['precio_max' => $precioMax]);
+        }
+
+        if ($request->has('habitaciones') && $request->get('habitaciones')) {
+            $habitaciones = $request->get('habitaciones');
+            $query->where('habitaciones', '>=', $habitaciones);
+            \Log::info('Filtro habitaciones aplicado:', ['habitaciones' => $habitaciones]);
+        }
+
+        if ($request->has('banos') && $request->get('banos')) {
+            $banos = $request->get('banos');
+            $query->where('banos', '>=', $banos);
+            \Log::info('Filtro baños aplicado:', ['banos' => $banos]);
+        }
+
+        if ($request->has('ubicaciones') && is_array($request->get('ubicaciones')) && count($request->get('ubicaciones')) > 0) {
+            $ubicaciones = $request->get('ubicaciones');
+            $query->whereHas('location', function ($q) use ($ubicaciones) {
+                $q->whereIn('address', $ubicaciones);
+            });
+            \Log::info('Filtro ubicaciones aplicado:', ['ubicaciones' => $ubicaciones]);
+        }
+
+        // Contar resultados antes de obtener
+        $totalCount = $query->count();
+        \Log::info('Total de propiedades filtradas:', ['total' => $totalCount]);
+
+        // Obtener propiedades filtradas
+        $productsConUbicacion = $query->get()
             ->map(function ($product) {
                 return [
                     'id' => $product->id,
@@ -108,7 +159,16 @@ class PropiedadPublicController extends Controller
                 'lat' => -16.5000, // La Paz, Bolivia (centro del país)
                 'lng' => -68.1500,
             ],
-            'totalPropiedades' => $productsConUbicacion->count(),
+            'totalPropiedades' => $totalCount,
+            'filtrosAplicados' => [
+                'categoria' => $request->get('categoria') ? (int)$request->get('categoria') : null,
+                'operacion' => $request->get('operacion'),
+                'precio_min' => $request->get('precio_min') ? (float)$request->get('precio_min') : null,
+                'precio_max' => $request->get('precio_max') ? (float)$request->get('precio_max') : null,
+                'habitaciones' => $request->get('habitaciones') ? (int)$request->get('habitaciones') : null,
+                'banos' => $request->get('banos') ? (int)$request->get('banos') : null,
+                'ubicaciones' => $request->get('ubicaciones'),
+            ]
         ]);
     }
 
