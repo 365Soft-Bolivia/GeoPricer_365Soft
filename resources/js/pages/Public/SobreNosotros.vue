@@ -126,19 +126,19 @@ const companyData = {
         <!-- Hero Section - Historia y Porqué de la Empresa -->
         <section class="relative bg-cover bg-center bg-no-repeat text-white" :style="{ backgroundImage: `url(${companyData.historia.imagenFondo})` }">
             <!-- Overlay para mejor legibilidad -->
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-900/70 via-blue-800/60 to-black/50"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-[#233C7A]/90 via-[#233C7A]/80 to-black/50"></div>
 
             <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
                 <div class="text-center max-w-4xl mx-auto">
                     <div class="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full mb-8">
-                        <Heart class="w-10 h-10 text-yellow-300" />
+                        <Heart class="w-10 h-10 text-[#FAB90E]" />
                     </div>
-                    <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight">
+                    <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                         {{ companyData.historia.titulo }}
                     </h1>
                     <div class="text-xl md:text-2xl text-blue-100 space-y-6 leading-relaxed">
                         <p>{{ companyData.historia.contenido }}</p>
-                        <div class="bg-white/10 backdrop-blur-sm border-l-4 border-yellow-300 p-6 my-8 text-left">
+                        <div class="bg-white/10 backdrop-blur-sm border-l-4 border-[#FAB90E] p-6 my-8 text-left">
                             <p class="italic text-lg">"{{ companyData.historia.momentoClave }}"</p>
                         </div>
                     </div>
@@ -150,13 +150,13 @@ const companyData = {
         <section class="py-20 bg-white dark:bg-gray-900">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16">
-                    <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full mb-6">
-                        <Users class="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-[#F5F5F5] dark:bg-[#233C7A]/30 rounded-full mb-6">
+                        <Users class="w-8 h-8 text-[#233C7A] dark:text-[#FAB90E]" />
                     </div>
-                    <h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                    <h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-6" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                         {{ companyData.trayectoria.titulo }}
                     </h2>
-                    <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                    <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto subtitle-elegant">
                         El talento y la experiencia que definen nuestro compromiso con la excelencia
                     </p>
                 </div>
@@ -168,7 +168,7 @@ const companyData = {
                         :key="index"
                         class="text-center"
                     >
-                        <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-6 mb-4">
+                        <div class="bg-gradient-to-br from-[#233C7A] to-[#E0081D] text-white rounded-2xl p-6 mb-4">
                             <div class="text-3xl md:text-4xl font-bold">{{ logro.numero }}</div>
                         </div>
                         <div class="text-gray-600 dark:text-gray-400 font-medium">{{ logro.etiqueta }}</div>
@@ -182,10 +182,10 @@ const companyData = {
                         :key="index"
                         class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-8 text-center hover:shadow-lg transition-all"
                     >
-                        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full mb-6">
-                            <component :is="miembro.icono" class="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-[#F5F5F5] dark:bg-[#233C7A]/30 rounded-full mb-6">
+                            <component :is="miembro.icono" class="w-8 h-8 text-[#233C7A] dark:text-[#FAB90E]" />
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                             {{ miembro.nombre }}
                         </h3>
                         <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
@@ -200,13 +200,13 @@ const companyData = {
         <section class="py-20 bg-gray-50 dark:bg-gray-800">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16">
-                    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-6">
-                        <TrendingUp class="w-8 h-8 text-green-600 dark:text-green-400" />
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-[#F5F5F5] dark:bg-[#233C7A]/30 rounded-full mb-6">
+                        <TrendingUp class="w-8 h-8 text-[#10b981] dark:text-[#FAB90E]" />
                     </div>
-                    <h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                    <h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-6" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                         {{ companyData.evolucion.titulo }}
                     </h2>
-                    <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                    <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto subtitle-elegant">
                         Los hitos que han moldeado nuestro camino hacia la excelencia
                     </p>
                 </div>
@@ -214,7 +214,7 @@ const companyData = {
                 <!-- Línea de Tiempo -->
                 <div class="relative">
                     <!-- Línea central -->
-                    <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-500 to-green-500"></div>
+                    <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-[#233C7A] to-[#10b981]"></div>
 
                     <div class="space-y-12">
                         <div
@@ -224,17 +224,17 @@ const companyData = {
                             :class="index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'"
                         >
                             <!-- Círculo en la línea -->
-                            <div class="absolute left-1/2 transform -translate-x-1/2 w-8 h-8 bg-white dark:bg-gray-900 border-4 border-blue-500 rounded-full z-10"></div>
+                            <div class="absolute left-1/2 transform -translate-x-1/2 w-8 h-8 bg-white dark:bg-gray-900 border-4 border-[#233C7A] rounded-full z-10"></div>
 
                             <!-- Contenido -->
                             <div class="w-full md:w-5/12" :class="index % 2 === 0 ? 'md:pr-8 md:text-right' : 'md:ml-auto md:pl-8'">
                                 <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all">
                                     <div class="flex items-center" :class="index % 2 === 0 ? 'md:justify-end' : ''">
-                                        <div class="bg-blue-100 dark:bg-blue-900 p-3 rounded-lg" :class="index % 2 === 0 ? 'md:order-2 md:ml-4' : 'mr-4'">
-                                            <component :is="hito.icono" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                        <div class="bg-[#F5F5F5] dark:bg-[#233C7A]/30 p-3 rounded-lg" :class="index % 2 === 0 ? 'md:order-2 md:ml-4' : 'mr-4'">
+                                            <component :is="hito.icono" class="w-6 h-6 text-[#233C7A] dark:text-[#FAB90E]" />
                                         </div>
                                         <div :class="index % 2 === 0 ? 'md:order-1' : ''">
-                                            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                                            <div class="text-2xl font-bold text-[#233C7A] dark:text-[#FAB90E] mb-2">
                                                 {{ hito.año }}
                                             </div>
                                             <h3 class="text-xl font-bold text-gray-900 dark:text-white">
@@ -261,12 +261,12 @@ const companyData = {
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="grid lg:grid-cols-2 gap-12 mb-16">
                     <!-- Misión -->
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-3xl p-8 lg:p-12">
+                    <div class="bg-gradient-to-br from-[#F5F5F5] to-[#233C7A]/10 dark:from-[#233C7A]/20 dark:to-[#E0081D]/20 rounded-3xl p-8 lg:p-12">
                         <div class="flex items-center mb-8">
-                            <div class="bg-blue-600 text-white p-4 rounded-2xl mr-6">
+                            <div class="bg-[#233C7A] text-white p-4 rounded-2xl mr-6">
                                 <component :is="companyData.misionVision.mision.icono" class="w-8 h-8" />
                             </div>
-                            <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
+                            <h2 class="text-3xl font-bold text-gray-900 dark:text-white" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                                 {{ companyData.misionVision.mision.titulo }}
                             </h2>
                         </div>
@@ -276,12 +276,12 @@ const companyData = {
                     </div>
 
                     <!-- Visión -->
-                    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-3xl p-8 lg:p-12">
+                    <div class="bg-gradient-to-br from-[#F5F5F5] to-[#10b981]/10 dark:from-[#10b981]/20 dark:to-[#FAB90E]/20 rounded-3xl p-8 lg:p-12">
                         <div class="flex items-center mb-8">
-                            <div class="bg-green-600 text-white p-4 rounded-2xl mr-6">
+                            <div class="bg-[#10b981] text-white p-4 rounded-2xl mr-6">
                                 <component :is="companyData.misionVision.vision.icono" class="w-8 h-8" />
                             </div>
-                            <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
+                            <h2 class="text-3xl font-bold text-gray-900 dark:text-white" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                                 {{ companyData.misionVision.vision.titulo }}
                             </h2>
                         </div>
@@ -293,8 +293,8 @@ const companyData = {
 
                 <!-- Valores -->
                 <div class="text-center mb-12">
-                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Nuestros Valores</h3>
-                    <p class="text-xl text-gray-600 dark:text-gray-300">
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">Nuestros Valores</h3>
+                    <p class="text-xl text-gray-600 dark:text-gray-300 subtitle-elegant">
                         Los principios que guían cada una de nuestras acciones
                     </p>
                 </div>
@@ -305,8 +305,8 @@ const companyData = {
                         :key="index"
                         class="text-center group"
                     >
-                        <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20">
-                            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-6 group-hover:scale-110 transition-transform">
+                        <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all group-hover:bg-[#F5F5F5] dark:group-hover:bg-[#233C7A]/20">
+                            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#233C7A] to-[#E0081D] rounded-full mb-6 group-hover:scale-110 transition-transform">
                                 <component :is="valor.icono" class="w-8 h-8 text-white" />
                             </div>
                             <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-4">

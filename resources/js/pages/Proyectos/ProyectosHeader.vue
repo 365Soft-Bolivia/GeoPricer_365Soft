@@ -55,60 +55,68 @@ const goToDetalles = (id: number) => {
 </script>
 
 <template>
-  <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex-1">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-        Gestión de Proyectos
-      </h1>
-      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Administra los inmuebles y proyectos de la empresa
-      </p>
-    </div>
-
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <!-- Buscador -->
-      <div class="relative">
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Buscar por nombre, código o categoría..."
-          class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white sm:w-80"
-        />
-        <svg
-          class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+  <!-- Header Section -->
+  <div class="bg-white rounded-2xl shadow-lg p-10 mb-10 border-l-4" style="border-color: #233C7A;">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <!-- Título y Descripción -->
+      <div class="flex-1">
+        <h1 class="text-4xl font-bold mb-3" style="font-family: 'Montserrat', sans-serif; font-weight: 700; color: #212121;">
+          Gestión de Proyectos
+        </h1>
+        <p class="text-lg" style="color: #212121; opacity: 0.7;">
+          Administra los inmuebles y proyectos de la empresa
+        </p>
       </div>
 
-      <!-- Botón Crear Proyecto -->
-      <button
-        @click="showCreateDialog = true"
-        class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >
-        <svg
-          class="-ml-1 mr-2 h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
+      <!-- Acciones: Buscador y Botón Crear -->
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <!-- Buscador -->
+        <div class="relative">
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Buscar por nombre, código o categoría..."
+            class="w-full rounded-xl border-2 px-5 py-3 pl-12 text-sm transition-all focus:outline-none focus:ring-2 sm:w-96"
+            style="border-color: #e0e0e0; background-color: #FAFAFA; color: #212121; focus:border-color: #233C7A; focus:ring-color: rgba(35, 60, 122, 0.1);"
           />
-        </svg>
-        Nuevo Proyecto
-      </button>
+          <svg
+            class="absolute left-4 top-3.5 h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            style="color: #212121; opacity: 0.4;"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+
+        <!-- Botón Crear Proyecto -->
+        <button
+          @click="showCreateDialog = true"
+          class="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold text-white transition-all hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2"
+          style="background: linear-gradient(135deg, #233C7A 0%, #1a2e5f 100%); focus:ring-color: #233C7A;"
+        >
+          <svg
+            class="-ml-1 mr-2 h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          Nuevo Proyecto
+        </button>
+      </div>
     </div>
   </div>
 

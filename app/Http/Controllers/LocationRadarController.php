@@ -24,10 +24,12 @@ class LocationRadarController extends Controller
                     'id' => $product->id,
                     'name' => $product->name,
                     'codigo_inmueble' => $product->codigo_inmueble,
-                    'price' => $product->price,
+                    'price_usd' => $product->price_usd,
+                    'price_bob' => $product->price_bob,
                     'superficie_util' => $product->superficie_util,
                     'superficie_construida' => $product->superficie_construida,
                     'category' => $product->category?->category_name,
+                    'category_id' => $product->category_id,
                     'operacion' => $product->operacion,
                     'ambientes' => $product->ambientes,
                     'habitaciones' => $product->habitaciones,
@@ -79,16 +81,17 @@ class LocationRadarController extends Controller
                 return $distance <= $radius;
             })
             ->map(function ($product) use ($centerLat, $centerLng) {
-                // Calcular precios por m²
+                // Calcular precios por m² (priorizar USD)
                 $pricePerUtilSqm = null;
                 $pricePerBuiltSqm = null;
+                $price = $product->price_usd ?? $product->price_bob;
 
-                if ($product->superficie_util && $product->superficie_util > 0) {
-                    $pricePerUtilSqm = $product->price / $product->superficie_util;
+                if ($price && $product->superficie_util && $product->superficie_util > 0) {
+                    $pricePerUtilSqm = $price / $product->superficie_util;
                 }
 
-                if ($product->superficie_construida && $product->superficie_construida > 0) {
-                    $pricePerBuiltSqm = $product->price / $product->superficie_construida;
+                if ($price && $product->superficie_construida && $product->superficie_construida > 0) {
+                    $pricePerBuiltSqm = $price / $product->superficie_construida;
                 }
 
                 $distance = $this->calculateDistance(
@@ -102,12 +105,14 @@ class LocationRadarController extends Controller
                     'id' => $product->id,
                     'name' => $product->name,
                     'codigo_inmueble' => $product->codigo_inmueble,
-                    'price' => $product->price,
+                    'price_usd' => $product->price_usd,
+                    'price_bob' => $product->price_bob,
                     'superficie_util' => $product->superficie_util,
                     'superficie_construida' => $product->superficie_construida,
                     'price_per_util_sqm' => $pricePerUtilSqm,
                     'price_per_built_sqm' => $pricePerBuiltSqm,
                     'category' => $product->category?->category_name,
+                    'category_id' => $product->category_id,
                     'operacion' => $product->operacion,
                     'ambientes' => $product->ambientes,
                     'habitaciones' => $product->habitaciones,

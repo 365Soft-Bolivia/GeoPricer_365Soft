@@ -21,14 +21,14 @@ class ProductLocationController extends Controller
     {
         // Obtener productos sin ubicación para el selector
         $productsSinUbicacion = Product::doesntHave('location')
-            ->select('id', 'name', 'codigo_inmueble', 'operacion', 'price')
+            ->select('id', 'name', 'codigo_inmueble', 'operacion', 'price_usd', 'price_bob')
             ->orderBy('name')
             ->get();
 
         // Obtener productos con ubicación para mostrar en el mapa
         $productsConUbicacion = Product::has('location')
             ->with(['location', 'category'])
-            ->select('id', 'name', 'codigo_inmueble', 'operacion', 'price', 'default_image', 'category_id')
+            ->select('id', 'name', 'codigo_inmueble', 'operacion', 'price_usd', 'price_bob', 'default_image', 'category_id')
             ->get()
             ->map(function ($product) {
                 return [
@@ -36,7 +36,8 @@ class ProductLocationController extends Controller
                     'name' => $product->name,
                     'codigo_inmueble' => $product->codigo_inmueble,
                     'operacion' => $product->operacion,
-                    'price' => $product->price,
+                    'price_usd' => $product->price_usd,
+                    'price_bob' => $product->price_bob,
                     'default_image' => $product->default_image,
                     'category' => $product->category?->category_name,
                     'location' => [
@@ -67,7 +68,7 @@ class ProductLocationController extends Controller
     {
         $query = ProductLocation::query()
             ->with(['product' => function ($query) {
-                $query->select('id', 'name', 'codigo_inmueble', 'price', 'operacion', 'default_image', 'category_id')
+                $query->select('id', 'name', 'codigo_inmueble', 'price_usd', 'price_bob', 'operacion', 'default_image', 'category_id')
                     ->with('category:id,category_name');
             }]);
 
@@ -84,7 +85,8 @@ class ProductLocationController extends Controller
                     'id' => $location->product->id,
                     'name' => $location->product->name,
                     'codigo_inmueble' => $location->product->codigo_inmueble,
-                    'price' => $location->product->price,
+                    'price_usd' => $location->product->price_usd,
+                    'price_bob' => $location->product->price_bob,
                     'operacion' => $location->product->operacion,
                     'default_image' => $location->product->default_image,
                     'category' => $location->product->category?->category_name,
@@ -290,7 +292,7 @@ class ProductLocationController extends Controller
             // Obtener todas las ubicaciones activas
             $locations = ProductLocation::active()
                 ->with(['product' => function ($query) {
-                    $query->select('id', 'name', 'codigo_inmueble', 'price', 'operacion', 'default_image', 'category_id')
+                    $query->select('id', 'name', 'codigo_inmueble', 'price_usd', 'price_bob', 'operacion', 'default_image', 'category_id')
                         ->with('category:id,category_name');
                 }])
                 ->get()
@@ -317,7 +319,8 @@ class ProductLocationController extends Controller
                             'id' => $location->product->id,
                             'name' => $location->product->name,
                             'codigo_inmueble' => $location->product->codigo_inmueble,
-                            'price' => $location->product->price,
+                            'price_usd' => $location->product->price_usd,
+                            'price_bob' => $location->product->price_bob,
                             'operacion' => $location->product->operacion,
                             'default_image' => $location->product->default_image,
                             'category' => $location->product->category?->category_name,
@@ -368,7 +371,8 @@ public function mapa(): Response
                     'id' => $product->id,
                     'name' => $product->name,
                     'codigo_inmueble' => $product->codigo_inmueble,
-                    'price' => $product->price,
+                    'price_usd' => $product->price_usd,
+                    'price_bob' => $product->price_bob,
                     'operacion' => $product->operacion,
                     'default_image' => $product->default_image,
                     'category' => $product->category?->category_name,
@@ -424,7 +428,7 @@ public function asignar(): Response
     // Obtener productos sin ubicación
     $productsSinUbicacion = Product::doesntHave('location')
         ->with('category:id,category_name')
-        ->select('id', 'name', 'codigo_inmueble', 'price', 'default_image', 'category_id')
+        ->select('id', 'name', 'codigo_inmueble', 'price_usd', 'price_bob', 'default_image', 'category_id')
         ->orderBy('name')
         ->get()
         ->map(function ($product) {
@@ -432,7 +436,8 @@ public function asignar(): Response
                 'id' => $product->id,
                 'name' => $product->name,
                 'codigo_inmueble' => $product->codigo_inmueble,
-                'price' => $product->price,
+                'price_usd' => $product->price_usd,
+                'price_bob' => $product->price_bob,
                 'default_image' => $product->default_image,
                 'category' => $product->category?->category_name,
             ];
@@ -459,7 +464,7 @@ public function editar(): Response
 {
     $productsConUbicacion = Product::has('location')
         ->with(['location', 'category'])
-        ->select('id', 'name', 'codigo_inmueble', 'price', 'default_image', 'category_id')
+        ->select('id', 'name', 'codigo_inmueble', 'price_usd', 'price_bob', 'default_image', 'category_id')
         ->orderBy('name')
         ->get()
         ->map(function ($product) {
@@ -467,7 +472,8 @@ public function editar(): Response
                 'id' => $product->id,
                 'name' => $product->name,
                 'codigo_inmueble' => $product->codigo_inmueble,
-                'price' => $product->price,
+                'price_usd' => $product->price_usd,
+                'price_bob' => $product->price_bob,
                 'default_image' => $product->default_image,
                 'category' => $product->category?->category_name,
                 'location' => [

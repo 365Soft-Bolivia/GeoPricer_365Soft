@@ -14,9 +14,10 @@ defineProps<Props>();
 
 <template>
     <img
-        src="logo.jpg"
-        alt="Logo"
-        :class="className"
+        src="/logoalfa.png"
+        alt="Alfa Inmobiliaria Bolivia"
+        class="h-full w-full object-contain"
+        style="max-width: none; max-height: none;"
         v-bind="$attrs"
     />
 </template>

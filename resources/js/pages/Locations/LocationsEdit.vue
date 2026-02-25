@@ -28,7 +28,8 @@ interface Product {
     id: number;
     name: string;
     codigo_inmueble: string;
-    price: number;
+    price_usd?: number | null;
+    price_bob?: number | null;
     default_image: string | null;
     category: string | null;
     location: {
@@ -457,7 +458,7 @@ onUnmounted(() => {
             <div class="w-[400px] bg-white shadow-xl border-l border-gray-300 flex flex-col">
                 <!-- Header del panel -->
                 <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
-                    <h2 class="text-xl font-bold mb-2">Editar Ubicaciones</h2>
+                    <h2 class="text-xl font-bold mb-2" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">Editar Ubicaciones</h2>
                     <p class="text-sm text-purple-100">
                         {{ selectedProduct ? 'Editando ubicación' : `Total: ${filteredProducts.length} propiedades` }}
                     </p>
@@ -572,9 +573,14 @@ onUnmounted(() => {
                                     </h3>
                                     <p class="text-sm text-gray-600 mb-1">{{ selectedProduct.codigo_inmueble }}</p>
                                     <p class="text-sm text-gray-600 mb-2">{{ selectedProduct.category || 'Sin categoría' }}</p>
-                                    <p class="text-lg font-bold text-green-600">
-                                        Bs. {{ selectedProduct.price.toLocaleString() }}
-                                    </p>
+                                    <div class="space-y-1">
+                                        <p v-if="selectedProduct.price_usd" class="text-lg font-bold text-green-600">
+                                            💰 ${{ selectedProduct.price_usd.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }} USD
+                                        </p>
+                                        <p v-if="selectedProduct.price_bob" class="text-base font-semibold text-blue-600">
+                                            🔸 Bs. {{ selectedProduct.price_bob.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

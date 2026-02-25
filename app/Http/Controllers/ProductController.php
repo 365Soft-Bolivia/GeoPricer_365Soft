@@ -13,8 +13,10 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $page = $request->input('page', 1);
+        $perPage = 100; // Mostrar 100 productos por página
 
-        $productos = Product::with('category')
+        $query = Product::with(['category', 'primaryImage'])
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -24,53 +26,64 @@ class ProductController extends Controller
                         });
                 });
             })
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'codigo_inmueble' => $product->codigo_inmueble,
-                    'price_usd' => $product->price_usd,
-                    'price_bob' => $product->price_bob,
-                    'superficie_util' => $product->superficie_util,
-                    'superficie_construida' => $product->superficie_construida,
-                    'ambientes' => $product->ambientes,
-                    'habitaciones' => $product->habitaciones,
-                    'banos' => $product->banos,
-                    'cocheras' => $product->cocheras,
-                    'ano_construccion' => $product->ano_construccion,
-                    'operacion' => $product->operacion,
-                    'comision' => $product->comision,
-                    'taxes' => $product->taxes,
-                    'description' => $product->description,
-                    'sku' => $product->sku,
-                    'hsn_sac_code' => $product->hsn_sac_code,
-                    'allow_purchase' => $product->allow_purchase,
-                    'is_public' => $product->is_public,
-                    'downloadable' => $product->downloadable,
-                    'downloadable_file' => $product->downloadable_file,
-                    'default_image' => $product->default_image,
-                    'estado' => $product->estado ?? 1,
-                    'category' => $product->category ? [
-                        'id' => $product->category->id,
-                        'category_name' => $product->category->category_name,
-                    ] : null,
-                    // ✅ CORRECCIÓN: Enviar image_path en lugar de url
-                    'primary_image' => $product->primaryImage ? [
-                        'id' => $product->primaryImage->id,
-                        'image_path' => $product->primaryImage->image_path,
-                    ] : null,
-                    'created_at' => $product->created_at->format('Y-m-d H:i:s'),
-                ];
-            });
+            ->orderBy('created_at', 'desc');
+
+        // Obtener productos paginados
+        $productosPaginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+        // Mapear los productos para incluir todos los campos necesarios
+        $productos = collect($productosPaginated->items())->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'codigo_inmueble' => $product->codigo_inmueble,
+                'price_usd' => $product->price_usd,
+                'price_bob' => $product->price_bob,
+                'superficie_util' => $product->superficie_util,
+                'superficie_construida' => $product->superficie_construida,
+                'ambientes' => $product->ambientes,
+                'habitaciones' => $product->habitaciones,
+                'banos' => $product->banos,
+                'cocheras' => $product->cocheras,
+                'ano_construccion' => $product->ano_construccion,
+                'operacion' => $product->operacion,
+                'comision' => $product->comision,
+                'taxes' => $product->taxes,
+                'description' => $product->description,
+                'sku' => $product->sku,
+                'hsn_sac_code' => $product->hsn_sac_code,
+                'allow_purchase' => $product->allow_purchase,
+                'is_public' => $product->is_public,
+                'downloadable' => $product->downloadable,
+                'downloadable_file' => $product->downloadable_file,
+                'default_image' => $product->default_image,
+                'estado' => $product->estado ?? 1,
+                'category' => $product->category ? [
+                    'id' => $product->category->id,
+                    'category_name' => $product->category->category_name,
+                ] : null,
+                'primary_image' => $product->primaryImage ? [
+                    'id' => $product->primaryImage->id,
+                    'image_path' => $product->primaryImage->image_path,
+                ] : null,
+                'created_at' => $product->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
 
         $categorias = ProductCategory::orderBy('category_name')
             ->get(['id', 'category_name']);
 
         return Inertia::render('Proyectos', [
-            'productos' => $productos->values(),
+            'productos' => $productos,
             'categorias' => $categorias,
+            'pagination' => [
+                'current_page' => $productosPaginated->currentPage(),
+                'per_page' => $productosPaginated->perPage(),
+                'total' => $productosPaginated->total(),
+                'last_page' => $productosPaginated->lastPage(),
+                'from' => $productosPaginated->firstItem(),
+                'to' => $productosPaginated->lastItem(),
+            ],
             'filters' => [
                 'search' => $search,
             ],

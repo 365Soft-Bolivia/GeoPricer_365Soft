@@ -14,15 +14,26 @@ interface Producto {
   id: number;
   name: string;
   codigo_inmueble: string;
-  price: number;
+  price_usd?: number | null;
+  price_bob?: number | null;
   estado: number;
   category: Category | null;
   created_at: string;
 }
 
+interface Pagination {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+  from: number | null;
+  to: number | null;
+}
+
 defineProps<{
   productos: Producto[];
   categorias: Category[];
+  pagination?: Pagination;
   filters?: {
     search?: string;
   };
@@ -36,9 +47,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 <template>
   <AppLayout :breadcrumbs="breadcrumbs">
     <Head title="Gestión de Productos" />
-    <div class="py-6">
-      <ProyectosHeader :categorias="categorias" :filters="filters" />
-      <ProyectosTable :productos="productos" :categorias="categorias" />
+    <div class="bg-[#F5F5F5] min-h-[calc(100vh-200px)]">
+      <div class="max-w-7xl mx-auto px-8 py-10">
+        <ProyectosHeader :categorias="categorias" :filters="filters" />
+        <ProyectosTable :productos="productos" :categorias="categorias" :pagination="pagination" />
+      </div>
     </div>
   </AppLayout>
 </template>

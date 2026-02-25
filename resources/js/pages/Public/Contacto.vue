@@ -90,9 +90,9 @@ const handleSubmit = () => {
 
             <!-- FORMULARIO DENTRO DE UN CUADRO CAFÉ -->
             <div
-                class="bg-[#5c4a3b] p-8 rounded-2xl shadow-xl backdrop-blur-md border border-[#8b7a61] transition-all"
+                class="bg-[#233C7A] p-8 rounded-2xl shadow-xl backdrop-blur-md border border-[#FAB90E] transition-all"
             >
-                <h2 class="text-3xl font-bold mb-6 text-white placeholder-white">Cuéntanos tu experiencia</h2>
+                <h2 class="text-3xl font-bold mb-6 text-white placeholder-white" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">Cuéntanos tu experiencia</h2>
 
                 <form @submit.prevent="handleSubmit" class="space-y-3">
 
@@ -182,9 +182,9 @@ const handleSubmit = () => {
 
                     <button
                         type="submit"
-                        class="bg-yellow-500 text-black dark:text-white dark:bg-yellow-600 
-                            font-bold px-10 py-3 rounded-md hover:bg-yellow-400 
-                            dark:hover:bg-yellow-500 transition w-full text-center mt-4"
+                        class="bg-[#FAB90E] text-black dark:text-white dark:bg-[#ffc932]
+                            font-bold px-10 py-3 rounded-md hover:bg-[#ffc932]
+                            dark:hover:bg-[#FAB90E] transition w-full text-center mt-4"
                     >
                         Contactar
                     </button>
@@ -195,13 +195,13 @@ const handleSubmit = () => {
                 <div class="flex flex-col">
 
                 <!-- Cuadro del texto -->
-            <div 
-                    class="bg-[#bfa78c]/90 dark:bg-[#5c4a3b]/80 
-                        p-8 rounded-2xl shadow-xl backdrop-blur-md 
-                        border border-[#a38b73] dark:border-[#8b7a61] 
+            <div
+                    class="bg-[#FAB90E]/90 dark:bg-[#233C7A]/80
+                        p-8 rounded-2xl shadow-xl backdrop-blur-md
+                        border border-[#E0081D] dark:border-[#FAB90E]
                         w-fit max-w-lg"
                 >
-                    <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+                    <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                         Contáctanos
                     </h3>
 
@@ -210,7 +210,7 @@ const handleSubmit = () => {
                     que le atienda? Envíenos un correo con sus datos para referirlo.
                 </p>
 
-                <p class="font-bold text-yellow-800 dark:text-yellow-400">Línea de soporte</p>
+                <p class="font-bold text-[#212121] dark:text-[#FAB90E]">Línea de soporte</p>
                 <p class="text-gray-900 dark:text-gray-200">
                     Nuestra asistencia telefónica es de Lunes a Viernes, de 8:00 a 17:00 hrs
                 </p>

@@ -281,9 +281,9 @@ const breadcrumbs = computed(() => [
 <template>
     <Head :title="`${propiedad.name} - ${getTitlePrice()}`" />
 
-    <div class="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] min-h-screen">
         <!-- Breadcrumbs -->
-        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div class="bg-white dark:bg-[#2a2a2a] border-b border-[#d4d4d4] dark:border-[#404040]">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
                 <nav class="flex items-center gap-2 text-sm">
                     <Link v-for="(item, index) in breadcrumbs" :key="index"
@@ -304,7 +304,7 @@ const breadcrumbs = computed(() => [
                         <Badge v-if="propiedad.operacion" class="mb-2" variant="secondary">
                             {{ propiedad.operacion }}
                         </Badge>
-                        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                             {{ propiedad.name }}
                         </h1>
                         <div class="flex items-start gap-2 text-gray-600 dark:text-gray-400">
@@ -318,10 +318,10 @@ const breadcrumbs = computed(() => [
                     
                     <div class="text-right">
                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Precio {{ propiedad.operacion }}</p>
-                        <p v-if="getMainPrice()" class="text-3xl md:text-4xl font-bold text-blue-600 dark:text-blue-400">
+                        <p v-if="getMainPrice()" class="text-3xl md:text-4xl font-bold text-[#233C7A] dark:text-[#FAB90E]">
                             {{ getMainPrice()?.formatted }}
                         </p>
-                        <p v-if="propiedad.price_bob && propiedad.price_usd" class="text-sm md:text-base font-semibold text-green-600 dark:text-green-400 mt-1">
+                        <p v-if="propiedad.price_bob && propiedad.price_usd" class="text-sm md:text-base font-semibold text-[#10b981] dark:text-[#FAB90E] mt-1">
                             {{ formatPrice(propiedad.price_bob!, 'BOB') }}
                         </p>
                         <p v-if="propiedad.operacion === 'alquiler'" class="text-sm text-gray-500 mt-1">/mes</p>
@@ -380,7 +380,7 @@ const breadcrumbs = computed(() => [
 
                             <!-- Badge imagen principal -->
                             <div v-if="sortedImages[currentImageIndex].is_primary" class="absolute top-4 left-4">
-                                <Badge class="bg-yellow-400 text-yellow-900 font-bold">
+                                <Badge class="bg-[#FAB90E] text-gray-900 font-bold">
                                     Foto Principal
                                 </Badge>
                             </div>
@@ -425,7 +425,7 @@ const breadcrumbs = computed(() => [
                         <Button
                             @click="handleCall"
                             variant="outline"
-                            class="w-full flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border-amber-300 text-amber-900 dark:text-amber-400"
+                            class="w-full flex items-center justify-center gap-2 bg-[#F5F5F5] hover:bg-[#233C7A]/10 dark:bg-[#233C7A]/20 dark:hover:bg-[#233C7A]/40 border-[#d4d4d4] text-[#212121] dark:text-[#FAB90E]"
                         >
                             <Phone :size="18" />
                             Llamar
@@ -434,7 +434,7 @@ const breadcrumbs = computed(() => [
                         <Button
                             @click="handleWhatsApp"
                             variant="outline"
-                            class="w-full flex items-center justify-center gap-2 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 border-green-300 text-green-900 dark:text-green-400"
+                            class="w-full flex items-center justify-center gap-2 bg-[#10b981]/10 hover:bg-[#10b981]/20 dark:bg-[#10b981]/20 dark:hover:bg-[#10b981]/40 border-[#10b981] text-[#10b981] dark:text-[#FAB90E]"
                         >
                             <MessageCircle :size="18" />
                             WhatsApp
@@ -468,8 +468,8 @@ const breadcrumbs = computed(() => [
 
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
                             <div v-if="propiedad.superficie_terreno" class="flex items-start gap-3">
-                                <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                    <Ruler :size="20" class="text-blue-600 dark:text-blue-400" />
+                                <div class="p-2 bg-[#F5F5F5] dark:bg-[#233C7A]/30 rounded-lg">
+                                    <Ruler :size="20" class="text-[#233C7A] dark:text-[#FAB90E]" />
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">Terreno</p>
@@ -504,8 +504,8 @@ const breadcrumbs = computed(() => [
                             </div>
 
                             <div v-if="propiedad.habitaciones" class="flex items-start gap-3">
-                                <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                                    <Bed :size="20" class="text-purple-600 dark:text-purple-400" />
+                                <div class="p-2 bg-[#E0081D]/10 dark:bg-[#E0081D]/30 rounded-lg">
+                                    <Bed :size="20" class="text-[#E0081D] dark:text-[#FAB90E]" />
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">Habitaciones</p>
@@ -516,8 +516,8 @@ const breadcrumbs = computed(() => [
                             </div>
 
                             <div v-if="propiedad.banos" class="flex items-start gap-3">
-                                <div class="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                                    <Bath :size="20" class="text-cyan-600 dark:text-cyan-400" />
+                                <div class="p-2 bg-[#233C7A]/10 dark:bg-[#233C7A]/30 rounded-lg">
+                                    <Bath :size="20" class="text-[#233C7A] dark:text-[#FAB90E]" />
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">Baños</p>
@@ -582,19 +582,19 @@ const breadcrumbs = computed(() => [
                 <div class="lg:col-span-1">
                     <div class="sticky top-8">
                         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4" style="font-family: 'Montserrat', sans-serif; font-weight: 600;">
                                 ¿Necesitas más información?
                             </h3>
 
                             <!-- Agente info -->
-                            <div class="flex items-center gap-3 mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                            <div class="flex items-center gap-3 mb-6 p-4 bg-[#F5F5F5] dark:bg-[#233C7A]/50 rounded-lg">
+                                <div class="w-16 h-16 bg-gradient-to-br from-[#233C7A] to-[#E0081D] rounded-full flex items-center justify-center text-white font-bold text-xl">
                                     CF
                                 </div>
                                 <div>
                                     <p class="font-semibold text-gray-900 dark:text-white">Carlos Flores</p>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">Agente Inmobiliario</p>
-                                    <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">+591 66666666</p>
+                                    <p class="text-sm text-[#233C7A] dark:text-[#FAB90E] font-medium">+591 66666666</p>
                                 </div>
                             </div>
 
@@ -678,7 +678,7 @@ const breadcrumbs = computed(() => [
                                 </label>
                                 </div>
 
-                                        <Button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white">
+                                        <Button type="submit" class="w-full bg-[#FAB90E] hover:bg-[#ffc932] text-white">
                                             Contactar
                                         </Button>
                             </form>
@@ -696,7 +696,7 @@ const breadcrumbs = computed(() => [
                         </h2>
                         <Button
                             @click="openGoogleMaps"
-                            class="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 w-full sm:w-auto"
+                            class="bg-[#233C7A] hover:bg-[#E0081D] text-white flex items-center gap-2 w-full sm:w-auto"
                         >
                             <MapPin :size="18" />
                             Ver en Google Maps

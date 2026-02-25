@@ -104,7 +104,7 @@ const activeItemStyles = (url: string) =>
                                         v-for="item in mainNavItems"
                                         :key="item.title"
                                         :href="item.href"
-                                        class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
+                                        class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent" style="font-family: 'Montserrat', sans-serif; font-weight: 500;"
                                         :class="activeItemStyles(item.href)"
                                     >
                                         <component
@@ -122,7 +122,7 @@ const activeItemStyles = (url: string) =>
                                         :href="toUrl(item.href)"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="flex items-center space-x-2 text-sm font-medium"
+                                        class="flex items-center space-x-2 text-sm font-medium" style="font-family: 'Montserrat', sans-serif; font-weight: 500;"
                                     >
                                         <component
                                             v-if="item.icon"

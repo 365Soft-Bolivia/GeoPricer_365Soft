@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import ProyectosEditDialog from './ProyectosEditDialog.vue';
 import { admin } from '@/routes-custom';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 const { proyectos } = admin;
 
@@ -40,13 +41,77 @@ interface Producto {
   created_at: string;
 }
 
-defineProps<{
+interface Pagination {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+  from: number | null;
+  to: number | null;
+}
+
+const props = defineProps<{
   productos: Producto[];
   categorias: Category[];
+  pagination?: Pagination;
+  filters?: {
+    search?: string;
+  };
 }>();
 
 const showEditDialog = ref(false);
 const selectedProduct = ref<Producto | null>(null);
+
+// Obtener los filtros actuales de la URL
+const currentFilters = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const filters: Record<string, string> = {};
+
+  if (urlParams.has('search')) {
+    filters.search = urlParams.get('search')!;
+  }
+
+  return filters;
+};
+
+// Calcular páginas visibles dinámicamente (estilo Google)
+const visiblePages = computed(() => {
+  if (!props.pagination) return [];
+
+  const pages: (number | string)[] = [];
+  const total = props.pagination.last_page;
+  const current = props.pagination.current_page;
+
+  // Siempre mostrar la primera página
+  pages.push(1);
+
+  if (total <= 7) {
+    // Si hay 7 o menos páginas, mostrar todas
+    for (let i = 2; i <= total; i++) {
+      pages.push(i);
+    }
+  } else {
+    // Lógica dinámica estilo Google
+    if (current <= 3) {
+      // Estamos al inicio: mostrar 1, 2, 3, 4, 5 ... última
+      for (let i = 2; i <= 5; i++) pages.push(i);
+      pages.push('...');
+      pages.push(total);
+    } else if (current >= total - 2) {
+      // Estamos al final: mostrar 1 ... últimas 5 páginas
+      pages.push('...');
+      for (let i = total - 4; i <= total; i++) pages.push(i);
+    } else {
+      // Estamos en el medio: mostrar 1 ... páginas alrededor de actual ... última
+      pages.push('...');
+      for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+      pages.push('...');
+      pages.push(total);
+    }
+  }
+
+  return pages;
+});
 
 const toggleStatus = (id: number) => {
   if (confirm('¿Estás seguro de cambiar el estado de este proyecto?')) {
@@ -99,105 +164,110 @@ const formatDate = (date: string) => {
     day: 'numeric'
   });
 };
+
+// Funciones de paginación
+const goToPage = (page: number) => {
+  const params = {
+    page,
+    ...currentFilters(), // Mantener los filtros actuales (búsqueda, etc.)
+  };
+
+  router.get(proyectos.index.url({ query: params }), {}, { preserveScroll: true });
+};
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+  <!-- Tabla Container -->
+  <div class="overflow-hidden rounded-2xl shadow-lg bg-white">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-900">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead>
+          <tr style="background: #F5F5F5;">
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: #212121; font-family: 'Montserrat', sans-serif;">
               Código
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: #212121; font-family: 'Montserrat', sans-serif;">
               Nombre
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: #212121; font-family: 'Montserrat', sans-serif;">
               Categoría
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: #212121; font-family: 'Montserrat', sans-serif;">
               Precio
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: #212121; font-family: 'Montserrat', sans-serif;">
               Estado
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: #212121; font-family: 'Montserrat', sans-serif;">
               Fecha Creación
             </th>
-            <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" style="color: #212121; font-family: 'Montserrat', sans-serif;">
               Acciones
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-          <tr v-for="producto in productos" :key="producto.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+        <tbody class="divide-y divide-gray-200 bg-white">
+          <tr v-for="producto in props.productos" :key="producto.id" class="transition-colors hover:bg-gray-50">
+            <td class="whitespace-nowrap px-6 py-4 text-sm font-semibold" style="color: #233C7A;">
               {{ producto.codigo_inmueble }}
             </td>
-            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-              {{ producto.name }}
+            <td class="px-6 py-4">
+              <div class="text-sm font-medium" style="color: #212121;">
+                {{ producto.name }}
+              </div>
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-              <span v-if="producto.category" class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <td class="whitespace-nowrap px-6 py-4 text-sm">
+              <span v-if="producto.category" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold" style="background: rgba(35, 60, 122, 0.1); color: #233C7A; font-family: 'Montserrat', sans-serif;">
                 {{ producto.category.category_name }}
               </span>
-              <span v-else class="text-gray-400">Sin categoría</span>
+              <span v-else class="text-sm" style="color: #212121; opacity: 0.5;">Sin categoría</span>
             </td>
-            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-              <div v-if="producto.price_usd || producto.price_bob">
-                <div v-if="producto.price_usd" class="text-green-600 font-semibold">
+            <td class="px-6 py-4 text-sm font-medium">
+              <div v-if="producto.price_usd || producto.price_bob" class="space-y-1">
+                <div v-if="producto.price_usd" class="font-bold" style="color: #10b981;">
                   {{ formatPrice(producto.price_usd, '$') }}
                 </div>
-                <div v-if="producto.price_bob" class="text-blue-600 font-semibold">
+                <div v-if="producto.price_bob" class="font-bold" style="color: #233C7A;">
                   {{ formatPrice(producto.price_bob, 'Bs.') }}
                 </div>
               </div>
-              <span v-else class="text-gray-400">Sin precio</span>
+              <span v-else style="color: #212121; opacity: 0.5;">Sin precio</span>
             </td>
             <td class="whitespace-nowrap px-6 py-4 text-sm">
-              <span 
-                :class="producto.estado === 1 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
-                class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
+              <span
+                :class="producto.estado === 1
+                  ? 'inline-flex items-center rounded-full px-3 py-1 text-xs font-bold'
+                  : 'inline-flex items-center rounded-full px-3 py-1 text-xs font-bold'"
+                :style="producto.estado === 1
+                  ? 'background: rgba(16, 185, 129, 0.15); color: #10b981;'
+                  : 'background: rgba(224, 8, 29, 0.15); color: #E0081D;'"
+                style="font-family: 'Montserrat', sans-serif;"
               >
                 {{ producto.estado === 1 ? 'Activo' : 'Inactivo' }}
               </span>
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+            <td class="whitespace-nowrap px-6 py-4 text-sm" style="color: #212121; opacity: 0.7;">
               {{ formatDate(producto.created_at) }}
             </td>
             <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
               <div class="flex items-center justify-end gap-2">
-                <!-- Botón Ver Detalles -->
+                <!-- Botón Ver/Editar (Unificado) -->
                 <button
                   @click="viewProduct(producto.id)"
-                  class="rounded p-1 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-                  title="Ver detalles"
+                  class="rounded-lg p-2 transition-all hover:scale-110"
+                  style="color: #233C7A;"
+                  title="Ver/Editar detalles"
                 >
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
-
-                <!-- Botón Editar -->
-                <button
-                  @click="editProduct(producto)"
-                  class="rounded p-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-gray-700"
-                  title="Editar"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                 </button>
 
                 <!-- Botón Toggle Estado -->
                 <button
                   @click="toggleStatus(producto.id)"
-                  :class="producto.estado === 1 ? 'text-red-600 hover:bg-red-50 dark:text-red-400' : 'text-green-600 hover:bg-green-50 dark:text-green-400'"
-                  class="rounded p-1 dark:hover:bg-gray-700"
+                  class="rounded-lg p-2 transition-all hover:scale-110"
+                  :style="producto.estado === 1 ? 'color: #E0081D;' : 'color: #10b981;'"
                   :title="producto.estado === 1 ? 'Desactivar' : 'Activar'"
                 >
                   <svg v-if="producto.estado === 1" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +281,8 @@ const formatDate = (date: string) => {
                 <!-- Botón Eliminar -->
                 <button
                   @click="deleteProduct(producto.id, producto.name)"
-                  class="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700"
+                  class="rounded-lg p-2 transition-all hover:scale-110"
+                  style="color: #E0081D;"
                   title="Eliminar"
                 >
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,14 +296,83 @@ const formatDate = (date: string) => {
       </table>
 
       <!-- Empty State -->
-      <div v-if="productos.length === 0" class="py-12 text-center">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+      <div v-if="props.productos.length === 0" class="py-16 text-center" style="background: #FAFAFA;">
+        <svg class="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #212121; opacity: 0.3;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay proyectos</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h3 class="mt-4 text-lg font-bold" style="font-family: 'Montserrat', sans-serif; color: #212121;">No hay proyectos</h3>
+        <p class="mt-2 text-sm" style="color: #212121; opacity: 0.6;">
           Comienza creando un nuevo proyecto.
         </p>
+      </div>
+
+      <!-- Paginación -->
+      <div v-if="props.pagination && props.pagination.last_page > 1" class="border-t border-gray-200 px-6 py-4" style="background: #F5F5F5;">
+        <div class="flex flex-col items-center justify-between gap-4 sm:flex-row sm:gap-0">
+          <!-- Info de resultados -->
+          <div class="text-sm" style="color: #212121; opacity: 0.7;">
+            <span v-if="props.pagination.from && props.pagination.to">
+              Mostrando <span class="font-bold" style="color: #233C7A;">{{ props.pagination.from }}</span> a
+              <span class="font-bold" style="color: #233C7A;">{{ props.pagination.to }}</span> de
+              <span class="font-bold" style="color: #233C7A;">{{ props.pagination.total }}</span> resultados
+            </span>
+          </div>
+
+          <!-- Controles de paginación -->
+          <div class="flex items-center gap-2">
+            <!-- Botón Anterior -->
+            <button
+              @click="goToPage(props.pagination.current_page - 1)"
+              :disabled="props.pagination.current_page === 1"
+              class="inline-flex items-center rounded-xl border-2 px-4 py-2 text-sm font-bold transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
+              style="border-color: #e0e0e0; background: white; color: #212121;"
+            >
+              <ChevronLeft :size="16" class="mr-1" />
+              Anterior
+            </button>
+
+            <!-- Botones de página -->
+            <div class="hidden sm:flex">
+              <button
+                v-for="(page, index) in visiblePages"
+                :key="index"
+                @click="typeof page === 'number' && goToPage(page)"
+                :disabled="page === '...'"
+                :class="[
+                  'inline-flex min-w-[40px] items-center justify-center rounded-xl border-2 px-3 py-2 text-sm font-bold transition-all',
+                  page === '...'
+                    ? 'cursor-default border-transparent bg-transparent'
+                    : props.pagination && props.pagination.current_page === page
+                      ? 'border-transparent text-white shadow-lg'
+                      : 'border-gray-200 bg-white hover:shadow-md'
+                ]"
+                :style="page === '...'
+                  ? ''
+                  : props.pagination && props.pagination.current_page === page
+                    ? 'background: linear-gradient(135deg, #233C7A 0%, #1a2e5f 100%);'
+                    : 'border-color: #e0e0e0; color: #212121;'"
+              >
+                {{ page }}
+              </button>
+            </div>
+
+            <!-- Página actual (móvil) -->
+            <span class="hidden text-sm font-bold sm:block" style="color: #212121; opacity: 0.7;">
+              Página {{ props.pagination.current_page }} de {{ props.pagination.last_page }}
+            </span>
+
+            <!-- Botón Siguiente -->
+            <button
+              @click="goToPage(props.pagination.current_page + 1)"
+              :disabled="props.pagination.current_page === props.pagination.last_page"
+              class="inline-flex items-center rounded-xl border-2 px-4 py-2 text-sm font-bold transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
+              style="border-color: #e0e0e0; background: white; color: #212121;"
+            >
+              Siguiente
+              <ChevronRight :size="16" class="ml-1" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -241,7 +381,7 @@ const formatDate = (date: string) => {
   <ProyectosEditDialog
     v-if="showEditDialog && selectedProduct"
     :product="selectedProduct"
-    :categorias="categorias"
+    :categorias="props.categorias"
     @close="showEditDialog = false"
     @updated="handleProductUpdated"
   />

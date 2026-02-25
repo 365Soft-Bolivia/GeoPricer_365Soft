@@ -27,7 +27,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
                 >
                     <PlaceholderPattern />
-                    <h1>
+                    <h1 style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                         Hola Mundo testeo 2 aver si funciona
                     </h1>
                 </div>

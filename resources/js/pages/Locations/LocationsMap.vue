@@ -25,7 +25,8 @@ interface Product {
   id: number;
   name: string;
   codigo_inmueble: string;
-  price: number;
+  price_usd?: number | null;
+  price_bob?: number | null;
   operacion: string;
   category?: string;
   category_id?: number | null;
@@ -55,7 +56,6 @@ let markerClusterGroup: L.MarkerClusterGroup | null = null;
 
 /* ================= USER LOCATION ================= */
 let userLocationMarker: L.Marker | null = null;
-let userLocationCircle: L.Circle | null = null;
 const isLocatingUser = ref(false);
 
 /* ================= RADAR ================= */
@@ -95,6 +95,23 @@ const nombreOperacionSeleccionada = computed(() => {
   return operacionesDisponibles.find(op => op.value === operacionSeleccionada.value)?.label || 'Todas';
 });
 
+/* ================= HELPER FUNCTIONS ================= */
+const formatPrice = (price?: number | null, currency: string = '$') => {
+  if (!price) return '';
+  return `${currency}${price.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
+
+const getPriceDisplay = (product: Product) => {
+  const prices = [];
+  if (product.price_usd) {
+    prices.push(`<span class="text-green-600 font-bold">${formatPrice(product.price_usd, '$')} USD</span>`);
+  }
+  if (product.price_bob) {
+    prices.push(`<span class="text-blue-600 font-bold">${formatPrice(product.price_bob, 'Bs.')} BOB</span>`);
+  }
+  return prices.join('<br>') || '<span class="text-gray-400">Precio no disponible</span>';
+};
+
 const productosFiltrados = computed(() => {
   return props.productsConUbicacion.filter(product => {
     if (!product.location.is_active) return false;
@@ -123,13 +140,19 @@ const filteredResults = computed(() => {
 // Calcular precio por metro cuadrado de superficie útil
 const getPricePerSqmUtil = (product: Product) => {
   if (!product.superficie_util || product.superficie_util <= 0) return null;
-  return product.price / product.superficie_util;
+  // Priorizar precio USD para cálculos
+  const price = product.price_usd || product.price_bob;
+  if (!price) return null;
+  return price / product.superficie_util;
 };
 
 // Calcular precio por metro cuadrado de superficie construida
 const getPricePerSqmConstruida = (product: Product) => {
   if (!product.superficie_construida || product.superficie_construida <= 0) return null;
-  return product.price / product.superficie_construida;
+  // Priorizar precio USD para cálculos
+  const price = product.price_usd || product.price_bob;
+  if (!price) return null;
+  return price / product.superficie_construida;
 };
 
 // Calcular promedio de precio por m² útil de la zona
@@ -139,10 +162,15 @@ const averagePricePerSqmUtil = computed(() => {
   if (validProducts.length === 0) return null;
 
   const sum = validProducts.reduce((acc, p) => {
-    return acc + (p.price / p.superficie_util!);
+    const price = p.price_usd || p.price_bob;
+    if (!price) return acc;
+    return acc + (price / p.superficie_util!);
   }, 0);
 
-  return sum / validProducts.length;
+  const validCount = validProducts.filter(p => p.price_usd || p.price_bob).length;
+  if (validCount === 0) return null;
+
+  return sum / validCount;
 });
 
 // Calcular promedio de precio por m² construido de la zona
@@ -152,15 +180,112 @@ const averagePricePerSqmConstruida = computed(() => {
   if (validProducts.length === 0) return null;
 
   const sum = validProducts.reduce((acc, p) => {
-    return acc + (p.price / p.superficie_construida!);
+    const price = p.price_usd || p.price_bob;
+    if (!price) return acc;
+    return acc + (price / p.superficie_construida!);
   }, 0);
 
-  return sum / validProducts.length;
+  const validCount = validProducts.filter(p => p.price_usd || p.price_bob).length;
+  if (validCount === 0) return null;
+
+  return sum / validCount;
 });
+
+// Calcular promedios separados para USD y BOB
+const averagePricePerSqm = computed(() => {
+  const result = {
+    util: { usd: null as number | null, bob: null as number | null },
+    construida: { usd: null as number | null, bob: null as number | null }
+  };
+
+  // Calcular promedio USD por m² útil
+  const utilUSD = filteredResults.value.filter(p => p.price_usd && p.superficie_util && p.superficie_util > 0);
+  if (utilUSD.length > 0) {
+    result.util.usd = utilUSD.reduce((acc, p) => acc + (p.price_usd! / p.superficie_util!), 0) / utilUSD.length;
+  }
+
+  // Calcular promedio BOB por m² útil
+  const utilBOB = filteredResults.value.filter(p => p.price_bob && p.superficie_util && p.superficie_util > 0);
+  if (utilBOB.length > 0) {
+    result.util.bob = utilBOB.reduce((acc, p) => acc + (p.price_bob! / p.superficie_util!), 0) / utilBOB.length;
+  }
+
+  // Calcular promedio USD por m² construida
+  const constrUSD = filteredResults.value.filter(p => p.price_usd && p.superficie_construida && p.superficie_construida > 0);
+  if (constrUSD.length > 0) {
+    result.construida.usd = constrUSD.reduce((acc, p) => acc + (p.price_usd! / p.superficie_construida!), 0) / constrUSD.length;
+  }
+
+  // Calcular promedio BOB por m² construida
+  const constrBOB = filteredResults.value.filter(p => p.price_bob && p.superficie_construida && p.superficie_construida > 0);
+  if (constrBOB.length > 0) {
+    result.construida.bob = constrBOB.reduce((acc, p) => acc + (p.price_bob! / p.superficie_construida!), 0) / constrBOB.length;
+  }
+
+  return result;
+});
+
+// Formatear precio para el panel de resultados (Opción 3)
+const getResultPriceDisplay = (product: Product) => {
+  const hasUSD = product.price_usd && product.price_usd > 0;
+  const hasBOB = product.price_bob && product.price_bob > 0;
+
+  if (!hasUSD && !hasBOB) {
+    return '<span class="text-gray-400 text-sm">Precio no disponible</span>';
+  }
+
+  let display = '';
+  if (hasUSD) {
+    display += `<div class="text-green-600 font-bold text-sm">💰 $${product.price_usd!.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD</div>`;
+  }
+  if (hasBOB) {
+    const spacing = hasUSD ? 'mt-1' : '';
+    display += `<div class="text-blue-600 font-semibold text-xs ${spacing}">🔸 Bs. ${product.price_bob!.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} BOB</div>`;
+  }
+
+  return display;
+};
+
+// Obtener precio por m² formateado con AMBAS monedas
+const getPricePerSqmUtilDisplay = (product: Product) => {
+  const prices = [];
+
+  // Calcular y mostrar precio en USD si está disponible
+  if (product.price_usd && product.superficie_util && product.superficie_util > 0) {
+    const usdPerSqm = product.price_usd / product.superficie_util;
+    prices.push(`${usdPerSqm.toFixed(0)} $US/m²`);
+  }
+
+  // Calcular y mostrar precio en BOB si está disponible
+  if (product.price_bob && product.superficie_util && product.superficie_util > 0) {
+    const bobPerSqm = product.price_bob / product.superficie_util;
+    prices.push(`${bobPerSqm.toFixed(0)} Bs./m²`);
+  }
+
+  return prices.length > 0 ? prices.join(' | ') : null;
+};
+
+const getPricePerSqmConstruidaDisplay = (product: Product) => {
+  const prices = [];
+
+  // Calcular y mostrar precio en USD si está disponible
+  if (product.price_usd && product.superficie_construida && product.superficie_construida > 0) {
+    const usdPerSqm = product.price_usd / product.superficie_construida;
+    prices.push(`${usdPerSqm.toFixed(0)} $US/m²`);
+  }
+
+  // Calcular y mostrar precio en BOB si está disponible
+  if (product.price_bob && product.superficie_construida && product.superficie_construida > 0) {
+    const bobPerSqm = product.price_bob / product.superficie_construida;
+    prices.push(`${bobPerSqm.toFixed(0)} Bs./m²`);
+  }
+
+  return prices.length > 0 ? prices.join(' | ') : null;
+};
 
 // Funciones de navegación
 const goBack = () => {
-  router.visit('/ubicaciones');
+  router.visit('/admin/ubicaciones');
 };
 
 const goToHome = () => {
@@ -220,17 +345,17 @@ const initMap = () => {
     removeOutsideVisibleBounds: true,
     iconCreateFunction: function(cluster) {
       const count = cluster.getChildCount();
-      let color = '#10B981';
+      let color = '#10b981';  /* Verde éxito - Mantenido */
       let size = 40;
 
       if (count >= 50) {
-        color = '#DC2626';
+        color = '#E0081D';  /* Rojo Alfa */
         size = 60;
       } else if (count >= 20) {
-        color = '#F59E0B';
+        color = '#FAB90E';  /* Amarillo Alfa */
         size = 50;
       } else if (count >= 10) {
-        color = '#3B82F6';
+        color = '#233C7A';  /* Azul Alfa */
         size = 45;
       }
 
@@ -313,7 +438,7 @@ const updateMarkers = () => {
       <div class="text-sm">
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
-        <span class="text-green-600 font-bold">Bs. ${product.price.toLocaleString()}</span><br>
+        ${getPriceDisplay(product)}<br>
         <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
       </div>
     `);
@@ -334,10 +459,10 @@ const getOperacionIcon = (operacion: string) => {
 
 const getOperacionColor = (operacion: string) => {
   switch (operacion) {
-    case 'venta': return '#10B981';
-    case 'alquiler': return '#3B82F6';
-    case 'anticretico': return '#8B5CF6';
-    default: return '#6B7280';
+    case 'venta': return '#10b981';     /* Verde éxito */
+    case 'alquiler': return '#233C7A';   /* Azul Alfa */
+    case 'anticretico': return '#E0081D'; /* Rojo Alfa */
+    default: return '#525252';           /* Gris neutro */
   }
 };
 
@@ -409,17 +534,6 @@ const locateMe = () => {
       if (userLocationMarker) {
         map!.removeLayer(userLocationMarker);
       }
-      if (userLocationCircle) {
-        map!.removeLayer(userLocationCircle);
-      }
-
-      userLocationCircle = L.circle([latitude, longitude], {
-        radius: accuracy,
-        color: '#3B82F6',
-        fillColor: '#3B82F6',
-        fillOpacity: 0.1,
-        weight: 2
-      }).addTo(map!);
 
       const pulsingIcon = L.divIcon({
         className: 'custom-div-icon',
@@ -428,7 +542,7 @@ const locateMe = () => {
             <div style="
               width: 20px;
               height: 20px;
-              background: #3B82F6;
+              background: #233C7A;  /* Azul Alfa */
               border: 4px solid white;
               border-radius: 50%;
               box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
@@ -510,8 +624,8 @@ const placeRadar = (e: L.LeafletMouseEvent) => {
   // Círculo azul semi-transparente
   radarCircle = L.circle(e.latlng, {
     radius: radarRadius.value,
-    color: '#3B82F6',
-    fillColor: '#3B82F6',
+    color: '#233C7A',    /* Azul Alfa */
+    fillColor: '#233C7A', /* Azul Alfa */
     fillOpacity: 0.15,
     weight: 2
   }).addTo(map);
@@ -525,7 +639,7 @@ const placeRadar = (e: L.LeafletMouseEvent) => {
         <div style="
           width: 30px;
           height: 30px;
-          background: #3B82F6;
+          background: #233C7A;  /* Azul Alfa */
           border: 3px solid white;
           border-radius: 50%;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -564,7 +678,7 @@ const startRadarPulse = (center: L.LatLng) => {
 
   radarPulse = L.circle(center, {
     radius: 0,
-    color: '#3B82F6',
+    color: '#233C7A',  /* Azul Alfa */
     opacity: 0.6,
     fillOpacity: 0,
     weight: 3
@@ -720,7 +834,7 @@ const updateRadarMarkers = () => {
       <div class="text-sm">
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
-        <span class="text-green-600 font-bold">Bs. ${product.price.toLocaleString()}</span><br>
+        ${getPriceDisplay(product)}<br>
         <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
       </div>
     `);
@@ -735,7 +849,7 @@ const updateRadarMarkers = () => {
       className: 'radar-result-marker',
       html: `
         <div style="
-          background: #10B981;
+          background: #10b981;  /* Verde éxito */
           border: 3px solid white;
           border-radius: 50%;
           width: 40px;
@@ -772,7 +886,7 @@ const updateRadarMarkers = () => {
       <div class="text-sm">
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
-        <span class="text-green-600 font-bold">Bs. ${product.price.toLocaleString()}</span><br>
+        ${getPriceDisplay(product)}<br>
         <span class="text-xs text-blue-600">📏 ${distance.toFixed(0)}m del centro</span><br>
         <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
         ${product.operacion ? `<br><span class="text-xs text-purple-600">${getOperacionIcon(product.operacion)} ${product.operacion}</span>` : ''}
@@ -833,7 +947,7 @@ const resetRadar = () => {
     <div ref="mapContainer" class="absolute inset-0 w-full h-full"></div>
 
     <!-- CONTROLES DESKTOP -->
-    <div class="absolute top-4 left-4 right-4 z-[1000] hidden lg:flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3" @click.stop>
+    <div class="absolute top-6 left-15 right-10 z-[1000] hidden lg:flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3" @click.stop>
       <!-- Controles de navegación y filtros (desktop) -->
       <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-wrap">
         <!-- Volver -->
@@ -1203,7 +1317,7 @@ const resetRadar = () => {
           @input="updateRadius"
           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
           :style="{
-            background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${((radarRadius - 100) / (5000 - 100) * 100)}%, #E5E7EB ${((radarRadius - 100) / (5000 - 100) * 100)}%, #E5E7EB 100%)`
+            background: `linear-gradient(to right, #233C7A 0%, #233C7A ${((radarRadius - 100) / (5000 - 100) * 100)}%, #d4d4d4 ${((radarRadius - 100) / (5000 - 100) * 100)}%, #d4d4d4 100%)`
           }"
         />
 
@@ -1272,9 +1386,7 @@ const resetRadar = () => {
           >
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
               <h4 class="font-bold text-gray-800 text-xs sm:text-sm line-clamp-2 flex-1">{{ p.name }}</h4>
-              <span class="text-green-600 font-bold text-sm sm:text-base ml-0 sm:ml-2 flex-shrink-0">
-                Bs. {{ (p.price / 1000).toFixed(0) }}k
-              </span>
+              <div class="ml-0 sm:ml-2 flex-shrink-0" v-html="getResultPriceDisplay(p)"></div>
             </div>
 
             <p class="text-xs text-gray-500 mb-2">{{ p.codigo_inmueble }}</p>
@@ -1287,8 +1399,8 @@ const resetRadar = () => {
                   <p class="font-bold text-blue-800 text-sm sm:text-xs">
                     {{ p.superficie_util ? p.superficie_util.toLocaleString() + ' m²' : 'N/A' }}
                   </p>
-                  <p class="text-blue-700 text-xs" v-if="getPricePerSqmUtil(p)">
-                    {{ getPricePerSqmUtil(p)!.toFixed(0) }} Bs/m²
+                  <p class="text-blue-700 text-xs" v-if="getPricePerSqmUtilDisplay(p)">
+                    {{ getPricePerSqmUtilDisplay(p) }}
                   </p>
                 </div>
                 <div>
@@ -1296,8 +1408,8 @@ const resetRadar = () => {
                   <p class="font-bold text-orange-800 text-sm sm:text-xs">
                     {{ p.superficie_construida ? p.superficie_construida.toLocaleString() + ' m²' : 'N/A' }}
                   </p>
-                  <p class="text-orange-700 text-xs" v-if="getPricePerSqmConstruida(p)">
-                    {{ getPricePerSqmConstruida(p)!.toFixed(0) }} Bs/m²
+                  <p class="text-orange-700 text-xs" v-if="getPricePerSqmConstruidaDisplay(p)">
+                    {{ getPricePerSqmConstruidaDisplay(p) }}
                   </p>
                 </div>
               </div>
@@ -1336,36 +1448,46 @@ const resetRadar = () => {
 
           <!-- Footer compacto con promedios -->
         <div
-          v-if="averagePricePerSqmUtil || averagePricePerSqmConstruida"
+          v-if="averagePricePerSqm.util.usd || averagePricePerSqm.util.bob || averagePricePerSqm.construida.usd || averagePricePerSqm.construida.bob"
           class="border-t bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-2 flex-shrink-0"
         >
-          <p class="text-center text-xs sm:text-sm font-bold text-blue-100 mb-3 sm:mb-2">📊 Promedio Bs/m² en la zona</p>
+          <p class="text-center text-xs sm:text-sm font-bold text-blue-100 mb-3 sm:mb-2">📊 Promedio de precio en la zona</p>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
             <!-- Promedio Útil -->
             <div
-              v-if="averagePricePerSqmUtil"
+              v-if="averagePricePerSqm.util.usd || averagePricePerSqm.util.bob"
               class="bg-white/10 rounded-lg sm:rounded p-3 sm:p-2 backdrop-blur-sm text-center"
             >
               <p class="text-sm sm:text-xs text-blue-100 mb-1">📐 Útil</p>
-              <p class="text-base sm:text-sm font-bold text-white">
-                {{ averagePricePerSqmUtil.toFixed(0) }}
-              </p>
-              <p class="text-xs text-blue-100 opacity-75">
+              <div class="space-y-1">
+                <p v-if="averagePricePerSqm.util.usd" class="text-base sm:text-sm font-bold text-white">
+                  $US {{ averagePricePerSqm.util.usd.toFixed(0) }}/m²
+                </p>
+                <p v-if="averagePricePerSqm.util.bob" class="text-xs sm:text-xs font-semibold text-blue-100">
+                  Bs. {{ averagePricePerSqm.util.bob.toFixed(0) }}/m²
+                </p>
+              </div>
+              <p class="text-xs text-blue-100 opacity-75 mt-1">
                 {{ filteredResults.filter(p => p.superficie_util && p.superficie_util > 0).length }} props
               </p>
             </div>
 
             <!-- Promedio Construida -->
             <div
-              v-if="averagePricePerSqmConstruida"
+              v-if="averagePricePerSqm.construida.usd || averagePricePerSqm.construida.bob"
               class="bg-white/10 rounded-lg sm:rounded p-3 sm:p-2 backdrop-blur-sm text-center"
             >
               <p class="text-sm sm:text-xs text-blue-100 mb-1">🏢 Constr.</p>
-              <p class="text-base sm:text-sm font-bold text-white">
-                {{ averagePricePerSqmConstruida.toFixed(0) }}
-              </p>
-              <p class="text-xs text-blue-100 opacity-75">
+              <div class="space-y-1">
+                <p v-if="averagePricePerSqm.construida.usd" class="text-base sm:text-sm font-bold text-white">
+                  $US {{ averagePricePerSqm.construida.usd.toFixed(0) }}/m²
+                </p>
+                <p v-if="averagePricePerSqm.construida.bob" class="text-xs sm:text-xs font-semibold text-blue-100">
+                  Bs. {{ averagePricePerSqm.construida.bob.toFixed(0) }}/m²
+                </p>
+              </div>
+              <p class="text-xs text-blue-100 opacity-75 mt-1">
                 {{ filteredResults.filter(p => p.superficie_construida && p.superficie_construida > 0).length }} props
               </p>
             </div>
@@ -1411,7 +1533,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #3B82F6;
+  background: #233C7A;  /* Azul Alfa */
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   border: 2px solid white;
@@ -1421,7 +1543,7 @@ input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #3B82F6;
+  background: #233C7A;  /* Azul Alfa */
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   border: 2px solid white;

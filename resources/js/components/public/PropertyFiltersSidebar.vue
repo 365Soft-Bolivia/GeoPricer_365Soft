@@ -861,9 +861,9 @@ const tieneAdicionalesActivas = computed(() => {
     background: #ffffff;
 }
 
-/* Modo oscuro — pantalla negra → scrollbar azul marino */
+/* Modo oscuro — pantalla negra → scrollbar Azul Alfa */
 .dark .overflow-y-auto::-webkit-scrollbar-thumb {
-    background: #001f3f; /* azul marino */
+    background: #233C7A; /* Azul Alfa corporativo */
 }
 
 /* Hover */

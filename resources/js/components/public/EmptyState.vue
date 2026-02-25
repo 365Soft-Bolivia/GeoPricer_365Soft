@@ -129,9 +129,9 @@ const content = computed(() => {
                         as-child
                         class="p-0 h-auto"
                     >
-                        <a href="/contacto">
+                        <a href="/mapa-propiedades">
                             <MapPin class="w-4 h-4 mr-1" />
-                            Contactar a un asesor
+                            Ver mapa interactivo
                         </a>
                     </Button>
                 </div>
@@ -149,16 +149,16 @@ const content = computed(() => {
                 </ul>
             </div>
 
-            <!-- Contacto cuando no hay propiedades -->
-            <div v-if="type === 'general'" class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-2">¿Necesitas ayuda?</h4>
-                <p class="text-sm text-blue-800 dark:text-blue-200 mb-3">
-                    Nuestros asesores están disponibles para ayudarte a encontrar la propiedad perfecta.
+            <!-- Mapa cuando no hay propiedades -->
+            <div v-if="type === 'general'" class="mt-6 p-4 bg-[#233C7A]/10 dark:bg-[#233C7A]/20 rounded-lg">
+                <h4 class="font-medium text-[#233C7A] dark:text-[#FAB90E] mb-2" style="font-family: 'Montserrat', sans-serif; font-weight: 600;">¿Necesitas ayuda?</h4>
+                <p class="text-sm text-[#233C7A] dark:text-[#FAB90E] mb-3">
+                    Explora nuestro mapa interactivo para encontrar la propiedad perfecta.
                 </p>
-                <Button as-child variant="outline" size="sm">
-                    <a href="/contacto">
+                <Button as-child variant="outline" size="sm" class="border-[#233C7A] text-[#233C7A] hover:bg-[#233C7A] hover:text-white">
+                    <a href="/mapa-propiedades">
                         <MapPin class="w-4 h-4 mr-1" />
-                        Contactar asesor
+                        Ver mapa interactivo
                     </a>
                 </Button>
             </div>
