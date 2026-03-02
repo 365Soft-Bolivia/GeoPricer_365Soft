@@ -1,8 +1,8 @@
-import { Folder, MapPinned, Tag, LockKeyhole } from 'lucide-vue-next';
+import { Folder, MapPinned, Tag, LockKeyhole, Upload, RefreshCw } from 'lucide-vue-next';
 import { admin } from '@/routes-custom';
 import type { NavItem } from '@/types';
 
-const { dashboard, proyectos, categorias, accesos, ubicaciones } = admin;
+const { dashboard, proyectos, categorias, accesos, ubicaciones, dataImport, dataReorder } = admin;
 
 export const allMainNavItems: NavItem[] = [
   {
@@ -32,6 +32,18 @@ export const allMainNavItems: NavItem[] = [
     title: 'Accesos',
     href: accesos().url,
     icon: LockKeyhole,
+    roles: ['admin'],
+  },
+  {
+    title: 'Inyección de Datos',
+    href: dataImport().url,
+    icon: Upload,
+    roles: ['admin'],
+  },
+  {
+    title: 'Reordenar Datos',
+    href: dataReorder().url,
+    icon: RefreshCw,
     roles: ['admin'],
   },
 ];

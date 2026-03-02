@@ -39,4 +39,6 @@ require __DIR__.'/accesos.php';
 require __DIR__.'/roles.php';
 require __DIR__.'/productLocations.php';
 require __DIR__.'/products.php';
+require __DIR__.'/data-import.php';
+require __DIR__.'/data-reorder.php';
 require __DIR__.'/public.php';

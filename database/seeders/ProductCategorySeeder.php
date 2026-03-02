@@ -13,9 +13,21 @@ class ProductCategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            'Casa','Departamento','Edificio','Galpón','Habitación','Local Comercial',
-            'Oficina','Parqueo','Quinta Propiedad Agricola','Terreno'
-
+            'Casa',
+            'Departamento',
+            'Penthouse',
+            'Terreno',
+            'Local Comercial',
+            'Oficina',
+            'Galpón',
+            'Quinta',
+            'Estudio/Monoambiente',
+            'Dúplex',
+            'Condominio',
+            'Edificio',
+            'Cochera',
+            'Habitación',
+            'Otros'
         ];
 
         foreach ($categories as $category) {

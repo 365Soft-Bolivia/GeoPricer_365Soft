@@ -15,6 +15,12 @@ import ConfirmationService from 'primevue/confirmationservice';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+// Exponer el token CSRF globalmente
+const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+if (csrfTokenMeta) {
+    (window as any).csrfToken = csrfTokenMeta.getAttribute('content');
+}
+
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) =>
