@@ -2,16 +2,17 @@ import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
-import path from 'path';
 import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './resources/js'),
+            '@': resolve(__dirname, './resources/js/'),
         },
     },
     plugins: [

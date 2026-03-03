@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Grid, List, MapPin, Bed, Bath, Car, Home, Ma
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Pagination from '@/components/public/Pagination.vue';
-import publicRoutes from '@/routes/public';
+import publicRoutes from '@/routes/public/index.ts';
 
 interface ProductImage {
     id: number;

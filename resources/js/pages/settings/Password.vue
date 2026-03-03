@@ -3,7 +3,7 @@ import PasswordController from '@/actions/App/Http/Controllers/Settings/Password
 import InputError from '@/components/InputError.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import password from '@/routes/admin/password';
+import password from '@/routes/admin/password.ts';
 
 const edit = password.edit;
 import { Form, Head } from '@inertiajs/vue3';

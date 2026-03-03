@@ -15,7 +15,7 @@ import {
     PinInputSlot,
 } from '@/components/ui/pin-input';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
-import { confirm } from '@/routes/two-factor';
+import { confirm } from '@/routes/two-factor/index.ts';
 import { Form } from '@inertiajs/vue3';
 import { useClipboard } from '@vueuse/core';
 import { Check, Copy, Loader2, ScanLine } from 'lucide-vue-next';

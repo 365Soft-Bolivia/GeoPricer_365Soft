@@ -15,7 +15,7 @@ import {
     Lightbulb,
     Globe
 } from 'lucide-vue-next';
-import publicRoutes from '@/routes/public';
+import publicRoutes from '@/routes/public/index.ts';
 
 defineOptions({
     layout: PublicLayout

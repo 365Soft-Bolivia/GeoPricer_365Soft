@@ -18,7 +18,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import publicRoutes from '@/routes/public';
+import publicRoutes from '@/routes/public/index.ts';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-vue-next"; 
 

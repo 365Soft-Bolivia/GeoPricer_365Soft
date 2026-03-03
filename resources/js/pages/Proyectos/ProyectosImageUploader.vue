@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { admin } from '@/routes-custom';
-import productos from '@/routes/productos';
+import productos from '@/routes/productos/index.ts';
 
 interface Props {
   productId: number;
