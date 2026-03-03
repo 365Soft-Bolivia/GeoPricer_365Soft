@@ -1,5 +1,11 @@
-import { qrCode, recoveryCodes, secretKey } from '@/routes/two-factor/index.ts';
 import { computed, ref } from 'vue';
+
+// Fortify two-factor URLs — static, no Wayfinder dependency needed
+const TWO_FACTOR_URLS = {
+    qrCode: '/user/two-factor-qr-code',
+    secretKey: '/user/two-factor-secret',
+    recoveryCodes: '/user/two-factor-recovery-codes',
+} as const;
 
 const fetchJson = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, {
@@ -26,7 +32,7 @@ export const useTwoFactorAuth = () => {
     const fetchQrCode = async (): Promise<void> => {
         try {
             const { svg } = await fetchJson<{ svg: string; url: string }>(
-                qrCode.url(),
+                TWO_FACTOR_URLS.qrCode,
             );
 
             qrCodeSvg.value = svg;
@@ -39,7 +45,7 @@ export const useTwoFactorAuth = () => {
     const fetchSetupKey = async (): Promise<void> => {
         try {
             const { secretKey: key } = await fetchJson<{ secretKey: string }>(
-                secretKey.url(),
+                TWO_FACTOR_URLS.secretKey,
             );
 
             manualSetupKey.value = key;
@@ -69,7 +75,7 @@ export const useTwoFactorAuth = () => {
         try {
             clearErrors();
             recoveryCodesList.value = await fetchJson<string[]>(
-                recoveryCodes.url(),
+                TWO_FACTOR_URLS.recoveryCodes,
             );
         } catch {
             errors.value.push('Failed to fetch recovery codes');
