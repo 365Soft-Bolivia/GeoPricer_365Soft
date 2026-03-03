@@ -1,4 +1,4 @@
-import { wayfinder } from '@laravel/vite-plugin-wayfinder';
+// wayfinder plugin removed temporarily to avoid executing PHP artisan during JS build
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
@@ -12,9 +12,11 @@ export default defineConfig({
             refresh: true,
         }),
         tailwindcss(),
-        wayfinder({
-            formVariants: true,
-        }),
+        // NOTE: The wayfinder plugin was removed here to prevent the build from
+        // invoking `php artisan wayfinder:generate` on environments where the
+        // PHP CLI does not match composer requirements. If you have PHP >= 8.2
+        // on your CLI, re-add the plugin:
+        // wayfinder({ formVariants: true }),
         vue({
             template: {
                 transformAssetUrls: {
