@@ -3,7 +3,7 @@ import EmailVerificationNotificationController from '@/actions/App/Http/Controll
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { logout } from '@/routes';
+import { logout } from '@/routes/index.ts';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
