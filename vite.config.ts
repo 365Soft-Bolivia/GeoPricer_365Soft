@@ -3,7 +3,10 @@ import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 import path from 'path';
-import wayfinder from '@laravel/vite-plugin-wayfinder';
+import { fileURLToPath } from 'url';
+import { wayfinder } from '@laravel/vite-plugin-wayfinder';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
     resolve: {
