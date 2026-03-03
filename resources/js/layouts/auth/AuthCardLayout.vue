@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { home } from '@/routes/index.ts';
+import { home } from '@/routes';
 import { Link } from '@inertiajs/vue3';
 
 defineProps<{
