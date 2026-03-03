@@ -1,16 +1,19 @@
 /**
  * Static Fortify two-factor route helpers.
- * These intentionally do NOT import from @/routes/two-factor (Wayfinder-generated)
- * because that directory is wiped and regenerated at build time on Railway,
- * and Fortify routes may not be registered during the artisan bootstrap phase.
+ * Callable functions with .url() and .form() — matching the Wayfinder API.
  */
 
-export const confirm = {
-    url: () => '/user/two-factor',
-    form: () => ({ action: '/user/two-factor', method: 'post' as const }),
-};
+type Method = 'get' | 'post' | 'put' | 'delete';
 
-export const regenerateRecoveryCodes = {
-    url: () => '/user/two-factor-recovery-codes',
-    form: () => ({ action: '/user/two-factor-recovery-codes', method: 'post' as const }),
-};
+function makeRoute(url: string, method: Method = 'get') {
+    const fn = () => url;
+    fn.url = () => url;
+    fn.form = () => ({ action: url, method });
+    return fn;
+}
+
+/** POST /user/two-factor */
+export const confirm = makeRoute('/user/two-factor', 'post');
+
+/** POST /user/two-factor-recovery-codes */
+export const regenerateRecoveryCodes = makeRoute('/user/two-factor-recovery-codes', 'post');

@@ -1,26 +1,32 @@
-// Rutas personalizadas que no se sobrescriben con wayfinder:generate
-// Este directorio está separado para evitar ser eliminado por wayfinder
-import type { RouteDefinition } from './../wayfinder';
+/**
+ * Static route helpers — independent of Wayfinder-generated files.
+ * These DO NOT import from @/routes or @/wayfinder because wayfinder:generate
+ * wipes and rewrites those directories at build time on Railway.
+ *
+ * Each export is a callable function (returning the URL string) that also
+ * has .url() and .form() methods, matching the Wayfinder route API.
+ */
 
-// Importar rutas generadas por wayfinder
-import * as generatedRoutes from './../routes/index';
+type Method = 'get' | 'post' | 'put' | 'delete';
 
-// Importar rutas admin específicas (estas ya existen con el prefijo /admin)
-import adminRoutes from './../routes/admin/index';
+function makeRoute(url: string, method: Method = 'get') {
+  const fn = () => url;
+  fn.url = () => url;
+  fn.form = () => ({ action: url, method });
+  return fn;
+}
 
-// Usar las rutas existentes generadas por wayfinder para el admin
-export const admin = adminRoutes;
+/** GET /admin/dashboard */
+export const dashboard = makeRoute('/admin/dashboard');
 
-// Exportar rutas públicas para acceso fácil
-export const publicRoutes = {
-  home: generatedRoutes.home,
-};
+/** GET /admin/login */
+export const login = makeRoute('/admin/login');
 
-// Reexportar rutas generadas si necesitas acceder a ellas
-export { generatedRoutes };
+/** GET /admin/register */
+export const register = makeRoute('/admin/register');
 
-// Tipos para las rutas personalizadas
-export type CustomRouteDefinition = RouteDefinition & {
-  url: string;
-  method: 'get' | 'post' | 'put' | 'delete' | 'patch';
-};
+/** POST /admin/logout */
+export const logout = makeRoute('/admin/logout', 'post');
+
+/** GET / */
+export const home = makeRoute('/');
