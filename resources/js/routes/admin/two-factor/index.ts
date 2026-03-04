@@ -77,68 +77,8 @@ show.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     show.form = showForm
-    /**
-     * Enable two-factor (POST)
-     */
-    export const enable = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-        url: enable.url(options),
-        method: 'post',
-    })
-
-    enable.definition = {
-        methods: ["post"],
-        url: '/admin/settings/two-factor/enable',
-    } satisfies RouteDefinition<["post"]>
-
-    enable.url = (options?: RouteQueryOptions) => {
-        return enable.definition.url + queryParams(options)
-    }
-
-    enable.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-        url: enable.url(options),
-        method: 'post',
-    })
-
-    const enableForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: enable.url(options),
-        method: 'post',
-    })
-
-    enable.form = enableForm
-
-    /**
-     * Disable two-factor (POST)
-     */
-    export const disable = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-        url: disable.url(options),
-        method: 'post',
-    })
-
-    disable.definition = {
-        methods: ["post"],
-        url: '/admin/settings/two-factor/disable',
-    } satisfies RouteDefinition<["post"]>
-
-    disable.url = (options?: RouteQueryOptions) => {
-        return disable.definition.url + queryParams(options)
-    }
-
-    disable.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-        url: disable.url(options),
-        method: 'post',
-    })
-
-    const disableForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: disable.url(options),
-        method: 'post',
-    })
-
-    disable.form = disableForm
-
-    const twoFactor = {
-        show: Object.assign(show, show),
-        enable: Object.assign(enable, enable),
-        disable: Object.assign(disable, disable),
-    }
+const twoFactor = {
+    show: Object.assign(show, show),
+}
 
 export default twoFactor

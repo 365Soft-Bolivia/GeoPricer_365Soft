@@ -30,3 +30,39 @@ export const logout = makeRoute('/admin/logout', 'post');
 
 /** GET / */
 export const home = makeRoute('/');
+
+/** GET /admin/proyectos */
+export const proyectos = {
+  index: makeRoute('/admin/proyectos'),
+};
+
+/** GET /admin/categorias */
+export const categorias = makeRoute('/admin/categorias');
+
+/** GET /admin/accesos */
+export const accesos = makeRoute('/admin/accesos');
+
+/** GET /admin/ubicaciones */
+export const ubicaciones = makeRoute('/admin/ubicaciones');
+
+/** GET /admin/data-import */
+export const dataImport = makeRoute('/admin/data-import');
+
+/** GET /admin/data-reorder */
+export const dataReorder = makeRoute('/admin/data-reorder');
+
+/** Group all admin routes for navigation */
+export const admin = {
+  dashboard,
+  proyectos,
+  categorias,
+  accesos,
+  ubicaciones,
+  dataImport,
+  dataReorder,
+};
+
+/** Group all public routes for navigation */
+export const publicRoutes = {
+  home,
+};
