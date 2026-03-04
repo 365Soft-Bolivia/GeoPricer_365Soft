@@ -1,48 +1,46 @@
 import { Folder, MapPinned, Tag, LockKeyhole, Upload, RefreshCw } from 'lucide-vue-next';
-import { admin } from '@/routes-custom';
 import type { NavItem } from '@/types';
 
-const { dashboard, proyectos, categorias, accesos, ubicaciones, dataImport, dataReorder } = admin;
-
+// URLs directas - evitamos problemas de runtime con funciones dinámicas
 export const allMainNavItems: NavItem[] = [
   {
     title: 'Dashboard',
-    href: dashboard().url,
+    href: '/admin/dashboard',
     icon: MapPinned,
   },
   {
     title: 'Proyectos',
-    href: proyectos.index().url,
+    href: '/admin/proyectos',
     icon: Folder,
     roles: ['admin'],
   },
   {
     title: 'Ubicaciones',
-    href: ubicaciones().url,
+    href: '/admin/ubicaciones',
     icon: MapPinned,
     roles: ['admin'],
   },
   {
     title: 'Categorías',
-    href: categorias().url,
+    href: '/admin/categorias',
     icon: Tag,
     roles: ['admin'],
   },
   {
     title: 'Accesos',
-    href: accesos().url,
+    href: '/admin/accesos',
     icon: LockKeyhole,
     roles: ['admin'],
   },
   {
     title: 'Inyección de Datos',
-    href: dataImport().url,
+    href: '/admin/data-import',
     icon: Upload,
     roles: ['admin'],
   },
   {
     title: 'Reordenar Datos',
-    href: dataReorder().url,
+    href: '/admin/data-reorder',
     icon: RefreshCw,
     roles: ['admin'],
   },

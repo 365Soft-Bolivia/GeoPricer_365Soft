@@ -3,18 +3,21 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
-    SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { urlIsActive } from '@/lib/utils';
 import { type NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 
 defineProps<{
     items: NavItem[];
 }>();
 
 const page = usePage();
+
+const navigate = (href: string) => {
+    router.visit(href);
+};
 </script>
 
 <template>
@@ -23,17 +26,15 @@ const page = usePage();
 
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
-                <SidebarMenuButton
-                    as-child
-                    :is-active="urlIsActive(item.href, page.url)"
-                    :tooltip="item.title"
+                <button
+                    type="button"
+                    @click="navigate(item.href)"
+                    class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+                    :class="{ 'bg-accent text-accent-foreground': urlIsActive(item.href, page.url) }"
                 >
-                    <Link :href="item.href">
-                        <component :is="item.icon" />
-                        <span>{{ item.title }}</span>
-                    </Link>
-
-                </SidebarMenuButton>
+                    <component :is="item.icon" class="size-4" />
+                    <span>{{ item.title }}</span>
+                </button>
             </SidebarMenuItem>
         </SidebarMenu>
     </SidebarGroup>

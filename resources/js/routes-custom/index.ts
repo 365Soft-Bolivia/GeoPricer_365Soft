@@ -32,9 +32,7 @@ export const logout = makeRoute('/admin/logout', 'post');
 export const home = makeRoute('/');
 
 /** GET /admin/proyectos */
-export const proyectos = {
-  index: makeRoute('/admin/proyectos'),
-};
+export const proyectos = makeRoute('/admin/proyectos');
 
 /** GET /admin/categorias */
 export const categorias = makeRoute('/admin/categorias');
