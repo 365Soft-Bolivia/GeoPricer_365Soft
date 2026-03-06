@@ -120,7 +120,7 @@ const formatNumber = (num: number) => {
                         Reordenar Datos Existentes
                     </h1>
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        Analiza y corrige automáticamente la categoría y operación de todos los productos en la base de datos
+                        Analiza, corrige y limpia automáticamente los datos de productos para proteger tu ACM
                     </p>
                 </div>
             </div>
@@ -138,6 +138,9 @@ const formatNumber = (num: number) => {
                         <p class="mt-1 text-sm text-blue-700 dark:text-blue-300">
                             Este módulo analiza todos los productos de la base de datos en lotes de 1000 para optimizar el rendimiento.
                             Detecta automáticamente la categoría y operación correcta basándose en el nombre y descripción.
+                            <br><br>
+                            <strong>🛡️ Protección de tu ACM:</strong> Elimina automáticamente productos con datos incompletos
+                            (precio sin superficie, o superficie sin precio) para evitar errores en tus cálculos de pricing.
                         </p>
                     </div>
                 </div>
@@ -184,7 +187,7 @@ const formatNumber = (num: number) => {
                 <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                     <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Resumen del Análisis</h2>
 
-                    <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-6">
                         <div class="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
                             <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ formatNumber(result.total) }}</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
@@ -205,6 +208,10 @@ const formatNumber = (num: number) => {
                             <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ formatNumber(result.both_incorrect) }}</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">Ambos Incorrectos</p>
                         </div>
+                        <div class="rounded-lg bg-red-100 p-4 dark:bg-red-900/30">
+                            <p class="text-2xl font-bold text-red-700 dark:text-red-300">{{ formatNumber(result.deleted_count) }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">A Eliminar</p>
+                        </div>
                     </div>
 
                     <div v-if="result.dry_run" class="mt-4 rounded-lg bg-yellow-100 p-3 dark:bg-yellow-900/30">
@@ -214,9 +221,22 @@ const formatNumber = (num: number) => {
                         </p>
                     </div>
 
+                    <div v-if="result.dry_run && result.deleted_count > 0" class="mt-4 rounded-lg bg-red-100 p-3 dark:bg-red-900/30">
+                        <p class="text-sm text-red-800 dark:text-red-200">
+                            🗑️ Se detectaron {{ formatNumber(result.deleted_count) }} productos incompletos que afectarán tu ACM.
+                            Estos serán eliminados al aplicar las correcciones.
+                        </p>
+                    </div>
+
                     <div v-if="!result.dry_run && result.applied > 0" class="mt-4 rounded-lg bg-green-100 p-3 dark:bg-green-900/30">
                         <p class="text-sm text-green-800 dark:text-green-200">
                             ✓ ¡Correcciones aplicadas exitosamente! {{ formatNumber(result.applied) }} productos actualizados.
+                        </p>
+                    </div>
+
+                    <div v-if="!result.dry_run && result.deleted > 0" class="mt-4 rounded-lg bg-green-100 p-3 dark:bg-green-900/30">
+                        <p class="text-sm text-green-800 dark:text-green-200">
+                            ✓ ¡Productos incompletos eliminados! {{ formatNumber(result.deleted) }} productos eliminados para proteger tu ACM.
                         </p>
                     </div>
                 </div>
@@ -281,6 +301,57 @@ const formatNumber = (num: number) => {
                     </div>
                 </div>
 
+                <!-- Products to Delete Table -->
+                <div v-if="result.products_to_delete && result.products_to_delete.length > 0" class="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-900/20">
+                    <h2 class="mb-4 text-lg font-semibold text-red-900 dark:text-red-200">
+                        Productos Incompletos a Eliminar (Primeros 50 de {{ formatNumber(result.deleted_count) }})
+                    </h2>
+                    <div class="mb-3 text-sm text-red-800 dark:text-red-300">
+                        <p>Estos productos tienen datos incompletos que pueden afectar negativamente tu ACM:</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-red-200 dark:divide-red-700">
+                            <thead class="bg-red-100 dark:bg-red-900">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-red-900 dark:text-white">CÓDIGO</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">Nombre</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">Motivo</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">Precio</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">Superficie</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-red-200 dark:divide-red-700">
+                                <tr v-for="item in result.products_to_delete" :key="item.codigo" class="hover:bg-red-100 dark:hover:bg-red-900/30">
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm font-mono font-bold text-red-600 dark:text-red-400">{{ item.codigo }}</td>
+                                    <td class="px-4 py-3 text-sm text-red-900 dark:text-red-100 max-w-xs truncate">{{ item.name }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3">
+                                        <span v-if="item.reason === 'precio_sin_superficie'" class="rounded-full bg-red-200 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+                                            Precio sin superficie
+                                        </span>
+                                        <span v-else-if="item.reason === 'superficie_sin_precio'" class="rounded-full bg-red-200 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+                                            Superficie sin precio
+                                        </span>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-red-900 dark:text-red-100">
+                                        <div v-if="item.price_usd" class="text-green-600">${{ item.price_usd }}</div>
+                                        <div v-if="item.price_bob" class="text-blue-600">Bs{{ item.price_bob }}</div>
+                                        <div v-if="!item.price_usd && !item.price_bob" class="text-gray-500">Sin precio</div>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-red-900 dark:text-red-100">
+                                        <div v-if="item.superficie_util" class="text-orange-600">{{ item.superficie_util }} m²</div>
+                                        <div v-if="item.superficie_construida" class="text-purple-600">{{ item.superficie_construida }} m²</div>
+                                        <div v-if="!item.superficie_util && !item.superficie_construida" class="text-gray-500">Sin superficie</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="result.deleted_count > 50" class="mt-4 text-center text-sm text-red-800 dark:text-red-300">
+                        ... y {{ formatNumber(result.deleted_count - 50) }} productos más a eliminar.
+                    </div>
+                </div>
+
                 <!-- No Changes -->
                 <div v-if="result.changes_count === 0" class="rounded-lg border border-green-200 bg-green-50 p-6 dark:border-green-900 dark:bg-green-900/20">
                     <div class="flex">
@@ -306,6 +377,12 @@ const formatNumber = (num: number) => {
                     <p>✅ <strong>Analiza todos los productos</strong> en lotes de 1000 para optimizar rendimiento</p>
                     <p>✅ <strong>Detecta categoría incorrecta</strong> basándose en el nombre y descripción</p>
                     <p>✅ <strong>Detecta operación incorrecta</strong> (venta/alquiler) en el contenido</p>
+                    <p>🗑️ <strong>Elimina productos incompletos</strong> que afectan el ACM:
+                        <ul class="ml-6 mt-1 space-y-1">
+                            <li>• Productos con precio pero sin superficie</li>
+                            <li>• Productos con superficie pero sin precio</li>
+                        </ul>
+                    </p>
                     <p>✅ <strong>Muestra reporte</strong> con los cambios propuestos antes de aplicar</p>
                     <p>✅ <strong>Protege contra duplicados</strong> - Solo actualiza si es necesario</p>
                     <p>✅ <strong>Transacciones seguras</strong> - Si hay error, revierte todos los cambios</p>

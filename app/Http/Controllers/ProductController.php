@@ -13,6 +13,8 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $categoria = $request->input('categoria');
+        $estado = $request->input('estado');
         $page = $request->input('page', 1);
         $perPage = 100; // Mostrar 100 productos por página
 
@@ -25,6 +27,12 @@ class ProductController extends Controller
                             $categoryQuery->where('category_name', 'like', "%{$search}%");
                         });
                 });
+            })
+            ->when($categoria, function ($query, $categoria) {
+                $query->where('category_id', $categoria);
+            })
+            ->when($estado !== null && $estado !== '', function ($query, $estado) {
+                $query->where('estado', $estado);
             })
             ->orderBy('created_at', 'desc');
 

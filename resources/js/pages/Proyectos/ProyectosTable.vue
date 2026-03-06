@@ -65,10 +65,16 @@ const selectedProduct = ref<Producto | null>(null);
 // Obtener los filtros actuales de la URL
 const currentFilters = () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const filters: Record<string, string> = {};
+  const filters: Record<string, string | number> = {};
 
   if (urlParams.has('search')) {
     filters.search = urlParams.get('search')!;
+  }
+  if (urlParams.has('categoria')) {
+    filters.categoria = parseInt(urlParams.get('categoria')!);
+  }
+  if (urlParams.has('estado')) {
+    filters.estado = parseInt(urlParams.get('estado')!);
   }
 
   return filters;
@@ -172,7 +178,7 @@ const goToPage = (page: number) => {
     ...currentFilters(), // Mantener los filtros actuales (búsqueda, etc.)
   };
 
-  router.get(proyectos.index.url({ query: params }), {}, { preserveScroll: true });
+  router.get(proyectos.index().url, params, { preserveScroll: true });
 };
 </script>
 

@@ -439,7 +439,11 @@ const updateMarkers = () => {
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
         ${getPriceDisplay(product)}<br>
-        <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
+        <span class="text-xs text-gray-500">${product.category || 'N/A'}</span><br>
+        <div class="text-xs text-gray-700 mt-2 pt-2 border-t border-gray-300">
+          <span class="font-semibold">Descripción:</span><br>
+          <span class="text-gray-600">${product.description || 'Sin descripción'}</span>
+        </div>
       </div>
     `);
 
@@ -835,7 +839,11 @@ const updateRadarMarkers = () => {
         <b>${product.name}</b><br>
         <span class="text-xs text-gray-600">${product.codigo_inmueble}</span><br>
         ${getPriceDisplay(product)}<br>
-        <span class="text-xs text-gray-500">${product.category || 'N/A'}</span>
+        <span class="text-xs text-gray-500">${product.category || 'N/A'}</span><br>
+        <div class="text-xs text-gray-700 mt-2 pt-2 border-t border-gray-300">
+          <span class="font-semibold">Descripción:</span><br>
+          <span class="text-gray-600">${product.description || 'Sin descripción'}</span>
+        </div>
       </div>
     `);
 

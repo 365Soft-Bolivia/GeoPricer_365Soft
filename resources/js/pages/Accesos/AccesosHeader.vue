@@ -34,9 +34,9 @@ const performSearch = (query: string) => {
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
-  
+
   searchTimeout = setTimeout(() => {
-    router.get(accesos().url,
+    router.get(accesos.listar().url,
       { search: query },
       {
         preserveState: true,
@@ -58,7 +58,7 @@ const handleSearch = () => {
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
-  router.get(accesos().url,
+  router.get(accesos.listar().url,
     { search: searchQuery.value },
     {
       preserveState: true,
@@ -74,7 +74,7 @@ const clearSearch = () => {
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
-  router.get(accesos().url,
+  router.get(accesos.listar().url,
     {},
     {
       preserveState: true,

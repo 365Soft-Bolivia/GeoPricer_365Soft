@@ -169,6 +169,7 @@ class DataReorderController extends Controller
             $incorrectOperation = 0;
             $bothIncorrect = 0;
             $processedCount = 0;
+            $productsToDelete = []; // Productos incompletos para eliminar
 
             Product::with(['category'])->chunk($batchSize, function ($products) use (
                 &$changes,
@@ -177,12 +178,58 @@ class DataReorderController extends Controller
                 &$incorrectOperation,
                 &$bothIncorrect,
                 &$processedCount,
+                &$productsToDelete,
                 &$categoryMap,
                 $totalProducts
             ) {
                 foreach ($products as $product) {
                     try {
                         $nameLower = mb_strtolower($product->name, 'UTF-8');
+
+                        // ============================================================
+                        // LIMPIEZA DE DATOS INCOMPLETOS
+                        // Eliminar productos que pueden afectar el ACM
+                        // ============================================================
+
+                        $hasPrice = ($product->price_usd > 0) || ($product->price_bob > 0);
+                        $hasSurface = ($product->superficie_util > 0) || ($product->superficie_construida > 0);
+
+                        // CASO 1: Tiene precio pero NO tiene superficie -> ELIMINAR
+                        if ($hasPrice && !$hasSurface) {
+                            $productsToDelete[] = [
+                                'id' => $product->id,
+                                'codigo' => $product->codigo_inmueble ?? $product->sku ?? $product->id,
+                                'name' => $product->name,
+                                'reason' => 'precio_sin_superficie',
+                                'price_usd' => $product->price_usd,
+                                'price_bob' => $product->price_bob,
+                                'superficie_util' => $product->superficie_util,
+                                'superficie_construida' => $product->superficie_construida,
+                            ];
+                            $processedCount++;
+                            continue; // Pasar al siguiente producto
+                        }
+
+                        // CASO 2: Tiene superficie pero NO tiene precio -> ELIMINAR
+                        if ($hasSurface && !$hasPrice) {
+                            $productsToDelete[] = [
+                                'id' => $product->id,
+                                'codigo' => $product->codigo_inmueble ?? $product->sku ?? $product->id,
+                                'name' => $product->name,
+                                'reason' => 'superficie_sin_precio',
+                                'price_usd' => $product->price_usd,
+                                'price_bob' => $product->price_bob,
+                                'superficie_util' => $product->superficie_util,
+                                'superficie_construida' => $product->superficie_construida,
+                            ];
+                            $processedCount++;
+                            continue; // Pasar al siguiente producto
+                        }
+
+                        // ============================================================
+                        // DETECCIÓN DE CATEGORÍA Y OPERACIÓN
+                        // Solo si pasó la limpieza de datos incompletos
+                        // ============================================================
 
                         // Detectar qué debería ser
                         $detectedCategory = $this->detectCategory($nameLower, $product);
@@ -249,14 +296,17 @@ class DataReorderController extends Controller
 
             \Log::info('DataReorder: Análisis completado', [
                 'correct' => $correct,
-                'changes' => count($changes)
+                'changes' => count($changes),
+                'to_delete' => count($productsToDelete)
             ]);
 
             // Aplicar cambios si no es dry run
             $applied = 0;
-            if (!$isDryRun && !empty($changes)) {
+            $deleted = 0;
+            if (!$isDryRun && (!empty($changes) || !empty($productsToDelete))) {
                 DB::beginTransaction();
                 try {
+                    // 1. Actualizar productos con cambios de categoría/operación
                     foreach ($changes as $change) {
                         $updateData = [];
 
@@ -277,8 +327,15 @@ class DataReorderController extends Controller
                         }
                     }
 
+                    // 2. Eliminar productos incompletos que afectan el ACM
+                    if (!empty($productsToDelete)) {
+                        $idsToDelete = array_column($productsToDelete, 'id');
+                        $deleted = Product::whereIn('id', $idsToDelete)->delete();
+                        \Log::info('DataReorder: Productos incompletos eliminados', ['deleted' => $deleted]);
+                    }
+
                     DB::commit();
-                    \Log::info('DataReorder: Cambios aplicados', ['applied' => $applied]);
+                    \Log::info('DataReorder: Cambios aplicados', ['applied' => $applied, 'deleted' => $deleted]);
                 } catch (\Exception $e) {
                     DB::rollBack();
                     \Log::error('DataReorder: Error aplicando cambios', [
@@ -300,6 +357,9 @@ class DataReorderController extends Controller
                     'changes' => array_slice($changes, 0, 50), // Primeros 50 cambios
                     'changes_count' => count($changes),
                     'applied' => $applied,
+                    'deleted_count' => count($productsToDelete),
+                    'products_to_delete' => array_slice($productsToDelete, 0, 50), // Primeros 50 a eliminar
+                    'deleted' => $deleted,
                     'dry_run' => $isDryRun,
                 ]
             ]);

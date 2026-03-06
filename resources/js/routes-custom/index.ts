@@ -16,6 +16,10 @@ function makeRoute(url: string, method: Method = 'get') {
   return fn;
 }
 
+// Importar rutas wayfinder para módulos que necesitan sub-rutas
+import ubicacionesRoutes from '@/routes/admin/ubicaciones';
+import proyectosRoutes from '@/routes/admin/proyectos';
+
 /** GET /admin/dashboard */
 export const dashboard = makeRoute('/admin/dashboard');
 
@@ -40,6 +44,9 @@ export const categorias = makeRoute('/admin/categorias');
 /** GET /admin/accesos */
 export const accesos = makeRoute('/admin/accesos');
 
+/** GET /admin/roles */
+export const roles = makeRoute('/admin/roles');
+
 /** GET /admin/ubicaciones */
 export const ubicaciones = makeRoute('/admin/ubicaciones');
 
@@ -52,10 +59,13 @@ export const dataReorder = makeRoute('/admin/data-reorder');
 /** Group all admin routes for navigation */
 export const admin = {
   dashboard,
-  proyectos,
+  proyectos: proyectosRoutes,
   categorias,
-  accesos,
-  ubicaciones,
+  accesos: {
+    listar: accesos,
+  },
+  roles,
+  ubicaciones: ubicacionesRoutes,
   dataImport,
   dataReorder,
 };
