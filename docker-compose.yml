@@ -11,7 +11,7 @@ services:
     image: geopricer-nginx:latest
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-80}:80"
+      - "8080:80"
     volumes:
       - storage_public:/var/www/html/public/storage:ro
     depends_on:
