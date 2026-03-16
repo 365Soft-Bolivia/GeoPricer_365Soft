@@ -1,0 +1,45 @@
+# ─── Git ──────────────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ─── Dependencias locales (se instalan en el build) ───────────────────────────
+node_modules/
+vendor/
+
+# ─── Assets compilados localmente ─────────────────────────────────────────────
+public/build/
+public/hot
+
+# ─── Entorno local ────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Logs y storage ───────────────────────────────────────────────────────────
+storage/logs/*.log
+storage/app/public/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+tests/
+phpunit.xml
+.pest/
+
+# ─── IDE y editores ───────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ─── Docker (no incluir dentro del build context) ─────────────────────────────
+docker-compose*.yml
+Dockerfile
+
+# ─── Docs y archivos temporales ───────────────────────────────────────────────
+README.md
+*.md
+temp_file.vue
+verificar_instalacion.php
