@@ -13,9 +13,6 @@ class DataImportController extends Controller
 {
     protected JsonImportParser $parser;
 
-    // Tasa de cambio aproximada USD a BOB (Bolivia)
-    const USD_TO_BOB_RATE = 6.95;
-
     public function __construct(JsonImportParser $parser)
     {
         $this->parser = $parser;
@@ -283,8 +280,7 @@ class DataImportController extends Controller
         // Calcular estadísticas de categorías y operaciones
         $categoriesStats = [];
         $operationsStats = [];
-        $pricesCorrected = 0;
-        $pricesCalculated = 0;
+        $skippedReasons = []; // Estadísticas de motivos de omisión
 
         foreach ($processed as $item) {
             // Contar categorías
@@ -300,16 +296,15 @@ class DataImportController extends Controller
                 $operationsStats[$opName] = 0;
             }
             $operationsStats[$opName]++;
+        }
 
-            // Contar precios corregidos
-            if (isset($item['price_corrected']) && $item['price_corrected']) {
-                $pricesCorrected++;
+        // Contar motivos de omisión para mostrar en el reporte
+        foreach ($skipped as $item) {
+            $reason = $item['reason'] ?? 'otro';
+            if (!isset($skippedReasons[$reason])) {
+                $skippedReasons[$reason] = 0;
             }
-
-            // Contar precios calculados
-            if (isset($item['price_calculated']) && $item['price_calculated']) {
-                $pricesCalculated++;
-            }
+            $skippedReasons[$reason]++;
         }
 
         return [
@@ -320,11 +315,10 @@ class DataImportController extends Controller
             'dry_run' => $isDryRun,
             'items' => array_slice($processed, 0, 20),
             'errors_list' => array_slice($errors, 0, 10),
-            'skipped_list' => array_slice($skipped, 0, 10),
+            'skipped_list' => array_slice($skipped, 0, 20), // Mostrar hasta 20 en lugar de 10
             'categories_stats' => $categoriesStats,
             'operations_stats' => $operationsStats,
-            'prices_corrected' => $pricesCorrected,
-            'prices_calculated' => $pricesCalculated,
+            'skipped_reasons' => $skippedReasons, // Nueva estadística
         ];
     }
 
@@ -409,8 +403,48 @@ class DataImportController extends Controller
             ];
         }
 
-        // Extraer TODOS los datos del item
+        // Extraer TODOS los datos del item (esto ya procesa precios y superficies)
         $productData = $this->extractProductData($item, $name, $categoryId, $operation, $externalId, $slug);
+
+        // ============================================================
+        // VALIDACIÓN DE DATOS OBLIGATORIOS PARA EL ACM
+        // Similar al módulo de reordenamiento de datos
+        // ============================================================
+
+        $hasPrice = (isset($productData['price_usd']) && $productData['price_usd'] > 0) ||
+                    (isset($productData['price_bob']) && $productData['price_bob'] > 0);
+        $hasSurface = (isset($productData['superficie_util']) && $productData['superficie_util'] > 0) ||
+                      (isset($productData['superficie_construida']) && $productData['superficie_construida'] > 0);
+
+        // CASO 1: NO tiene precio -> OMITIR (protección del ACM)
+        if (!$hasPrice) {
+            return [
+                'status' => 'skipped',
+                'id' => $externalId,
+                'name' => $name,
+                'reason' => 'sin_precio_superficie',
+                'reason_text' => 'No tiene precio (USD ni BOB). El ACM requiere al menos un precio.',
+                'price_usd' => $productData['price_usd'] ?? null,
+                'price_bob' => $productData['price_bob'] ?? null,
+                'superficie_util' => $productData['superficie_util'] ?? null,
+                'superficie_construida' => $productData['superficie_construida'] ?? null,
+            ];
+        }
+
+        // CASO 2: Tiene precio pero NO tiene superficie -> OMITIR (protección del ACM)
+        if ($hasPrice && !$hasSurface) {
+            return [
+                'status' => 'skipped',
+                'id' => $externalId,
+                'name' => $name,
+                'reason' => 'precio_sin_superficie',
+                'reason_text' => 'Tiene precio pero no superficie (m²). El ACM requiere ambos.',
+                'price_usd' => $productData['price_usd'] ?? null,
+                'price_bob' => $productData['price_bob'] ?? null,
+                'superficie_util' => $productData['superficie_util'] ?? null,
+                'superficie_construida' => $productData['superficie_construida'] ?? null,
+            ];
+        }
 
         // Crear producto (si no es dry run)
         $productId = null;
@@ -447,9 +481,6 @@ class DataImportController extends Controller
             'data_saved' => $productData,
             'category_name' => ucfirst($detectedCategory), // Para mostrar en el modal
             'operation' => ucfirst($operation), // Para mostrar en el modal
-            'price_corrected' => $productData['price_corrected'] ?? false, // Si se corrigió el precio
-            'price_calculated' => $productData['price_calculated'] ?? false, // Si se calculó el precio
-            'price_correction_note' => $productData['price_correction_note'] ?? null, // Nota de la corrección
             'price_usd' => $productData['price_usd'] ?? null,
             'price_bob' => $productData['price_bob'] ?? null,
         ];
@@ -582,54 +613,6 @@ class DataImportController extends Controller
         if (empty($data['description'])) {
             $operationText = $operation ?? 'operación no especificada';
             $data['description'] = "Propiedad en {$operationText}: {$name}";
-        }
-
-        // Validar y corregir coherencia de precios
-        $data = $this->validateAndCorrectPrices($data);
-
-        return $data;
-    }
-
-    /**
-     * Validar y corregir precios incoherentes
-     * Si los precios USD y BOB no tienen coherencia, recalcular uno basado en el otro
-     */
-    protected function validateAndCorrectPrices(array $data): array
-    {
-        $hasUsd = isset($data['price_usd']) && $data['price_usd'] > 0;
-        $hasBob = isset($data['price_bob']) && $data['price_bob'] > 0;
-
-        // Si tiene ambos precios
-        if ($hasUsd && $hasBob) {
-            $usd = $data['price_usd'];
-            $bob = $data['price_bob'];
-
-            // Calcular tasa implícita
-            $implicitRate = $bob / $usd;
-
-            // Verificar si es coherente (permitiendo ±20% de variación)
-            $expectedBob = $usd * self::USD_TO_BOB_RATE;
-            $lowerBound = $expectedBob * 0.8;  // 80% del esperado
-            $upperBound = $expectedBob * 1.2;  // 120% del esperado
-
-            // Si el BOB está fuera del rango razonable, corregir
-            if ($bob < $lowerBound || $bob > $upperBound) {
-                $data['price_bob'] = round($expectedBob, 2);
-                $data['price_corrected'] = true;
-                $data['price_correction_note'] = "Precio BOB corregido de {$bob} a {$data['price_bob']} (tasa: " . self::USD_TO_BOB_RATE . ")";
-            }
-        }
-        // Si solo tiene USD, calcular BOB
-        elseif ($hasUsd && !$hasBob) {
-            $data['price_bob'] = round($data['price_usd'] * self::USD_TO_BOB_RATE, 2);
-            $data['price_calculated'] = true;
-            $data['price_correction_note'] = "Precio BOB calculado desde USD (tasa: " . self::USD_TO_BOB_RATE . ")";
-        }
-        // Si solo tiene BOB, calcular USD
-        elseif (!$hasUsd && $hasBob) {
-            $data['price_usd'] = round($data['price_bob'] / self::USD_TO_BOB_RATE, 2);
-            $data['price_calculated'] = true;
-            $data['price_correction_note'] = "Precio USD calculado desde BOB (tasa: " . self::USD_TO_BOB_RATE . ")";
         }
 
         return $data;
@@ -880,8 +863,7 @@ class DataImportController extends Controller
 
         foreach ($textFields as $field) {
             if (isset($item[$field]) && is_string($item[$field])) {
-                $cleanDesc = strip_tags($item[$field]); // Eliminar HTML
-                $cleanDesc = html_entity_decode($cleanDesc, ENT_QUOTES | ENT_HTML5, 'UTF-8'); // Decodificar entidades HTML
+                $cleanDesc = $this->cleanHtmlText($item[$field]); // Limpiar HTML de forma inteligente
                 $fieldLower = mb_strtolower($cleanDesc, 'UTF-8');
 
                 // Buscar con el mismo orden de prioridad
@@ -914,8 +896,7 @@ class DataImportController extends Controller
             }
 
             if (is_string($value)) {
-                $cleanValue = strip_tags($value); // Eliminar HTML
-                $cleanValue = html_entity_decode($cleanValue, ENT_QUOTES | ENT_HTML5, 'UTF-8'); // Decodificar entidades HTML
+                $cleanValue = $this->cleanHtmlText($value); // Limpiar HTML de forma inteligente
                 $valueLower = mb_strtolower($cleanValue, 'UTF-8');
 
                 // Buscar con el mismo orden de prioridad
@@ -991,8 +972,7 @@ class DataImportController extends Controller
         $descFields = ['description', 'desc', 'descripción', 'descripcion', 'details', 'detalle', 'detalles', 'text', 'texto'];
         foreach ($descFields as $field) {
             if (isset($item[$field]) && is_string($item[$field])) {
-                $cleanDesc = strip_tags($item[$field]);
-                $cleanDesc = html_entity_decode($cleanDesc, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $cleanDesc = $this->cleanHtmlText($item[$field]);
                 $fullText .= ' ' . $cleanDesc;
             }
         }
@@ -1000,8 +980,7 @@ class DataImportController extends Controller
         // 3. Agregar todos los demás campos string
         foreach ($item as $key => $value) {
             if (is_string($value) && !in_array($key, $descFields) && !in_array($key, ['name', 'slug', 'id'])) {
-                $cleanValue = strip_tags($value);
-                $cleanValue = html_entity_decode($cleanValue, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $cleanValue = $this->cleanHtmlText($value);
                 $fullText .= ' ' . $cleanValue;
             }
         }
@@ -1035,6 +1014,186 @@ class DataImportController extends Controller
     }
 
     /**
+     * Verificar si un producto es realmente una cochera basado en sus datos
+     * Una cochera real SOLO debe tener precio y metros cuadrados.
+     * Si tiene datos adicionales como habitaciones, baños, ambientes o año de construcción,
+     * entonces es otro tipo de inmueble (casa, dpto, etc.) que menciona cochera.
+     *
+     * @param array $item El item normalizado a verificar
+     * @return bool true si parece ser una cochera real, false si tiene datos de otra propiedad
+     */
+    protected function isRealCochera(array $item): bool
+    {
+        // Datos que una cochera SÍ debe tener
+        $hasPrice = (isset($item['price_usd']) && $item['price_usd'] > 0) ||
+                    (isset($item['price_bob']) && $item['price_bob'] > 0);
+        $hasSurface = (isset($item['superficie_util']) && $item['superficie_util'] > 0) ||
+                      (isset($item['superficie_construida']) && $item['superficie_construida'] > 0);
+
+        // Si no tiene precio o superficie, no es una cochera válida
+        if (!$hasPrice || !$hasSurface) {
+            return false;
+        }
+
+        // Datos que indican NO es una cochera (es otra propiedad)
+        // Una cochera real no tiene estos campos con valores positivos
+        $hasAmbientes = isset($item['ambientes']) && $item['ambientes'] > 0;
+        $hasHabitaciones = isset($item['habitaciones']) && $item['habitaciones'] > 0;
+        $hasBanos = isset($item['banos']) && $item['banos'] > 0;
+        $hasAnoConstruccion = isset($item['ano_construccion']) && $item['ano_construccion'] > 0;
+
+        // Si tiene cualquiera de estos datos adicionales, NO es una cochera
+        // (es una casa, departamento, etc. que menciona cochera/parking en su descripción)
+        if ($hasAmbientes || $hasHabitaciones || $hasBanos || $hasAnoConstruccion) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Verificar si un item es realmente una habitación basado en sus datos
+     * Una habitación real típicamente tiene:
+     * - Exactamente 1 habitación/ambiente/dormitorio
+     * - Menciona "baño compartido" en la descripción
+     * - O menciona "sin cocina" o "sin cocina privada"
+     *
+     * Diferencia con Estudio/Monoambiente:
+     * - Habitación: 1 Ambiente + Baño Compartido + Sin Cocina Privada
+     * - Estudio/Monoambiente: 1 Ambiente + Baño Privado + Cocina Privada
+     *
+     * @param array $item El item a verificar
+     * @param string $description La descripción del item
+     * @return bool true si parece ser una habitación real, false si es otra propiedad
+     */
+    protected function isRealHabitacion(array $item, ?string $description = null): bool
+    {
+        // Verificar si menciona indicadores de habitación en la descripción
+        if ($description) {
+            $descLower = mb_strtolower($description, 'UTF-8');
+
+            // Indicadores fuertes de habitación
+            $habitationKeywords = [
+                'baño compartido', 'baño a compartir',
+                'bano compartido', 'bano a compartir',
+                'baño compartida', 'baños compartidos', 'banos compartidos',
+                'bathroom shared', 'shared bathroom', 'share bathroom',
+                'sin cocina', 'sin cocina privada', 'sin cocina propia',
+                'no cocina', 'sin cocina equipada',
+                'kitchen shared', 'shared kitchen'
+            ];
+
+            foreach ($habitationKeywords as $keyword) {
+                if (str_contains($descLower, $keyword)) {
+                    return true;
+                }
+            }
+        }
+
+        // Verificar datos del item
+        $hasExactlyOneHabitacion = isset($item['habitaciones']) && $item['habitaciones'] === 1;
+        $hasExactlyOneAmbiente = isset($item['ambientes']) && $item['ambientes'] === 1;
+
+        // Si tiene más de 1 habitación o más de 1 ambiente, NO es habitación individual
+        $hasMultipleHabitaciones = isset($item['habitaciones']) && $item['habitaciones'] > 1;
+        $hasMultipleAmbientes = isset($item['ambientes']) && $item['ambientes'] > 1;
+
+        if ($hasMultipleHabitaciones || $hasMultipleAmbientes) {
+            return false;
+        }
+
+        // Para ser habitación, debe tener exactamente 1 habitación o ambiente
+        // y NO tener características de monoambiente (cocina privada)
+        if ($hasExactlyOneHabitacion || $hasExactlyOneAmbiente) {
+            // Si menciona "cocina privada" o "kitchenette", es más probable que sea monoambiente
+            if ($description) {
+                $descLower = mb_strtolower($description, 'UTF-8');
+                $monoambienteKeywords = ['cocina privada', 'kitchenette', 'kitchen priv', 'cocina propia', 'cocina completa'];
+                foreach ($monoambienteKeywords as $keyword) {
+                    if (str_contains($descLower, $keyword)) {
+                        return false; // Es más probable que sea monoambiente
+                    }
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar si un item es realmente un estudio/monoambiente basado en sus datos
+     * Un monoambiente real típicamente tiene:
+     * - Exactamente 1 ambiente
+     * - Baño privado
+     * - Cocina privada (o kitchenette)
+     *
+     * Diferencia con Habitación:
+     * - Habitación: 1 Ambiente + Baño Compartido + Sin Cocina Privada
+     * - Estudio/Monoambiente: 1 Ambiente + Baño Privado + Cocina Privada
+     *
+     * @param array $item El item a verificar
+     * @param string $description La descripción del item
+     * @return bool true si parece ser un monoambiente real, false si es otra propiedad
+     */
+    protected function isRealMonoambiente(array $item, ?string $description = null): bool
+    {
+        // Verificar indicadores de monoambiente en la descripción
+        if ($description) {
+            $descLower = mb_strtolower($description, 'UTF-8');
+
+            // Indicadores fuertes de monoambiente
+            $monoambienteKeywords = [
+                'cocina privada', 'kitchenette', 'kitchen priv', 'cocina propia',
+                'cocina completa', 'mini cocina', 'cocina integrada',
+                'kitchen private', 'private kitchen'
+            ];
+
+            foreach ($monoambienteKeywords as $keyword) {
+                if (str_contains($descLower, $keyword)) {
+                    // Verificar que tenga 1 ambiente
+                    $hasExactlyOneAmbiente = isset($item['ambientes']) && $item['ambientes'] === 1;
+                    $hasExactlyOneHabitacion = isset($item['habitaciones']) && $item['habitaciones'] <= 1;
+                    return $hasExactlyOneAmbiente || $hasExactlyOneHabitacion;
+                }
+            }
+        }
+
+        // Verificar datos del item
+        $hasExactlyOneAmbiente = isset($item['ambientes']) && $item['ambientes'] === 1;
+        $hasExactlyOneHabitacion = isset($item['habitaciones']) && $item['habitaciones'] === 1;
+
+        // Si tiene más de 1 ambiente o más de 1 habitación, NO es monoambiente
+        $hasMultipleAmbientes = isset($item['ambientes']) && $item['ambientes'] > 1;
+        $hasMultipleHabitaciones = isset($item['habitaciones']) && $item['habitaciones'] > 1;
+
+        if ($hasMultipleAmbientes || $hasMultipleHabitaciones) {
+            return false;
+        }
+
+        // Para ser monoambiente, debe tener exactamente 1 ambiente
+        if ($hasExactlyOneAmbiente || $hasExactlyOneHabitacion) {
+            // NO debe mencionar baño compartido
+            if ($description) {
+                $descLower = mb_strtolower($description, 'UTF-8');
+                $habitationKeywords = [
+                    'baño compartido', 'baño a compartir',
+                    'bano compartido', 'bano a compartir',
+                    'baño compartida', 'baños compartidos', 'banos compartidos'
+                ];
+                foreach ($habitationKeywords as $keyword) {
+                    if (str_contains($descLower, $keyword)) {
+                        return false; // Es más probable que sea habitación
+                    }
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Detectar categoría basada en palabras clave del nombre, descripción u otros campos
      * Búsqueda mejorada con word boundaries para evitar falsos positivos
      * Incluye lógica inteligente de prioridad entre categorías similares
@@ -1057,10 +1216,27 @@ class DataImportController extends Controller
         // EL NOMBRE TIENE PRIORIDAD ABSOLUTA SOBRE MAPEOS
         // ============================================================
 
-        // REGLA 0: MONOAMBIENTE vs DEPARTAMENTO
-        // Monoambiente tiene PRIORIDAD ABSOLUTA sobre departamento
+        // Obtener descripción limpia para validaciones adicionales
+        $cleanDescription = null;
+        if (isset($item['description']) && is_string($item['description'])) {
+            $cleanDescription = $this->cleanHtmlText($item['description']);
+        }
+
+        // REGLA 0: HABITACIÓN vs MONOAMBIENTE (MÁXIMA PRIORIDAD)
+        // Se verifican antes que todo lo demás
+        // Habitación: 1 Ambiente + Baño Compartido + Sin Cocina Privada
+        // Monoambiente: 1 Ambiente + Baño Privado + Cocina Privada
+        $habitationKeywords = ['habitación', 'habitaciones', 'room', 'cuarto', 'cuartos', 'bedroom'];
         $monoambienteKeywords = ['monoambiente', 'monoambientes', 'studio', 'studio apartment', 'single room', 'mono ambiente', 'mono-ambiente'];
-        $deptoKeywords = ['departamento', 'depto', 'apartamento', 'piso', 'flat', 'dept', 'apartment'];
+        // NOTA: 'dormitorio' NO está aquí porque es genérico para deptos/casas también
+
+        $hasHabitationKeyword = false;
+        foreach ($habitationKeywords as $keyword) {
+            if ($findKeyword($nameLower, $keyword)) {
+                $hasHabitationKeyword = true;
+                break;
+            }
+        }
 
         $hasMonoambienteKeyword = false;
         foreach ($monoambienteKeywords as $keyword) {
@@ -1074,14 +1250,50 @@ class DataImportController extends Controller
             }
         }
 
-        // Si menciona monoambiente, es monoambiente (PRIORIDAD MÁXIMA)
+        // Si detecta monoambiente por palabra clave, verificar que realmente sea monoambiente
         if ($hasMonoambienteKeyword) {
-            return 'estudio/monoambiente';
+            if ($this->isRealMonoambiente($item, $cleanDescription)) {
+                return 'estudio/monoambiente';
+            }
+            // Si no es monoambiente, pero tiene 1 ambiente, podría ser habitación
+            if ($this->isRealHabitacion($item, $cleanDescription)) {
+                return 'habitación';
+            }
+            // Sino, continuar buscando otras categorías
+        }
+
+        // Si detecta habitación por palabra clave, verificar que realmente sea habitación
+        if ($hasHabitationKeyword) {
+            if ($this->isRealHabitacion($item, $cleanDescription)) {
+                return 'habitación';
+            }
+            // Si no es habitación, pero tiene 1 ambiente, podría ser monoambiente
+            if ($this->isRealMonoambiente($item, $cleanDescription)) {
+                return 'estudio/monoambiente';
+            }
+            // IMPORTANTE: Si menciona "departamento" en el nombre y tiene 1 ambiente + cocina privada,
+            // seguir siendo departamento (no cambiarlo a habitación)
+            // Ejemplo: "Departamento de 1 Dormitorio en Venta" con cocina privada
+            $hasExactlyOneHabitacion = isset($item['habitaciones']) && $item['habitaciones'] === 1;
+            $hasExactlyOneAmbiente = isset($item['ambientes']) && $item['ambientes'] === 1;
+
+            // Si el inmueble menciona "departamento" y tiene 1 ambiente,
+            // mantenerlo como departamento (monoambiente de venta)
+            if ($hasExactlyOneHabitacion || $hasExactlyOneAmbiente) {
+                $deptoKeywords = ['departamento', 'depto', 'departamento de', 'depto de', 'departamento en'];
+                foreach ($deptoKeywords as $keyword) {
+                    if ($findKeyword($nameLower, $keyword)) {
+                        return 'departamento'; // Mantener como departamento monoambiente
+                    }
+                }
+            }
+            // Sino, continuar buscando otras categorías
         }
 
         // REGLA 1: DEPARTAMENTO vs EDIFICIO
         // Departamento tiene PRIORIDAD sobre edificio
         $edificioKeywords = ['edificio', 'torre', 'building', 'tower'];
+        $deptoKeywords = ['departamento', 'depto', 'apartamento', 'piso', 'flat', 'dept', 'apartment'];
 
         $hasDeptoKeyword = false;
         foreach ($deptoKeywords as $keyword) {
@@ -1144,8 +1356,9 @@ class DataImportController extends Controller
             return 'casa';
         }
 
-        // Si SOLO menciona condominio (sin casa), es condominio
-        if ($hasCondominioKeyword) {
+        // Si SOLO menciona condominio (sin casa, Y sin monoambiente, departamento o habitación), es condominio
+        // IMPORTANTE: Monoambiente tiene prioridad sobre condominio
+        if ($hasCondominioKeyword && !$hasMonoambienteKeyword && !$hasHabitationKeyword && !$hasDeptoKeyword) {
             \Log::info("DataImport: Condominio detectado en nombre", [
                 'name' => $nameLower
             ]);
@@ -1160,6 +1373,47 @@ class DataImportController extends Controller
         foreach ($this->keywordMap as $category => $keywords) {
             foreach ($keywords as $keyword) {
                 if ($findKeyword($nameLower, $keyword)) {
+                    // VALIDACIÓN ESPECIAL PARA HABITACIÓN
+                    // Habitación: 1 Ambiente + Baño Compartido + Sin Cocina Privada
+                    if ($category === 'habitación' && !$this->isRealHabitacion($item, $cleanDescription)) {
+                        // Si detecta habitación pero no cumple los requisitos,
+                        // verificar si podría ser monoambiente
+                        if ($this->isRealMonoambiente($item, $cleanDescription)) {
+                            return 'estudio/monoambiente';
+                        }
+                        \Log::info("DataImport: Habitación detectada pero invalidada por datos", [
+                            'name' => $nameLower,
+                            'item' => $item
+                        ]);
+                        continue;
+                    }
+
+                    // VALIDACIÓN ESPECIAL PARA ESTUDIO/MONOAMBIENTE
+                    // Monoambiente: 1 Ambiente + Baño Privado + Cocina Privada
+                    if ($category === 'estudio/monoambiente' && !$this->isRealMonoambiente($item, $cleanDescription)) {
+                        // Si detecta monoambiente pero no cumple los requisitos,
+                        // verificar si podría ser habitación
+                        if ($this->isRealHabitacion($item, $cleanDescription)) {
+                            return 'habitación';
+                        }
+                        \Log::info("DataImport: Monoambiente detectado pero invalidado por datos", [
+                            'name' => $nameLower,
+                            'item' => $item
+                        ]);
+                        continue;
+                    }
+
+                    // VALIDACIÓN ESPECIAL PARA COCHERA
+                    // Solo clasificar como cochera si realmente tiene SOLO precio y metros
+                    // Si tiene datos adicionales (habitaciones, baños, etc.), es otra propiedad
+                    if ($category === 'cochera' && !$this->isRealCochera($item)) {
+                        // No es cochera, continuar buscando otras categorías
+                        \Log::info("DataImport: Cochera detectada pero invalidada por datos adicionales", [
+                            'name' => $nameLower,
+                            'item' => $item
+                        ]);
+                        continue;
+                    }
                     \Log::info("DataImport: Categoría detectada en nombre", [
                         'category' => $category,
                         'keyword' => $keyword,
@@ -1207,11 +1461,23 @@ class DataImportController extends Controller
             $tipoPropLower = mb_strtolower(trim($tipoProp), 'UTF-8');
 
             if (isset($c21CategoryMapping[$tipoPropLower])) {
-                \Log::info("DataImport: Categoría detectada via mapeo C21", [
-                    'tipoProp' => $tipoPropLower,
-                    'mapped' => $c21CategoryMapping[$tipoPropLower]
-                ]);
-                return $c21CategoryMapping[$tipoPropLower];
+                $mappedCategory = $c21CategoryMapping[$tipoPropLower];
+
+                // VALIDACIÓN ESPECIAL PARA COCHERA
+                // Solo clasificar como cochera si realmente tiene SOLO precio y metros
+                if ($mappedCategory === 'cochera' && !$this->isRealCochera($item)) {
+                    // No es cochera, continuar buscando otras categorías
+                    \Log::info("DataImport: Cochera detectada via C21 pero invalidada por datos adicionales", [
+                        'tipoProp' => $tipoPropLower,
+                        'item' => $item
+                    ]);
+                } else {
+                    \Log::info("DataImport: Categoría detectada via mapeo C21", [
+                        'tipoProp' => $tipoPropLower,
+                        'mapped' => $mappedCategory
+                    ]);
+                    return $mappedCategory;
+                }
             }
         }
 
@@ -1248,11 +1514,23 @@ class DataImportController extends Controller
             $categoryLower = mb_strtolower(trim($item['category']), 'UTF-8');
 
             if (isset($infocasasCategoryMapping[$categoryLower])) {
-                \Log::info("DataImport: Categoría detectada via mapeo InfoCasas", [
-                    'category' => $categoryLower,
-                    'mapped' => $infocasasCategoryMapping[$categoryLower]
-                ]);
-                return $infocasasCategoryMapping[$categoryLower];
+                $mappedCategory = $infocasasCategoryMapping[$categoryLower];
+
+                // VALIDACIÓN ESPECIAL PARA COCHERA
+                // Solo clasificar como cochera si realmente tiene SOLO precio y metros
+                if ($mappedCategory === 'cochera' && !$this->isRealCochera($item)) {
+                    // No es cochera, continuar buscando otras categorías
+                    \Log::info("DataImport: Cochera detectada via InfoCasas pero invalidada por datos adicionales", [
+                        'category' => $categoryLower,
+                        'item' => $item
+                    ]);
+                } else {
+                    \Log::info("DataImport: Categoría detectada via mapeo InfoCasas", [
+                        'category' => $categoryLower,
+                        'mapped' => $mappedCategory
+                    ]);
+                    return $mappedCategory;
+                }
             }
         }
 
@@ -1269,6 +1547,10 @@ class DataImportController extends Controller
             foreach ($this->keywordMap as $category => $keywords) {
                 foreach ($keywords as $keyword) {
                     if ($findKeyword($categoryLower, $keyword)) {
+                        // VALIDACIÓN ESPECIAL PARA COCHERA
+                        if ($category === 'cochera' && !$this->isRealCochera($item)) {
+                            continue;
+                        }
                         return $category;
                     }
                 }
@@ -1279,6 +1561,10 @@ class DataImportController extends Controller
         foreach ($this->keywordMap as $category => $keywords) {
             foreach ($keywords as $keyword) {
                 if ($findKeyword($nameLower, $keyword)) {
+                    // VALIDACIÓN ESPECIAL PARA COCHERA
+                    if ($category === 'cochera' && !$this->isRealCochera($item)) {
+                        continue;
+                    }
                     return $category;
                 }
             }
@@ -1289,8 +1575,7 @@ class DataImportController extends Controller
 
         foreach ($textFields as $field) {
             if (isset($item[$field]) && is_string($item[$field])) {
-                $cleanDesc = strip_tags($item[$field]); // Eliminar HTML
-                $cleanDesc = html_entity_decode($cleanDesc, ENT_QUOTES | ENT_HTML5, 'UTF-8'); // Decodificar entidades HTML
+                $cleanDesc = $this->cleanHtmlText($item[$field]); // Limpiar HTML de forma inteligente
                 $fieldLower = mb_strtolower($cleanDesc, 'UTF-8');
 
                 // Aplicar misma lógica de prioridad en descripción
@@ -1319,6 +1604,26 @@ class DataImportController extends Controller
                 foreach ($this->keywordMap as $category => $keywords) {
                     foreach ($keywords as $keyword) {
                         if ($findKeyword($fieldLower, $keyword)) {
+                            // VALIDACIÓN ESPECIAL PARA HABITACIÓN
+                            if ($category === 'habitación' && !$this->isRealHabitacion($item, $cleanDesc)) {
+                                if ($this->isRealMonoambiente($item, $cleanDesc)) {
+                                    return 'estudio/monoambiente';
+                                }
+                                continue;
+                            }
+
+                            // VALIDACIÓN ESPECIAL PARA ESTUDIO/MONOAMBIENTE
+                            if ($category === 'estudio/monoambiente' && !$this->isRealMonoambiente($item, $cleanDesc)) {
+                                if ($this->isRealHabitacion($item, $cleanDesc)) {
+                                    return 'habitación';
+                                }
+                                continue;
+                            }
+
+                            // VALIDACIÓN ESPECIAL PARA COCHERA
+                            if ($category === 'cochera' && !$this->isRealCochera($item)) {
+                                continue;
+                            }
                             return $category;
                         }
                     }
@@ -1334,8 +1639,7 @@ class DataImportController extends Controller
             }
 
             if (is_string($value) && strlen($value) > 3) { // Solo campos con más de 3 caracteres
-                $cleanValue = strip_tags($value); // Eliminar HTML
-                $cleanValue = html_entity_decode($cleanValue, ENT_QUOTES | ENT_HTML5, 'UTF-8'); // Decodificar entidades HTML
+                $cleanValue = $this->cleanHtmlText($value); // Limpiar HTML de forma inteligente
                 $valueLower = mb_strtolower($cleanValue, 'UTF-8');
 
                 // Aplicar prioridades incluso en campos de último recurso
@@ -1364,6 +1668,26 @@ class DataImportController extends Controller
                 foreach ($this->keywordMap as $category => $keywords) {
                     foreach ($keywords as $keyword) {
                         if ($findKeyword($valueLower, $keyword)) {
+                            // VALIDACIÓN ESPECIAL PARA HABITACIÓN
+                            if ($category === 'habitación' && !$this->isRealHabitacion($item, $cleanDescription)) {
+                                if ($this->isRealMonoambiente($item, $cleanDescription)) {
+                                    return 'estudio/monoambiente';
+                                }
+                                continue;
+                            }
+
+                            // VALIDACIÓN ESPECIAL PARA ESTUDIO/MONOAMBIENTE
+                            if ($category === 'estudio/monoambiente' && !$this->isRealMonoambiente($item, $cleanDescription)) {
+                                if ($this->isRealHabitacion($item, $cleanDescription)) {
+                                    return 'habitación';
+                                }
+                                continue;
+                            }
+
+                            // VALIDACIÓN ESPECIAL PARA COCHERA
+                            if ($category === 'cochera' && !$this->isRealCochera($item)) {
+                                continue;
+                            }
                             return $category;
                         }
                     }
@@ -1387,5 +1711,107 @@ class DataImportController extends Controller
             'success' => true,
             'data' => $categories
         ]);
+    }
+
+    /**
+     * Limpiar descripción HTML y convertirla a texto plano legible
+     * Convierte <p>, <br> a saltos de línea, elimina tags innecesarios
+     * y limpía espacios y saltos de línea excesivos
+     *
+     * @param string|null $html La descripción HTML
+     * @return string Descripción limpia en texto plano
+     */
+    protected function cleanHtmlDescription(?string $html): string
+    {
+        if (empty($html) || !is_string($html)) {
+            return '';
+        }
+
+        // Decodificar entidades HTML primero (para &nbsp;, &amp;, etc.)
+        $text = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Reemplazar etiquetas de párrafo y salto de línea por saltos de línea
+        // Primero reemplazamos <br> y sus variantes
+        $text = preg_replace('/<br\s*\/?>/i', "\n", $text);
+        $text = preg_replace('/<\/br>/i', "\n", $text);
+
+        // Reemplazar <p> por salto de línea
+        $text = preg_replace('/<p\b[^>]*>/i', "\n", $text);
+
+        // Reemplazar </p> por salto de línea
+        $text = preg_replace('/<\/p>/i', "\n", $text);
+
+        // Reemplazar <div> y </div> por salto de línea
+        $text = preg_replace('/<div\b[^>]*>/i', "\n", $text);
+        $text = preg_replace('/<\/div>/i', "\n", $text);
+
+        // Reemplazar <li> y </li> con formato de lista
+        $text = preg_replace('/<li\b[^>]*>/i', "\n• ", $text);
+        $text = preg_replace('/<\/li>/i', "\n", $text);
+
+        // Reemplazar <ul> y <ol> por saltos de línea
+        $text = preg_replace('/<[uo]l\b[^>]*>/i', "\n", $text);
+        $text = preg_replace('/<\/[uo]l>/i', "\n", $text);
+
+        // Reemplazar <h1>-<h6> por saltos de línea con énfasis
+        $text = preg_replace('/<h([1-6])\b[^>]*>/i', "\n### ", $text);
+        $text = preg_replace('/<\/h[1-6]>/i', "\n", $text);
+
+        // Reemplazar <strong>, <b> por asteriscos
+        $text = preg_replace('/<(strong|b)\b[^>]*>/i', "**", $text);
+        $text = preg_replace('/<\/(strong|b)>/i', "**", $text);
+
+        // Reemplazar <em>, <i> por guiones bajos
+        $text = preg_replace('/<(em|i)\b[^>]*>/i', "_", $text);
+        $text = preg_replace('/<\/(em|i)>/i', "_", $text);
+
+        // Eliminar todos los demás tags HTML restantes
+        $text = strip_tags($text);
+
+        // Decodificar entidades HTML nuevamente (por si hay algunas después de strip_tags)
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Limpiar saltos de línea múltiples: convertir 3+ saltos a 2 saltos
+        $text = preg_replace("/\n{3,}/", "\n\n", $text);
+
+        // Limpiar espacios en blanco al inicio de cada línea
+        $text = preg_replace('/^[ \t]+/m', '', $text);
+
+        // Trim general para eliminar espacios al inicio y final
+        $text = trim($text);
+
+        // Reemplazar espacios múltiples con un solo espacio
+        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
+
+        return trim($text);
+    }
+
+    /**
+     * Limpiar valor de texto eliminando HTML básico
+     * Versión simplificada para campos que no son descripción
+     *
+     * @param string|null $text El texto a limpiar
+     * @return string Texto limpio
+     */
+    protected function cleanHtmlText(?string $text): string
+    {
+        if (empty($text) || !is_string($text)) {
+            return '';
+        }
+
+        // Reemplazar <br> por espacio
+        $cleaned = preg_replace('/<br\s*\/?>/i', ' ', $text);
+        $cleaned = preg_replace('/<\/br>/i', ' ', $cleaned);
+
+        // Eliminar todos los tags HTML
+        $cleaned = strip_tags($cleaned);
+
+        // Decodificar entidades HTML
+        $cleaned = html_entity_decode($cleaned, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Limpiar espacios múltiples
+        $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+
+        return trim($cleaned);
     }
 }

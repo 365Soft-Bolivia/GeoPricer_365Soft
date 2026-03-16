@@ -97,13 +97,13 @@ const currentYear = new Date().getFullYear();
 
             <!-- Copyright -->
             <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 text-sm text-[#F5F5F5]/80">
-                <p>&copy; {{ currentYear }} Alfa Inmobiliaria Bolivia. Todos los derechos reservados.</p>
+                <p>&copy; {{ currentYear }} (365 Soft Bolivia). Todos los derechos reservados.</p>
                 <div class="flex items-center space-x-6">
                     <span class="flex items-center">
                         <svg class="w-5 h-5 mr-2 text-[#FAB90E]" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 9.67-1.736 0-3.356-.52-4.701-1.413l2.143-2.143a5.976 5.976 0 012.558.572c3.15 0 5.704-2.554 5.704-5.704 0-.345-.031-.683-.09-1.011L15 14l-3.898-3.898a5.976 5.976 0 01-.572-2.558c0-3.15 2.554-5.704 5.704-5.704.345 0 .683.031 1.011.09L10 5 6.002 1.002a5.976 5.976 0 012.558-.572c3.15 0 5.704 2.554 5.704 5.704 0 .345-.031.683-.09 1.011L15 14l-3.898-3.898z" clip-rule="evenodd"></path>
                         </svg>
-                        Hecho con ❤️ en Bolivia
+                        Hecho por 365soft en Bolivia
                     </span>
                 </div>
             </div>

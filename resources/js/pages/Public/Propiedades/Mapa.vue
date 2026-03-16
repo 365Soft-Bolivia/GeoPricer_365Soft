@@ -47,6 +47,7 @@ interface Product {
   cocheras?: number;
   default_image?: string | null;
   images?: ProductImage[];
+  descripcion?: string;
   location: {
     latitude: number;
     longitude: number;
@@ -82,6 +83,15 @@ let markerClusterGroup: L.MarkerClusterGroup | null = null;
 /* ================= USER LOCATION ================= */
 let userLocationMarker: L.Marker | null = null;
 const isLocatingUser = ref(false);
+
+/* ================= LOCATION SEARCH ================= */
+const searchLocationInput = ref('');
+const searchResults = ref<any[]>([]);
+const isSearchingLocation = ref(false);
+let searchLocationMarker: L.Marker | null = null;
+let searchTimeout: number | null = null;
+const showSearchDropdown = ref(false);
+const isSearchExpanded = ref(false); // Controla si el buscador está expandido
 
 /* ================= RADAR ================= */
 let radarMarker: L.Marker | null = null;
@@ -211,41 +221,26 @@ const formatPrice = (price?: number | null, currency: string = '$') => {
 const getPriceDisplay = (product: Product) => {
   const prices = [];
   if (product.price_usd) {
-    prices.push(`<span class="text-green-600 font-bold">${formatPrice(product.price_usd, '$')} USD</span>`);
+    prices.push(`<span class="text-[#233C7A] font-bold">${formatPrice(product.price_usd, '$')} USD</span>`);
   }
   if (product.price_bob) {
-    prices.push(`<span class="text-blue-600 font-bold">${formatPrice(product.price_bob, 'Bs.')} BOB</span>`);
+    prices.push(`<span class="text-[#E0081D] font-bold">${formatPrice(product.price_bob, 'Bs.')} BOB</span>`);
   }
   return prices.join('<br>') || '<span class="text-gray-400">Precio no disponible</span>';
 };
 
-// Generar popup HTML mejorado con imagen y botón
+// Generar popup HTML mejorado sin imagen y con botón
 const getPopupContent = (product: Product, extraInfo: string = '') => {
-  const imageUrl = getPropertyImageUrl(product);
-  const hasImage = !!imageUrl;
-
-  const imageHtml = hasImage
-    ? `<div class="relative w-full h-32 overflow-hidden rounded-t-lg">
-        <img src="${imageUrl}" alt="${product.name}" class="w-full h-full object-cover" />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-      </div>`
-    : `<div class="w-full h-20 bg-gray-200 rounded-t-lg flex items-center justify-center">
-        <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-        </svg>
-      </div>`;
-
   // Badge de operación con color
   const operacionColors = {
-    'venta': 'bg-green-500',
-    'alquiler': 'bg-blue-500',
-    'anticretico': 'bg-red-500'
+    'venta': 'bg-[#233C7A]',      /* Azul Alfa */
+    'alquiler': 'bg-[#E0081D]',   /* Rojo Alfa */
+    'anticretico': 'bg-[#FAB90E]' /* Amarillo Alfa */
   };
   const operacionColor = operacionColors[product.operacion as keyof typeof operacionColors] || 'bg-gray-500';
 
   return `
     <div class="property-popup min-w-[280px] max-w-[320px]">
-      ${imageHtml}
       <div class="p-3 space-y-2">
         <!-- Tipo de operación -->
         <div class="flex items-center justify-between">
@@ -291,12 +286,6 @@ const getPopupContent = (product: Product, extraInfo: string = '') => {
       </div>
 
       <style>
-        .property-popup img {
-          transition: transform 0.3s ease;
-        }
-        .property-popup:hover img {
-          transform: scale(1.05);
-        }
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -1046,7 +1035,7 @@ const initMap = () => {
     removeOutsideVisibleBounds: true,
     iconCreateFunction: function(cluster) {
       const count = cluster.getChildCount();
-      let color = '#10b981';  /* Verde éxito - Mantenido */
+      let color = '#FAB90E';  /* Amarillo Alfa - Color base */
       let size = 40;
 
       if (count >= 50) {
@@ -1169,9 +1158,9 @@ const getOperacionIcon = (operacion: string) => {
 
 const getOperacionColor = (operacion: string) => {
   switch (operacion) {
-    case 'venta': return '#10b981';     /* Verde éxito */
-    case 'alquiler': return '#233C7A';   /* Azul Alfa */
-    case 'anticretico': return '#E0081D'; /* Rojo Alfa */
+    case 'venta': return '#233C7A';     /* Azul Alfa */
+    case 'alquiler': return '#E0081D';   /* Rojo Alfa */
+    case 'anticretico': return '#FAB90E'; /* Amarillo Alfa */
     default: return '#525252';           /* Gris neutro */
   }
 };
@@ -1188,9 +1177,13 @@ onMounted(() => {
 onUnmounted(() => {
   removeFullScreenStyles();
   if (pulseInterval) clearInterval(pulseInterval);
+  if (searchTimeout) clearTimeout(searchTimeout);
   if (map) {
     if (markerClusterGroup) {
       map.removeLayer(markerClusterGroup);
+    }
+    if (searchLocationMarker) {
+      map.removeLayer(searchLocationMarker);
     }
     map.remove();
     map = null;
@@ -1323,6 +1316,256 @@ const locateMe = () => {
   );
 };
 
+/* ================= LOCATION SEARCH FUNCTIONS ================= */
+interface SearchResult {
+  place_id: number;
+  licence: string;
+  osm_type: string;
+  osm_id: number;
+  boundingbox: number[];
+  lat: string;
+  lon: string;
+  display_name: string;
+  class: string;
+  type: string;
+  importance: number;
+  icon: string;
+}
+
+// Buscar ubicación usando OpenStreetMap Nominatim
+const searchLocation = async (query: string) => {
+  if (!query || query.trim().length < 3) {
+    searchResults.value = [];
+    showSearchDropdown.value = false;
+    return;
+  }
+
+  showSearchDropdown.value = true;
+
+  // Cancelar búsqueda anterior si existe
+  if (searchTimeout) clearTimeout(searchTimeout);
+
+  isSearchingLocation.value = true;
+
+  // Debounce: esperar 300ms después de que el usuario deje de escribir
+  searchTimeout = window.setTimeout(async () => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=BO&limit=5&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'es',
+            'User-Agent': 'GeoPricer/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error('Error en la búsqueda');
+
+      const data: SearchResult[] = await response.json();
+      searchResults.value = data;
+    } catch (error) {
+      console.error('Error buscando ubicación:', error);
+      searchResults.value = [];
+    } finally {
+      isSearchingLocation.value = false;
+    }
+  }, 300);
+};
+
+// Ir a la ubicación seleccionada
+const goToLocation = (lat: number, lng: number, name: string, result: SearchResult) => {
+  if (!map) return;
+
+  // Cerrar el dropdown
+  showSearchDropdown.value = false;
+
+  // Mover el mapa a la ubicación con animación
+  map.setView([lat, lng], 16, {
+    animate: true,
+    duration: 1.5
+  });
+
+  // Eliminar marcador anterior si existe
+  if (searchLocationMarker) {
+    map.removeLayer(searchLocationMarker);
+  }
+
+  // Crear marcador personalizado para la ubicación buscada
+  const searchIcon = L.divIcon({
+    className: 'search-location-icon',
+    html: `
+      <div style="
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <div style="
+          width: 40px;
+          height: 40px;
+          background: #FAB90E;
+          border: 4px solid white;
+          border-radius: 50%;
+          box-shadow: 0 4px 12px rgba(250, 185, 14, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+        ">📍</div>
+        <style>
+          .search-location-icon::after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(250, 185, 14, 0.3);
+            border-radius: 50%;
+            animation: pulse-search 2s infinite;
+            z-index: -1;
+          }
+          @keyframes pulse-search {
+            0% { transform: scale(1); opacity: 0.6; }
+            70% { transform: scale(1.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+          }
+        </style>
+      </div>
+    `,
+    iconSize: [40, 40],
+    iconAnchor: [20, 40]
+  });
+
+  searchLocationMarker = L.marker([lat, lng], { icon: searchIcon }).addTo(map);
+
+  // Crear contenido del popup con información detallada
+  const popupContent = createSearchPopupContent(result);
+  searchLocationMarker.bindPopup(popupContent).openPopup();
+
+  // Cerrar popup automáticamente después de 3 segundos
+  setTimeout(() => {
+    if (searchLocationMarker) {
+      searchLocationMarker.closePopup();
+    }
+  }, 3000);
+
+  // Limpiar resultados de búsqueda
+  searchResults.value = [];
+  searchLocationInput.value = '';
+
+  // Cerrar buscador después de seleccionar
+  closeSearchAfterSelection();
+};
+
+// Crear contenido del popup de ubicación buscada
+const createSearchPopupContent = (result: SearchResult): string => {
+  // Extraer información relevante
+  const addressParts = result.display_name.split(', ');
+  const shortAddress = addressParts.slice(0, 3).join(', ');
+
+  return `
+    <div class="search-popup" style="min-width: 200px; max-width: 300px;">
+      <div class="flex items-center gap-2 mb-2">
+        <span style="font-size: 20px;">📍</span>
+        <span style="font-weight: bold; color: #233C7A;">Ubicación buscada</span>
+      </div>
+      <div class="text-sm text-gray-700 mb-2">
+        ${shortAddress}
+      </div>
+      <div class="text-xs text-gray-500">
+        ${result.type ? `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">${result.type}</span>` : ''}
+      </div>
+      <style>
+        .search-popup a {
+          color: #233C7A !important;
+          text-decoration: none;
+        }
+        .search-popup a:hover {
+          text-decoration: underline;
+        }
+      </style>
+    </div>
+  `;
+};
+
+// Formatear nombre corto para mostrar en resultados
+const formatResultName = (result: SearchResult): string => {
+  const parts = result.display_name.split(', ');
+  if (parts.length <= 2) return result.display_name;
+  return parts.slice(0, 2).join(', ');
+};
+
+// Obtener el tipo de ubicación para mostrar ícono
+const getLocationTypeIcon = (result: SearchResult): string => {
+  if (result.class === 'highway') return '🛣️';
+  if (result.class === 'building') return '🏢';
+  if (result.class === 'amenity') return '🏪';
+  if (result.class === 'shop') return '🏬';
+  if (result.class === 'tourism') return '🏨';
+  if (result.class === 'natural') return '🌳';
+  if (result.class === 'leisure') return '🎯';
+  if (result.type === 'residential') return '🏠';
+  if (result.type === 'suburb') return '🏘️';
+  if (result.type === 'city') return '🏙️';
+  if (result.type === 'town') return '🏘️';
+  if (result.type === 'village') return '🏡';
+  return '📍';
+};
+
+// Limpiar búsqueda
+const clearLocationSearch = () => {
+  searchLocationInput.value = '';
+  searchResults.value = [];
+  showSearchDropdown.value = false;
+  if (searchLocationMarker && map) {
+    map.removeLayer(searchLocationMarker);
+    searchLocationMarker = null;
+  }
+};
+
+// Toggle expansión del buscador
+const toggleSearchExpand = () => {
+  isSearchExpanded.value = !isSearchExpanded.value;
+  if (isSearchExpanded.value) {
+    // Expandir
+    setTimeout(() => {
+      // Intentar enfocar el input de desktop o móvil
+      const desktopInput = document.getElementById('location-search-input');
+      const mobileInput = document.getElementById('location-search-input-mobile');
+      if (desktopInput) desktopInput.focus();
+      else if (mobileInput) mobileInput.focus();
+    }, 100);
+  } else {
+    // Colapsar
+    searchResults.value = [];
+    showSearchDropdown.value = false;
+  }
+};
+
+// Manejar blur del input (cerrar si no hay resultados seleccionados)
+const handleSearchBlur = () => {
+  // Esperar un poco para permitir que se haga clic en los resultados
+  setTimeout(() => {
+    if (!showSearchDropdown.value && !searchLocationInput.value) {
+      isSearchExpanded.value = false;
+    }
+  }, 200);
+};
+
+// Cerrar buscador cuando se selecciona un resultado
+const closeSearchAfterSelection = () => {
+  setTimeout(() => {
+    isSearchExpanded.value = false;
+  }, 300);
+};
+
+// Cerrar dropdown cuando se hace click fuera
+const handleOutsideClick = () => {
+  if (showSearchDropdown.value) {
+    showSearchDropdown.value = false;
+  }
+};
+
 /* ================= ACTIVAR MODO RADAR ================= */
 const activateRadarMode = () => {
   radarMode.value = true;
@@ -1369,8 +1612,6 @@ const placeRadar = (e: L.LeafletMouseEvent) => {
       iconAnchor: [15, 15]
     })
   }).addTo(map);
-
-  radarMarker.bindPopup('🎯 Arrastra para ajustar posición').openPopup();
 
   radarMarker.on('drag', (ev: any) => {
     const pos = ev.target.getLatLng();
@@ -1556,7 +1797,7 @@ const updateRadarMarkers = () => {
       className: 'radar-result-marker',
       html: `
         <div style="
-          background: #10b981;  /* Verde éxito */
+          background: #FAB90E;  /* Amarillo Alfa */
           border: 3px solid white;
           border-radius: 50%;
           width: 40px;
@@ -1565,15 +1806,15 @@ const updateRadarMarkers = () => {
           align-items: center;
           justify-content: center;
           font-size: 18px;
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+          box-shadow: 0 4px 12px rgba(250, 185, 14, 0.4);
           animation: pulse-radar 2s infinite;
           z-index: 1000;
         ">🎯</div>
         <style>
           @keyframes pulse-radar {
-            0% { transform: scale(1); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
-            50% { transform: scale(1.1); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6); }
-            100% { transform: scale(1); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
+            0% { transform: scale(1); box-shadow: 0 4px 12px rgba(250, 185, 14, 0.4); }
+            50% { transform: scale(1.1); box-shadow: 0 6px 20px rgba(250, 185, 14, 0.6); }
+            100% { transform: scale(1); box-shadow: 0 4px 12px rgba(250, 185, 14, 0.4); }
           }
         </style>
       `,
@@ -1643,14 +1884,14 @@ const resetRadar = () => {
 <template>
   <Head title="Mapa Interactivo de Propiedades" />
 
-  <div class="relative w-screen h-screen overflow-hidden" @click="showCategoryDropdown = false; showOperationDropdown = false;">
+  <div class="relative w-screen h-screen overflow-hidden" @click="showCategoryDropdown = false; showOperationDropdown = false; handleOutsideClick();">
 
     <!-- PANTALLA DE SELECCIÓN DE FILTROS -->
     <transition name="fade">
-      <div v-if="showSelectionScreen" class="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 z-[2000] flex items-center justify-center p-4">
+      <div v-if="showSelectionScreen" class="absolute inset-0 bg-gradient-to-br from-[#233C7A] via-[#1e325e] to-[#233C7A] z-[3000] flex items-center justify-center p-4">
         <div class="max-w-4xl w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
           <!-- Header -->
-          <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 sm:p-8">
+          <div class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] text-white p-6 sm:p-8">
             <div class="flex items-center justify-between mb-4">
               <h1 class="text-2xl sm:text-3xl font-bold flex items-center gap-3">
                 <MapPin :size="32" />
@@ -1679,7 +1920,7 @@ const resetRadar = () => {
               <!-- Categorías -->
               <div>
                 <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                  <Building :size="20" class="text-blue-600" />
+                  <Building :size="20" class="text-[#233C7A]" />
                   Categoría <span class="text-sm font-normal text-gray-500">(opcional)</span>
                 </h2>
                 <div class="space-y-2 max-h-64 overflow-y-auto">
@@ -1690,12 +1931,12 @@ const resetRadar = () => {
                     :class="[
                       'w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center justify-between',
                       categoriaSeleccionada === parseInt(id as string)
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
+                        ? 'border-[#233C7A] bg-[#F5F5F5] dark:bg-[#233C7A]/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-[#233C7A] dark:hover:border-[#233C7A]'
                     ]"
                   >
                     <span class="font-medium text-gray-700 dark:text-gray-200">{{ nombre }}</span>
-                    <Check v-if="categoriaSeleccionada === parseInt(id as string)" :size="20" class="text-blue-600" />
+                    <Check v-if="categoriaSeleccionada === parseInt(id as string)" :size="20" class="text-[#233C7A]" />
                   </button>
                 </div>
               </div>
@@ -1703,7 +1944,7 @@ const resetRadar = () => {
               <!-- Operaciones -->
               <div>
                 <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                  <DollarSign :size="20" class="text-green-600" />
+                  <DollarSign :size="20" class="text-[#233C7A]" />
                   Tipo de Operación <span class="text-sm font-normal text-gray-500">(opcional)</span>
                 </h2>
                 <div class="space-y-2">
@@ -1714,15 +1955,15 @@ const resetRadar = () => {
                     :class="[
                       'w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center justify-between',
                       operacionSeleccionada === op.value
-                        ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-green-300 dark:hover:border-green-500'
+                        ? 'border-[#E0081D] bg-[#F5F5F5] dark:bg-[#E0081D]/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-[#E0081D] dark:hover:border-[#E0081D]'
                     ]"
                   >
                     <div class="flex items-center gap-3">
                       <component :is="op.icon" :size="18" />
                       <span class="font-medium text-gray-700 dark:text-gray-200">{{ op.label }}</span>
                     </div>
-                    <Check v-if="operacionSeleccionada === op.value" :size="20" class="text-green-600" />
+                    <Check v-if="operacionSeleccionada === op.value" :size="20" class="text-[#E0081D]" />
                   </button>
                 </div>
               </div>
@@ -1746,7 +1987,7 @@ const resetRadar = () => {
               </button>
               <button
                 @click="confirmSelectionAndLoadMap"
-                class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                class="flex-1 px-6 py-3 bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] text-white rounded-lg font-semibold hover:from-[#E0081D] hover:to-[#233C7A] transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
               >
                 🗺️ Ver Mapa
               </button>
@@ -1784,12 +2025,123 @@ const resetRadar = () => {
         <!-- Cambiar filtros (panel lateral) -->
         <button
           @click="openFilterPanel"
-          class="bg-purple-600/90 hover:bg-purple-700/90 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all backdrop-blur-sm"
+          class="bg-[#FAB90E]/90 hover:bg-[#FAB90E] text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all backdrop-blur-sm"
           title="Cambiar filtros"
         >
           <Filter :size="16" />
           <span class="hidden sm:inline text-sm font-medium">Cambiar Filtros</span>
         </button>
+
+        <!-- BUSCADOR DE UBICACIÓN - Responsive Dropdown junto a filtros -->
+        <div class="relative" @click.stop>
+          <!-- Botón icono lupa (estado colapsado) -->
+          <button
+            v-if="!isSearchExpanded"
+            @click="toggleSearchExpand"
+            class="w-10 h-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-105 text-[#233C7A]"
+            type="button"
+            title="Buscar ubicación"
+          >
+            <Search :size="18" />
+          </button>
+
+          <!-- Input de búsqueda expandido - Absolute para no afectar el layout -->
+          <transition name="search-expand-inline">
+            <div
+              v-if="isSearchExpanded"
+              class="absolute left-0 top-0 z-[1500] min-w-0"
+            >
+              <div class="flex items-center">
+                <Search
+                  :size="16"
+                  :class="isSearchingLocation ? 'animate-spin' : ''"
+                  class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10"
+                />
+                <input
+                  id="location-search-input"
+                  v-model="searchLocationInput"
+                  @input="searchLocation(searchLocationInput)"
+                  @focus="searchLocationInput && searchLocation(searchLocationInput)"
+                  @blur="handleSearchBlur"
+                  placeholder="Buscar dirección..."
+                  type="text"
+                  autocomplete="off"
+                  class="w-56 pl-9 pr-8 py-2 rounded-lg shadow-lg border-0 focus:ring-2 focus:ring-[#233C7A] bg-white/95 backdrop-blur-sm text-sm"
+                />
+                <!-- Botón limpiar -->
+                <button
+                  v-if="searchLocationInput"
+                  @click="clearLocationSearch"
+                  class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                  type="button"
+                >
+                  <X :size="14" />
+                </button>
+                <!-- Botón cerrar -->
+                <button
+                  @click="toggleSearchExpand"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                  type="button"
+                >
+                  <X :size="14" />
+                </button>
+              </div>
+
+              <!-- Dropdown de resultados -->
+              <transition name="fade">
+                <div
+                  v-if="showSearchDropdown && searchResults.length > 0"
+                  class="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-100 z-[2001] w-56"
+                >
+                  <div class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] px-4 py-2">
+                    <p class="text-xs text-white font-medium">
+                      {{ searchResults.length }} resultado{{ searchResults.length > 1 ? 's' : '' }}
+                    </p>
+                  </div>
+
+                  <div class="max-h-80 overflow-y-auto">
+                    <button
+                      v-for="result in searchResults"
+                      :key="result.place_id"
+                      @click.stop="goToLocation(parseFloat(result.lat), parseFloat(result.lon), result.display_name, result)"
+                      type="button"
+                      class="w-full text-left px-3 py-2.5 hover:bg-[#F5F5F5] transition-colors border-b border-gray-100 last:border-b-0 group"
+                    >
+                      <div class="flex items-start gap-2">
+                        <span class="text-lg mt-0.5">{{ getLocationTypeIcon(result) }}</span>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs font-semibold text-gray-800 group-hover:text-[#233C7A] truncate">
+                            {{ formatResultName(result) }}
+                          </p>
+                          <p class="text-xs text-gray-500 truncate mt-0.5">
+                            {{ result.type }}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center">
+                    Datos de OpenStreetMap
+                  </div>
+                </div>
+              </transition>
+
+              <!-- Estado de búsqueda -->
+              <div
+                v-if="showSearchDropdown && isSearchingLocation"
+                class="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 px-4 py-3 z-[2001] w-56"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="animate-spin">
+                    <Search :size="16" class="text-[#233C7A]" />
+                  </div>
+                  <span class="text-xs text-gray-600">Buscando...</span>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </div>
       </div>
 
       <!-- Controles del mapa (desktop) -->
@@ -1807,7 +2159,7 @@ const resetRadar = () => {
           :disabled="isLocatingUser"
           :class="[
             'p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm',
-            isLocatingUser ? 'bg-blue-400/90 cursor-not-allowed' : 'bg-blue-600/90 hover:bg-blue-700/90 text-white'
+            isLocatingUser ? 'bg-[#233C7A]/60 cursor-not-allowed' : 'bg-[#233C7A]/90 hover:bg-[#233C7A] text-white'
           ]"
           class="text-white"
           title="Mi ubicación"
@@ -1819,7 +2171,7 @@ const resetRadar = () => {
         <button
           v-if="!radarMode"
           @click="activateRadarMode"
-          class="bg-purple-600/90 hover:bg-purple-700/90 text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+          class="bg-[#FAB90E]/90 hover:bg-[#FAB90E] text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
           title="Activar radar"
         >
           <Radar :size="18" />
@@ -1828,7 +2180,7 @@ const resetRadar = () => {
         <button
           v-if="radarMode"
           @click="resetRadar"
-          class="bg-red-600/90 hover:bg-red-700/90 text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm animate-pulse"
+          class="bg-[#E0081D]/90 hover:bg-[#E0081D] text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm animate-pulse"
           title="Quitar radar"
         >
           <X :size="18" />
@@ -1837,7 +2189,7 @@ const resetRadar = () => {
         <!-- Ver todo -->
         <button
           @click="resetView"
-          class="bg-white/95 hover:bg-white text-gray-700 p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+          class="bg-white/95 hover:bg-white text-[#212121] p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
           title="Ver todo"
         >
           <MapPin :size="18" />
@@ -1850,15 +2202,118 @@ const resetRadar = () => {
     <!-- Dropdown filtros - ELIMINADO, ahora solo está el botón Cambiar Filtros -->
 
     <!-- Botón cambiar filtros (móvil) -->
-    <div class="fixed bottom-4 left-4 z-[1200] lg:hidden">
+    <div class="fixed bottom-20 left-4 z-[1200] lg:hidden flex flex-col gap-3">
+      <!-- Inicio -->
+      <button
+        @click="goToHome"
+        class="bg-white/95 hover:bg-white text-gray-700 p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+        title="Inicio"
+      >
+        <Home :size="18" />
+      </button>
+
       <button
         @click="openFilterPanel"
-        class="bg-purple-600/90 hover:bg-purple-700/90 text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+        class="bg-[#FAB90E]/90 hover:bg-[#FAB90E] text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
         title="Cambiar filtros"
         aria-label="Cambiar filtros"
       >
         <Filter :size="18" />
       </button>
+
+      <!-- BUSCADOR DE UBICACIÓN (móvil) -->
+      <div class="relative" @click.stop>
+        <!-- Botón icono lupa (estado colapsado) -->
+        <button
+          v-if="!isSearchExpanded"
+          @click="toggleSearchExpand"
+          class="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-lg transition-all hover:scale-105 text-[#233C7A]"
+          type="button"
+          title="Buscar ubicación"
+        >
+          <Search :size="18" />
+        </button>
+
+        <!-- Input de búsqueda expandido (móvil) - Absolute para no afectar el layout -->
+        <transition name="search-expand-inline">
+          <div
+            v-if="isSearchExpanded"
+            class="absolute left-0 top-0 z-[1500] min-w-0"
+          >
+            <div class="flex items-center">
+              <Search
+                :size="16"
+                :class="isSearchingLocation ? 'animate-spin' : ''"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10"
+              />
+              <input
+                id="location-search-input-mobile"
+                v-model="searchLocationInput"
+                @input="searchLocation(searchLocationInput)"
+                @focus="searchLocationInput && searchLocation(searchLocationInput)"
+                @blur="handleSearchBlur"
+                placeholder="Buscar dirección..."
+                type="text"
+                autocomplete="off"
+                class="w-52 pl-9 pr-8 py-2 rounded-lg shadow-lg border-0 focus:ring-2 focus:ring-[#233C7A] bg-white/95 backdrop-blur-sm text-sm"
+              />
+              <!-- Botón limpiar -->
+              <button
+                v-if="searchLocationInput"
+                @click="clearLocationSearch"
+                class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                type="button"
+              >
+                <X :size="14" />
+              </button>
+              <!-- Botón cerrar -->
+              <button
+                @click="toggleSearchExpand"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                type="button"
+              >
+                <X :size="14" />
+              </button>
+            </div>
+
+            <!-- Dropdown de resultados (móvil) -->
+            <transition name="fade">
+              <div
+                v-if="showSearchDropdown && searchResults.length > 0"
+                class="absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-100 z-[2001] w-52"
+              >
+                <div class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] px-4 py-2">
+                  <p class="text-xs text-white font-medium">
+                    {{ searchResults.length }} resultado{{ searchResults.length > 1 ? 's' : '' }}
+                  </p>
+                </div>
+
+                <div class="max-h-60 overflow-y-auto">
+                  <button
+                    v-for="result in searchResults"
+                    :key="result.place_id"
+                    @click.stop="goToLocation(parseFloat(result.lat), parseFloat(result.lon), result.display_name, result)"
+                    type="button"
+                    class="w-full text-left px-3 py-2.5 hover:bg-[#F5F5F5] transition-colors border-b border-gray-100 last:border-b-0 group"
+                  >
+                    <div class="flex items-start gap-2">
+                      <span class="text-lg mt-0.5">{{ getLocationTypeIcon(result) }}</span>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-800 group-hover:text-[#233C7A] truncate">
+                          {{ formatResultName(result) }}
+                        </p>
+                        <p class="text-xs text-gray-500 truncate mt-0.5">
+                          {{ result.type }}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </transition>
+      </div>
     </div>
 
     <!-- Contador -->
@@ -1871,12 +2326,12 @@ const resetRadar = () => {
     </div>
 
     <!-- Botones inferiores -->
-    <div class="fixed bottom-4 right-4 z-[1200] lg:hidden flex flex-col gap-3">
+    <div class="fixed bottom-20 right-4 z-[1200] lg:hidden flex flex-col gap-3">
       <!-- Radar / Quitar Radar -->
       <button
         v-if="!radarMode"
         @click="activateRadarMode"
-        class="bg-purple-600/90 hover:bg-purple-700/90 text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+        class="bg-[#FAB90E]/90 hover:bg-[#FAB90E] text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
         title="Activar modo radar para buscar propiedades"
         aria-label="Activar modo radar"
       >
@@ -1886,7 +2341,7 @@ const resetRadar = () => {
       <button
         v-if="radarMode"
         @click="resetRadar"
-        class="bg-red-600/90 hover:bg-red-700/90 text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm animate-pulse"
+        class="bg-[#E0081D]/90 hover:bg-[#E0081D] text-white p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm animate-pulse"
         title="Desactivar modo radar"
         aria-label="Desactivar modo radar"
       >
@@ -1896,7 +2351,7 @@ const resetRadar = () => {
       <!-- Ver todo -->
       <button
         @click="resetView"
-        class="bg-white/95 hover:bg-white text-gray-700 p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
+        class="bg-white/95 hover:bg-white text-[#212121] p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm"
         title="Ver todas las propiedades en el mapa"
         aria-label="Ver todas las propiedades"
       >
@@ -1909,7 +2364,7 @@ const resetRadar = () => {
         :disabled="isLocatingUser"
         :class="[
           'p-3 rounded-lg shadow-lg transition-all backdrop-blur-sm',
-          isLocatingUser ? 'bg-blue-400/90 cursor-not-allowed' : 'bg-blue-600/90 hover:bg-blue-700/90 text-white'
+          isLocatingUser ? 'bg-[#233C7A]/60 cursor-not-allowed' : 'bg-[#233C7A]/90 hover:bg-[#233C7A] text-white'
         ]"
         title="Mi ubicación"
         aria-label="Centrar en mi ubicación actual"
@@ -1921,7 +2376,7 @@ const resetRadar = () => {
     <!-- MENSAJE DE INSTRUCCIÓN -->
     <div
       v-if="radarMode && !radarPlaced"
-      class="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-purple-600 text-white px-4 py-2 rounded-lg shadow-xl"
+      class="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-[#FAB90E] text-white px-4 py-2 rounded-lg shadow-xl"
     >
       <p class="text-sm font-medium flex items-center gap-2">
         <MapPin :size="16" />
@@ -1936,8 +2391,8 @@ const resetRadar = () => {
     >
       <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <label class="font-semibold text-gray-800 text-sm">Radio de búsqueda</label>
-          <span class="bg-blue-600 text-white px-3 py-1 rounded-full font-bold text-sm">
+          <label class="font-semibold text-[#212121] text-sm">Radio de búsqueda</label>
+          <span class="bg-[#233C7A] text-white px-3 py-1 rounded-full font-bold text-sm">
             {{ radarRadius }}m
           </span>
         </div>
@@ -1949,9 +2404,9 @@ const resetRadar = () => {
           step="50"
           v-model.number="radarRadius"
           @input="updateRadius"
-          class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          class="w-full h-2 bg-[#F5F5F5] rounded-lg appearance-none cursor-pointer"
           :style="{
-            background: `linear-gradient(to right, #233C7A 0%, #233C7A ${((radarRadius - 100) / (5000 - 100) * 100)}%, #d4d4d4 ${((radarRadius - 100) / (5000 - 100) * 100)}%, #d4d4d4 100%)`
+            background: `linear-gradient(to right, #233C7A 0%, #233C7A ${((radarRadius - 100) / (5000 - 100) * 100)}%, #F5F5F5 ${((radarRadius - 100) / (5000 - 100) * 100)}%, #F5F5F5 100%)`
           }"
         />
 
@@ -1963,7 +2418,7 @@ const resetRadar = () => {
 
         <button
           @click="search"
-          class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-2 rounded-lg font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
+          class="w-full bg-gradient-to-r from-[#FAB90E] to-[#E0081D] hover:from-[#E0081D] hover:to-[#FAB90E] text-white py-2 rounded-lg font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
         >
           🎯 Buscar Propiedades
         </button>
@@ -1977,41 +2432,41 @@ const resetRadar = () => {
         class="absolute right-0 top-0 h-full w-full sm:w-80 md:w-96 bg-white shadow-2xl z-[1300] flex flex-col"
       >
         <!-- Header Compacto -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 flex justify-between items-center flex-shrink-0">
+        <div class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] text-white px-3 py-2 flex justify-between items-center flex-shrink-0">
           <div>
-            <h3 class="font-bold text-sm sm:text-base">📍 Propiedades encontradas</h3>
-            <p class="text-xs text-blue-100">{{ filteredResults.length }} resultados</p>
+            <h3 class="font-bold text-xs sm:text-sm">📍 Propiedades</h3>
+            <p class="text-[10px] sm:text-xs text-blue-100">{{ filteredResults.length }} resultados</p>
           </div>
           <button
             @click="showPanel = false"
-            class="hover:bg-white/20 p-2 sm:p-1 rounded-lg transition-colors"
+            class="hover:bg-white/20 p-1.5 rounded-lg transition-colors"
           >
-            <X :size="20" />
+            <X :size="16" />
           </button>
         </div>
 
         <!-- Búsqueda Compacta -->
-        <div class="p-3 sm:p-2 border-b bg-gray-50 flex-shrink-0">
+        <div class="px-2 py-1.5 border-b bg-gray-50 flex-shrink-0">
           <div class="relative">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="16" />
+            <Search class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" :size="14" />
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="Buscar en resultados..."
-              class="w-full pl-10 pr-10 py-2 sm:py-1.5 text-sm sm:text-xs border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              placeholder="Buscar..."
+              class="w-full pl-7 pr-7 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
             <button
               v-if="searchQuery"
               @click="searchQuery = ''"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              <X :size="16" />
+              <X :size="14" />
             </button>
           </div>
         </div>
 
-        <!-- Lista de resultados compacta -->
-        <div class="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2">
+        <!-- Lista de resultados -->
+        <div class="flex-1 overflow-y-auto px-2 sm:px-3 py-2 sm:py-3 space-y-2">
           <div
             v-for="p in filteredResults"
             :key="p.id"
@@ -2019,7 +2474,7 @@ const resetRadar = () => {
             class="cursor-pointer border border-gray-200 hover:border-blue-500 p-2 sm:p-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-[1.01] hover:shadow-sm"
           >
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
-              <h4 class="font-bold text-gray-800 text-xs sm:text-sm line-clamp-2 flex-1">{{ p.name }}</h4>
+              <h4 class="font-bold text-gray-800 text-sm sm:text-base line-clamp-2 flex-1">{{ p.name }}</h4>
 
               <!-- PRECIO SEGÚN OPERACIÓN -->
               <div class="ml-0 sm:ml-2 flex-shrink-0">
@@ -2051,14 +2506,14 @@ const resetRadar = () => {
               </div>
             </div>
 
-            <p class="text-xs text-gray-500 mb-2">{{ p.codigo_inmueble }}</p>
+            <p class="text-xs sm:text-sm text-gray-500 mb-2">{{ p.codigo_inmueble }}</p>
 
-            <!-- Superficie compacta -->
-            <div class="bg-gray-50 rounded-lg p-2 mb-2">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <!-- Superficie -->
+            <div class="bg-gray-50 rounded-lg p-2 sm:p-3 mb-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
                 <div>
                   <p class="text-blue-600 font-medium mb-1">📐 Útil</p>
-                  <p class="font-bold text-blue-800 text-sm sm:text-xs">
+                  <p class="font-bold text-blue-800 text-sm sm:text-base">
                     {{ p.superficie_util ? p.superficie_util.toLocaleString() + ' m²' : 'N/A' }}
                   </p>
                   <p class="text-blue-700 text-xs" v-if="getPricePerSqmUtilDisplay(p)">
@@ -2067,7 +2522,7 @@ const resetRadar = () => {
                 </div>
                 <div>
                   <p class="text-orange-600 font-medium mb-1">🏢 Constr.</p>
-                  <p class="font-bold text-orange-800 text-sm sm:text-xs">
+                  <p class="font-bold text-orange-800 text-sm sm:text-base">
                     {{ p.superficie_construida ? p.superficie_construida.toLocaleString() + ' m²' : 'N/A' }}
                   </p>
                   <p class="text-orange-700 text-xs" v-if="getPricePerSqmConstruidaDisplay(p)">
@@ -2077,8 +2532,8 @@ const resetRadar = () => {
               </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs gap-1">
-              <span v-if="p.category" class="bg-gray-100 px-2 py-1 rounded text-gray-700 inline-block w-fit">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm gap-1">
+              <span v-if="p.category" class="bg-gray-100 px-2 sm:px-3 py-1 rounded text-gray-700 inline-block w-fit">
                 {{ p.category }}
               </span>
               <span class="text-gray-500">
@@ -2373,10 +2828,10 @@ const resetRadar = () => {
         class="absolute left-0 top-0 h-full w-full sm:w-96 bg-white shadow-2xl z-[1300] flex flex-col"
       >
         <!-- Header -->
-        <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 flex justify-between items-center flex-shrink-0">
+        <div class="bg-gradient-to-r from-[#FAB90E] to-[#E0081D] text-white p-4 flex justify-between items-center flex-shrink-0">
           <div>
             <h3 class="font-bold text-lg">Cambiar Filtros</h3>
-            <p class="text-xs text-purple-100">Selecciona las nuevas opciones</p>
+            <p class="text-xs text-white/80">Selecciona las nuevas opciones</p>
           </div>
           <button
             @click="showFilterPanel = false"
@@ -2470,7 +2925,7 @@ const resetRadar = () => {
                 :class="[
                   'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all',
                   canLoadMap
-                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800'
+                    ? 'bg-gradient-to-r from-[#FAB90E] to-[#E0081D] text-white hover:from-[#E0081D] hover:to-[#FAB90E]'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 ]"
                 :disabled="!canLoadMap"
@@ -2505,6 +2960,22 @@ const resetRadar = () => {
   opacity: 0;
 }
 
+/* Animación de fade-down para el buscador */
+.fade-down-enter-active,
+.fade-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-down-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-down-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
 /* Animación del panel lateral derecho (resultados radar) */
 .slide-enter-active,
 .slide-leave-active {
@@ -2531,6 +3002,52 @@ const resetRadar = () => {
 
 .slide-left-leave-to {
   transform: translateX(-100%);
+}
+
+/* Animación de expansión del buscador */
+.search-expand-enter-active,
+.search-expand-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-expand-enter-from {
+  opacity: 0;
+  width: 0;
+  transform: scaleX(0);
+}
+
+.search-expand-leave-to {
+  opacity: 0;
+  width: 0;
+  transform: scaleX(0);
+}
+
+/* Animación de fade para el icono del buscador */
+.search-icon-fade-enter-active,
+.search-icon-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.search-icon-fade-enter-from,
+.search-icon-fade-leave-to {
+  opacity: 0;
+}
+
+/* Animación de expansión del buscador en línea (sin afectar layout) */
+.search-expand-inline-enter-active,
+.search-expand-inline-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left center;
+}
+
+.search-expand-inline-enter-from {
+  opacity: 0;
+  transform: scaleX(0) translateX(-10px);
+}
+
+.search-expand-inline-leave-to {
+  opacity: 0;
+  transform: scaleX(0) translateX(-10px);
 }
 
 .line-clamp-2 {

@@ -242,10 +242,10 @@ class JsonImportParser
         // Descripción (combinar campos de texto)
         $descriptionParts = [];
         if (isset($item['descripcion']) && !empty($item['descripcion'])) {
-            $descriptionParts[] = $item['descripcion'];
+            $descriptionParts[] = $this->cleanHtmlDescription($item['descripcion']);
         }
         if (isset($item['municipio']) && !empty($item['municipio'])) {
-            $descriptionParts[] = 'Zona: ' . $item['municipio'];
+            $descriptionParts[] = 'Zona: ' . $this->cleanHtmlText($item['municipio']);
         }
 
         if (!empty($descriptionParts)) {
@@ -379,9 +379,7 @@ class JsonImportParser
         // Descripción
         if (isset($item['description']) && !empty($item['description'])) {
             // Limpiar HTML de la descripción
-            $description = strip_tags($item['description']);
-            $description = html_entity_decode($description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            $normalized['description'] = trim($description);
+            $normalized['description'] = $this->cleanHtmlDescription($item['description']);
         }
 
         // Procesar technicalSheet (array de clave-valor)
@@ -483,5 +481,107 @@ class JsonImportParser
 
         // Mantener todos los campos originales
         return array_merge($item, $normalized);
+    }
+
+    /**
+     * Limpiar descripción HTML y convertirla a texto plano legible
+     * Convierte <p>, <br> a saltos de línea, elimina tags innecesarios
+     * y limpía espacios y saltos de línea excesivos
+     *
+     * @param string|null $html La descripción HTML
+     * @return string Descripción limpia en texto plano
+     */
+    protected function cleanHtmlDescription(?string $html): string
+    {
+        if (empty($html) || !is_string($html)) {
+            return '';
+        }
+
+        // Decodificar entidades HTML primero (para &nbsp;, &amp;, etc.)
+        $text = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Reemplazar etiquetas de párrafo y salto de línea por saltos de línea
+        // Primero reemplazamos <br> y sus variantes
+        $text = preg_replace('/<br\s*\/?>/i', "\n", $text);
+        $text = preg_replace('/<\/br>/i', "\n", $text);
+
+        // Reemplazar <p> por salto de línea
+        $text = preg_replace('/<p\b[^>]*>/i', "\n", $text);
+
+        // Reemplazar </p> por salto de línea
+        $text = preg_replace('/<\/p>/i', "\n", $text);
+
+        // Reemplazar <div> y </div> por salto de línea
+        $text = preg_replace('/<div\b[^>]*>/i', "\n", $text);
+        $text = preg_replace('/<\/div>/i', "\n", $text);
+
+        // Reemplazar <li> y </li> con formato de lista
+        $text = preg_replace('/<li\b[^>]*>/i', "\n• ", $text);
+        $text = preg_replace('/<\/li>/i', "\n", $text);
+
+        // Reemplazar <ul> y <ol> por saltos de línea
+        $text = preg_replace('/<[uo]l\b[^>]*>/i', "\n", $text);
+        $text = preg_replace('/<\/[uo]l>/i', "\n", $text);
+
+        // Reemplazar <h1>-<h6> por saltos de línea con énfasis
+        $text = preg_replace('/<h([1-6])\b[^>]*>/i', "\n### ", $text);
+        $text = preg_replace('/<\/h[1-6]>/i', "\n", $text);
+
+        // Reemplazar <strong>, <b> por asteriscos
+        $text = preg_replace('/<(strong|b)\b[^>]*>/i', "**", $text);
+        $text = preg_replace('/<\/(strong|b)>/i', "**", $text);
+
+        // Reemplazar <em>, <i> por guiones bajos
+        $text = preg_replace('/<(em|i)\b[^>]*>/i', "_", $text);
+        $text = preg_replace('/<\/(em|i)>/i', "_", $text);
+
+        // Eliminar todos los demás tags HTML restantes
+        $text = strip_tags($text);
+
+        // Decodificar entidades HTML nuevamente (por si hay algunas después de strip_tags)
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Limpiar saltos de línea múltiples: convertir 3+ saltos a 2 saltos
+        $text = preg_replace("/\n{3,}/", "\n\n", $text);
+
+        // Limpiar espacios en blanco al inicio de cada línea
+        $text = preg_replace('/^[ \t]+/m', '', $text);
+
+        // Trim general para eliminar espacios al inicio y final
+        $text = trim($text);
+
+        // Reemplazar espacios múltiples con un solo espacio
+        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
+
+        return trim($text);
+    }
+
+    /**
+     * Limpiar valor de texto eliminando HTML básico
+     * Versión simplificada para campos que no son descripción
+     *
+     * @param string|null $text El texto a limpiar
+     * @return string Texto limpio
+     */
+    protected function cleanHtmlText(?string $text): string
+    {
+        if (empty($text) || !is_string($text)) {
+            return '';
+        }
+
+        // Reemplazar <br> por espacio
+        $cleaned = preg_replace('/<br\s*\/?>/i', ' ', $text);
+        $cleaned = preg_replace('/<\/br>/i', ' ', $cleaned);
+
+        // Eliminar todos los tags HTML
+        $cleaned = strip_tags($cleaned);
+
+        // Decodificar entidades HTML
+        $cleaned = html_entity_decode($cleaned, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Limpiar espacios múltiples
+        $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+
+        return trim($cleaned);
     }
 }

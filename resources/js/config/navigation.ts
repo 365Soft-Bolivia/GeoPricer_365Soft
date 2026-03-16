@@ -3,11 +3,11 @@ import type { NavItem } from '@/types';
 
 // URLs directas - evitamos problemas de runtime con funciones dinámicas
 export const allMainNavItems: NavItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/admin/dashboard',
-    icon: MapPinned,
-  },
+  // {
+  //   title: 'Dashboard',
+  //   href: '/admin/dashboard',
+  //   icon: MapPinned,
+  // },
   {
     title: 'Proyectos',
     href: '/admin/proyectos',
@@ -20,18 +20,12 @@ export const allMainNavItems: NavItem[] = [
     icon: MapPinned,
     roles: ['admin'],
   },
-  {
-    title: 'Categorías',
-    href: '/admin/categorias',
-    icon: Tag,
-    roles: ['admin'],
-  },
-  {
-    title: 'Accesos',
-    href: '/admin/accesos',
-    icon: LockKeyhole,
-    roles: ['admin'],
-  },
+  // {
+  //   title: 'Categorías',
+  //   href: '/admin/categorias',
+  //   icon: Tag,
+  //   roles: ['admin'],
+  // },
   {
     title: 'Inyección de Datos',
     href: '/admin/data-import',
@@ -42,6 +36,12 @@ export const allMainNavItems: NavItem[] = [
     title: 'Reordenar Datos',
     href: '/admin/data-reorder',
     icon: RefreshCw,
+    roles: ['admin'],
+  },
+  {
+    title: 'Accesos',
+    href: '/admin/accesos',
+    icon: LockKeyhole,
     roles: ['admin'],
   },
 ];

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\DataImportController::process
- * @see app/Http/Controllers/DataImportController.php:158
+ * @see app/Http/Controllers/DataImportController.php:155
  * @route '/admin/data-import/process'
  */
 export const process = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ process.definition = {
 
 /**
 * @see \App\Http\Controllers\DataImportController::process
- * @see app/Http/Controllers/DataImportController.php:158
+ * @see app/Http/Controllers/DataImportController.php:155
  * @route '/admin/data-import/process'
  */
 process.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ process.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\DataImportController::process
- * @see app/Http/Controllers/DataImportController.php:158
+ * @see app/Http/Controllers/DataImportController.php:155
  * @route '/admin/data-import/process'
  */
 process.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ process.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\DataImportController::process
- * @see app/Http/Controllers/DataImportController.php:158
+ * @see app/Http/Controllers/DataImportController.php:155
  * @route '/admin/data-import/process'
  */
     const processForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ process.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\DataImportController::process
- * @see app/Http/Controllers/DataImportController.php:158
+ * @see app/Http/Controllers/DataImportController.php:155
  * @route '/admin/data-import/process'
  */
         processForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -56,7 +56,7 @@ process.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     process.form = processForm
 /**
 * @see \App\Http\Controllers\DataImportController::categories
- * @see app/Http/Controllers/DataImportController.php:1380
+ * @see app/Http/Controllers/DataImportController.php:1704
  * @route '/admin/data-import/categories'
  */
 export const categories = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -71,7 +71,7 @@ categories.definition = {
 
 /**
 * @see \App\Http\Controllers\DataImportController::categories
- * @see app/Http/Controllers/DataImportController.php:1380
+ * @see app/Http/Controllers/DataImportController.php:1704
  * @route '/admin/data-import/categories'
  */
 categories.url = (options?: RouteQueryOptions) => {
@@ -80,7 +80,7 @@ categories.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\DataImportController::categories
- * @see app/Http/Controllers/DataImportController.php:1380
+ * @see app/Http/Controllers/DataImportController.php:1704
  * @route '/admin/data-import/categories'
  */
 categories.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -89,7 +89,7 @@ categories.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\DataImportController::categories
- * @see app/Http/Controllers/DataImportController.php:1380
+ * @see app/Http/Controllers/DataImportController.php:1704
  * @route '/admin/data-import/categories'
  */
 categories.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -99,7 +99,7 @@ categories.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\DataImportController::categories
- * @see app/Http/Controllers/DataImportController.php:1380
+ * @see app/Http/Controllers/DataImportController.php:1704
  * @route '/admin/data-import/categories'
  */
     const categoriesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -109,7 +109,7 @@ categories.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\DataImportController::categories
- * @see app/Http/Controllers/DataImportController.php:1380
+ * @see app/Http/Controllers/DataImportController.php:1704
  * @route '/admin/data-import/categories'
  */
         categoriesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -118,7 +118,7 @@ categories.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\DataImportController::categories
- * @see app/Http/Controllers/DataImportController.php:1380
+ * @see app/Http/Controllers/DataImportController.php:1704
  * @route '/admin/data-import/categories'
  */
         categoriesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

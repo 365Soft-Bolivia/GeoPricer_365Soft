@@ -13,7 +13,7 @@ import proyectos from './proyectos'
 import dataImport8a61c1 from './data-import'
 import dataReorder01e44d from './data-reorder'
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:12
  * @route '/admin'
  */
 export const home = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -27,7 +27,7 @@ home.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:12
  * @route '/admin'
  */
 home.url = (options?: RouteQueryOptions) => {
@@ -35,7 +35,7 @@ home.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:12
  * @route '/admin'
  */
 home.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -43,7 +43,7 @@ home.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:12
  * @route '/admin'
  */
 home.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -52,7 +52,7 @@ home.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:12
  * @route '/admin'
  */
     const homeForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -61,7 +61,7 @@ home.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:12
  * @route '/admin'
  */
         homeForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -69,7 +69,7 @@ home.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:12
  * @route '/admin'
  */
         homeForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -84,7 +84,7 @@ home.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     home.form = homeForm
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:23
  * @route '/admin/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -98,7 +98,7 @@ dashboard.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:23
  * @route '/admin/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -106,7 +106,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:23
  * @route '/admin/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -114,7 +114,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:23
  * @route '/admin/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -123,7 +123,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:23
  * @route '/admin/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:23
  * @route '/admin/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -140,7 +140,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:23
  * @route '/admin/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -155,7 +155,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     dashboard.form = dashboardForm
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:32
  * @route '/admin/categorias'
  */
 export const categorias = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -169,7 +169,7 @@ categorias.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:32
  * @route '/admin/categorias'
  */
 categorias.url = (options?: RouteQueryOptions) => {
@@ -177,7 +177,7 @@ categorias.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:32
  * @route '/admin/categorias'
  */
 categorias.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -185,7 +185,7 @@ categorias.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:32
  * @route '/admin/categorias'
  */
 categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -194,7 +194,7 @@ categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:32
  * @route '/admin/categorias'
  */
     const categoriasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -203,7 +203,7 @@ categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:32
  * @route '/admin/categorias'
  */
         categoriasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -211,7 +211,7 @@ categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see [serialized-closure]:2
+ * @see routes/web.php:32
  * @route '/admin/categorias'
  */
         categoriasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -672,7 +672,7 @@ ubicaciones.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     ubicaciones.form = ubicacionesForm
 /**
 * @see \App\Http\Controllers\DataImportController::dataImport
- * @see app/Http/Controllers/DataImportController.php:150
+ * @see app/Http/Controllers/DataImportController.php:147
  * @route '/admin/data-import'
  */
 export const dataImport = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -687,7 +687,7 @@ dataImport.definition = {
 
 /**
 * @see \App\Http\Controllers\DataImportController::dataImport
- * @see app/Http/Controllers/DataImportController.php:150
+ * @see app/Http/Controllers/DataImportController.php:147
  * @route '/admin/data-import'
  */
 dataImport.url = (options?: RouteQueryOptions) => {
@@ -696,7 +696,7 @@ dataImport.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\DataImportController::dataImport
- * @see app/Http/Controllers/DataImportController.php:150
+ * @see app/Http/Controllers/DataImportController.php:147
  * @route '/admin/data-import'
  */
 dataImport.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -705,7 +705,7 @@ dataImport.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\DataImportController::dataImport
- * @see app/Http/Controllers/DataImportController.php:150
+ * @see app/Http/Controllers/DataImportController.php:147
  * @route '/admin/data-import'
  */
 dataImport.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -715,7 +715,7 @@ dataImport.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\DataImportController::dataImport
- * @see app/Http/Controllers/DataImportController.php:150
+ * @see app/Http/Controllers/DataImportController.php:147
  * @route '/admin/data-import'
  */
     const dataImportForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -725,7 +725,7 @@ dataImport.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\DataImportController::dataImport
- * @see app/Http/Controllers/DataImportController.php:150
+ * @see app/Http/Controllers/DataImportController.php:147
  * @route '/admin/data-import'
  */
         dataImportForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -734,7 +734,7 @@ dataImport.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\DataImportController::dataImport
- * @see app/Http/Controllers/DataImportController.php:150
+ * @see app/Http/Controllers/DataImportController.php:147
  * @route '/admin/data-import'
  */
         dataImportForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -750,7 +750,7 @@ dataImport.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dataImport.form = dataImportForm
 /**
 * @see \App\Http\Controllers\DataReorderController::dataReorder
- * @see app/Http/Controllers/DataReorderController.php:89
+ * @see app/Http/Controllers/DataReorderController.php:90
  * @route '/admin/data-reorder'
  */
 export const dataReorder = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -765,7 +765,7 @@ dataReorder.definition = {
 
 /**
 * @see \App\Http\Controllers\DataReorderController::dataReorder
- * @see app/Http/Controllers/DataReorderController.php:89
+ * @see app/Http/Controllers/DataReorderController.php:90
  * @route '/admin/data-reorder'
  */
 dataReorder.url = (options?: RouteQueryOptions) => {
@@ -774,7 +774,7 @@ dataReorder.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\DataReorderController::dataReorder
- * @see app/Http/Controllers/DataReorderController.php:89
+ * @see app/Http/Controllers/DataReorderController.php:90
  * @route '/admin/data-reorder'
  */
 dataReorder.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -783,7 +783,7 @@ dataReorder.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\DataReorderController::dataReorder
- * @see app/Http/Controllers/DataReorderController.php:89
+ * @see app/Http/Controllers/DataReorderController.php:90
  * @route '/admin/data-reorder'
  */
 dataReorder.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -793,7 +793,7 @@ dataReorder.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\DataReorderController::dataReorder
- * @see app/Http/Controllers/DataReorderController.php:89
+ * @see app/Http/Controllers/DataReorderController.php:90
  * @route '/admin/data-reorder'
  */
     const dataReorderForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -803,7 +803,7 @@ dataReorder.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\DataReorderController::dataReorder
- * @see app/Http/Controllers/DataReorderController.php:89
+ * @see app/Http/Controllers/DataReorderController.php:90
  * @route '/admin/data-reorder'
  */
         dataReorderForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -812,7 +812,7 @@ dataReorder.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\DataReorderController::dataReorder
- * @see app/Http/Controllers/DataReorderController.php:89
+ * @see app/Http/Controllers/DataReorderController.php:90
  * @route '/admin/data-reorder'
  */
         dataReorderForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

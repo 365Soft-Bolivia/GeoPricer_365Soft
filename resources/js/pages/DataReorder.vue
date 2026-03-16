@@ -16,7 +16,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 // Estado del componente
 const isAnalyzing = ref(false);
 const isDryRun = ref(true);
+const cleanHtml = ref(true);
 const result = ref<any>(null);
+const resultOutside = ref<any>(null);
 const error = ref<string | null>(null);
 
 // Función para obtener el token CSRF con múltiples fallbacks
@@ -69,6 +71,7 @@ const analyzeProducts = async () => {
             },
             body: JSON.stringify({
                 dry_run: isDryRun.value,
+                clean_html: cleanHtml.value,
             }),
         });
 
@@ -100,6 +103,70 @@ const analyzeProducts = async () => {
     } finally {
         isAnalyzing.value = false;
     }
+};
+
+// Analizar productos fuera de Bolivia
+const analyzeOutsideBolivia = async () => {
+    isAnalyzing.value = true;
+    error.value = null;
+    result.value = null;
+
+    try {
+        const csrfToken = getCsrfToken();
+
+        console.log('Token CSRF obtenido:', csrfToken.substring(0, 10) + '...');
+
+        const response = await fetch('/admin/data-reorder/analyze-outside-bolivia', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                dry_run: isDryRun.value,
+            }),
+        });
+
+        // Verificar si la respuesta es HTML (error del servidor)
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Respuesta no JSON recibida:', text.substring(0, 200));
+            throw new Error('El servidor devolvió una respuesta inválida. Verifica los logs de Laravel.');
+        }
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Error al analizar los productos');
+        }
+
+        resultOutside.value = data.data;
+
+        // Si no es dry run y hay productos, recargar después de 2 segundos
+        if (!isDryRun.value && data.data.deleted > 0) {
+            setTimeout(() => {
+                router.reload();
+            }, 2000);
+        }
+    } catch (e: any) {
+        console.error('Error completo:', e);
+        error.value = e.message || 'Error al analizar los productos';
+    } finally {
+        isAnalyzing.value = false;
+    }
+};
+
+// Exportar CSV de productos
+const exportCsv = (csvData: string) => {
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `productos_fuera_bolivia_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
 };
 
 // Formatear número
@@ -149,22 +216,114 @@ const formatNumber = (num: number) => {
             <!-- Controls -->
             <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-6">
                         <label class="flex items-center gap-2">
                             <input type="checkbox" v-model="isDryRun" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
                             <span class="text-sm text-gray-700 dark:text-gray-300">
                                 Modo Simulación ({{ isDryRun ? 'Solo previsualizar' : 'Aplicar cambios' }})
                             </span>
                         </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" v-model="cleanHtml" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">
+                                Limpiar HTML de descripciones
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button
+                            @click="analyzeProducts"
+                            :disabled="isAnalyzing"
+                            class="rounded-lg bg-primary px-6 py-2 text-white hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span v-if="isAnalyzing">Analizando...</span>
+                            <span v-else>{{ isDryRun ? 'Analizar Productos' : 'Aplicar Correcciones' }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outside Bolivia Controls -->
+            <div class="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-900/20">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-6">
+                        <div>
+                            <h3 class="text-sm font-medium text-red-900 dark:text-red-200">
+                                Detectar y eliminar productos fuera de Bolivia
+                            </h3>
+                            <p class="text-xs text-red-700 dark:text-red-300 mt-1">
+                                Analiza ubicaciones GPS y elimina productos fuera del territorio boliviano
+                            </p>
+                        </div>
                     </div>
 
                     <button
-                        @click="analyzeProducts"
+                        @click="analyzeOutsideBolivia"
                         :disabled="isAnalyzing"
-                        class="rounded-lg bg-primary px-6 py-2 text-white hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="rounded-lg bg-red-600 px-6 py-2 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span v-if="isAnalyzing">Analizando...</span>
-                        <span v-else>{{ isDryRun ? 'Analizar Productos' : 'Aplicar Correcciones' }}</span>
+                        <span v-else>{{ isDryRun ? 'Detectar fuera de Bolivia' : 'Eliminar productos fuera de Bolivia' }}</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- Results Outside Bolivia -->
+            <div v-if="resultOutside" class="space-y-4 mt-6">
+                <!-- Summary -->
+                <div class="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-900/20">
+                    <h2 class="mb-4 text-lg font-semibold text-red-900 dark:text-white">Análisis de Productos Fuera de Bolivia</h2>
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <div class="rounded-lg bg-white p-4 dark:bg-gray-800">
+                            <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ formatNumber(resultOutside.total_with_location) }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Total con ubicación</p>
+                        </div>
+                        <div class="rounded-lg bg-red-100 p-4 dark:bg-red-900/30">
+                            <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ formatNumber(resultOutside.outside_bolivia) }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Fuera de Bolivia</p>
+                        </div>
+                        <div class="rounded-lg bg-gray-100 p-4 dark:bg-gray-700">
+                            <p class="text-2xl font-bold text-gray-600 dark:text-gray-400">{{ formatNumber(resultOutside.total_with_location - resultOutside.outside_bolivia) }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Dentro de Bolivia</p>
+                        </div>
+                    </div>
+
+                    <!-- Export CSV Button -->
+                    <div v-if="resultOutside.csv_export" class="rounded-lg bg-white p-4 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                    Se encontraron <strong>{{ formatNumber(resultOutside.outside_bolivia) }}</strong> productos fuera de Bolivia.
+                                    <br>
+                                    Puedes exportar la lista antes de eliminar para respaldar los datos.
+                                </p>
+                            </div>
+                            <button
+                                @click="exportCsv(resultOutside.csv_export)"
+                                class="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 012 2H5a2 2 0 002 2V7a2 2 0 00-2-2 2zm-6 0 2a2 2 0 100-2H8v-2a2 2 0 00-2 2zm4-4a2 2 0 100-2H8v-2a2 2 0 00-2 2z" />
+                                </svg>
+                                <span>Exportar CSV</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Alerta de dry_run -->
+                    <div v-if="resultOutside.dry_run && resultOutside.outside_bolivia > 0" class="mt-4 rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
+                        <p class="text-sm text-amber-800 dark:text-amber-200">
+                            ℹ️ <strong>Modo Simulación activado:</strong> Los productos no se eliminarán realmente.
+                            Desmarca "Modo Simulación" y vuelve a hacer clic en "Eliminar productos fuera de Bolivia" para eliminar los productos.
+                        </p>
+                    </div>
+
+                    <!-- Confirmación de eliminación -->
+                    <div v-if="!resultOutside.dry_run && resultOutside.outside_bolivia > 0" class="mt-4 rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
+                        <p class="text-sm text-green-800 dark:text-green-200">
+                            ✓ <strong>{{ formatNumber(resultOutside.deleted) }}</strong> productos eliminados exitosamente.
+                            <br>
+                            <span v-if="resultOutside.deleted > 0">La página se recargará en 2 segundos...</span>
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -187,7 +346,7 @@ const formatNumber = (num: number) => {
                 <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                     <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Resumen del Análisis</h2>
 
-                    <div class="grid grid-cols-2 gap-4 md:grid-cols-6">
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-7">
                         <div class="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
                             <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ formatNumber(result.total) }}</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
@@ -211,6 +370,10 @@ const formatNumber = (num: number) => {
                         <div class="rounded-lg bg-red-100 p-4 dark:bg-red-900/30">
                             <p class="text-2xl font-bold text-red-700 dark:text-red-300">{{ formatNumber(result.deleted_count) }}</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">A Eliminar</p>
+                        </div>
+                        <div class="rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
+                            <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ formatNumber(result.html_cleaned || 0) }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Desc. con HTML</p>
                         </div>
                     </div>
 
@@ -237,6 +400,18 @@ const formatNumber = (num: number) => {
                     <div v-if="!result.dry_run && result.deleted > 0" class="mt-4 rounded-lg bg-green-100 p-3 dark:bg-green-900/30">
                         <p class="text-sm text-green-800 dark:text-green-200">
                             ✓ ¡Productos incompletos eliminados! {{ formatNumber(result.deleted) }} productos eliminados para proteger tu ACM.
+                        </p>
+                    </div>
+
+                    <div v-if="result.html_cleaned > 0" class="mt-4 rounded-lg bg-amber-100 p-3 dark:bg-amber-900/30">
+                        <p class="text-sm text-amber-800 dark:text-amber-200">
+                            <span v-if="result.dry_run">
+                                ℹ️ Se detectaron {{ formatNumber(result.html_cleaned) }} descripciones con HTML que necesitan limpieza.
+                                Activa "Limpiar HTML de descripciones" y desmarca "Modo Simulación" para aplicar la limpieza.
+                            </span>
+                            <span v-else>
+                                ✓ ¡Descripciones limpiadas! {{ formatNumber(result.html_cleaned) }} descripciones con HTML convertidas a texto plano.
+                            </span>
                         </p>
                     </div>
                 </div>
@@ -352,6 +527,44 @@ const formatNumber = (num: number) => {
                     </div>
                 </div>
 
+                <!-- Products with HTML Table -->
+                <div v-if="result.products_with_html && result.products_with_html.length > 0" class="rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-900 dark:bg-amber-900/20">
+                    <h2 class="mb-4 text-lg font-semibold text-amber-900 dark:text-amber-200">
+                        Productos con HTML en Descripción (Primeros 50 de {{ formatNumber(result.html_cleaned) }})
+                    </h2>
+                    <div class="mb-3 text-sm text-amber-800 dark:text-amber-300">
+                        <p>Estos productos tienen descripciones con formato HTML que serán limpiadas a texto plano:</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-amber-200 dark:divide-amber-700">
+                            <thead class="bg-amber-100 dark:bg-amber-900">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-white">CÓDIGO</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-amber-800 dark:text-amber-300">Nombre</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-amber-800 dark:text-amber-300">Descripción (vista previa)</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-amber-800 dark:text-amber-300">Tamaño</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-amber-200 dark:divide-amber-700">
+                                <tr v-for="item in result.products_with_html" :key="item.codigo" class="hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm font-mono font-bold text-amber-600 dark:text-amber-400">{{ item.codigo }}</td>
+                                    <td class="px-4 py-3 text-sm text-amber-900 dark:text-amber-100 max-w-xs truncate">{{ item.name }}</td>
+                                    <td class="px-4 py-3 text-sm text-amber-800 dark:text-amber-200 max-w-md truncate font-mono text-xs">
+                                        {{ item.description }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+                                        {{ formatNumber(item.description_length) }} caracteres
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="result.html_cleaned > 50" class="mt-4 text-center text-sm text-amber-800 dark:text-amber-300">
+                        ... y {{ formatNumber(result.html_cleaned - 50) }} productos más con HTML.
+                    </div>
+                </div>
+
                 <!-- No Changes -->
                 <div v-if="result.changes_count === 0" class="rounded-lg border border-green-200 bg-green-50 p-6 dark:border-green-900 dark:bg-green-900/20">
                     <div class="flex">
@@ -381,6 +594,13 @@ const formatNumber = (num: number) => {
                         <ul class="ml-6 mt-1 space-y-1">
                             <li>• Productos con precio pero sin superficie</li>
                             <li>• Productos con superficie pero sin precio</li>
+                        </ul>
+                    </p>
+                    <p>🧹 <strong>Limpia HTML de descripciones</strong> - Convierte descripciones con formato HTML a texto plano legible:
+                        <ul class="ml-6 mt-1 space-y-1">
+                            <li>• Elimina tags HTML innecesarios</li>
+                            <li>• Convierte etiquetas br y p a saltos de línea</li>
+                            <li>• Mantiene el texto legible y limpio</li>
                         </ul>
                     </p>
                     <p>✅ <strong>Muestra reporte</strong> con los cambios propuestos antes de aplicar</p>

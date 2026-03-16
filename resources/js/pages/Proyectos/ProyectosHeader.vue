@@ -3,9 +3,7 @@ import { ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useDebounceFn } from '@vueuse/core';
 import ProyectosCreateForm from './ProyectosCreateForm.vue';
-import { admin } from '@/routes-custom';
-
-const { proyectos } = admin;
+import { proyectos, proyectosShow } from '@/routes-custom';
 
 interface Category {
   id: number;
@@ -17,14 +15,12 @@ const props = defineProps<{
   filters?: {
     search?: string;
     categoria?: number;
-    estado?: number;
   };
 }>();
 
 const showCreateDialog = ref(false);
 const search = ref(props.filters?.search || '');
-const selectedCategory = ref(props.filters?.categoria || '');
-const selectedEstado = ref(props.filters?.estado || '');
+const selectedCategory = ref<number | null>(props.filters?.categoria || null);
 
 // Búsqueda con debounce
 const debouncedSearch = useDebounceFn(() => {
@@ -38,14 +34,11 @@ const applyFilters = () => {
   if (search.value) {
     filters.search = search.value;
   }
-  if (selectedCategory.value) {
+  if (selectedCategory.value !== null) {
     filters.categoria = selectedCategory.value;
   }
-  if (selectedEstado.value) {
-    filters.estado = selectedEstado.value;
-  }
 
-  router.get(proyectos.index().url, filters, {
+  router.get(proyectos.url(), filters, {
     preserveState: true,
     preserveScroll: true,
     replace: true
@@ -55,32 +48,22 @@ const applyFilters = () => {
 // Limpiar todos los filtros
 const clearFilters = () => {
   search.value = '';
-  selectedCategory.value = '';
-  selectedEstado.value = '';
+  selectedCategory.value = null;
 
-  router.get(proyectos.index().url, {}, {
+  router.get(proyectos.url(), {}, {
     preserveState: true,
     preserveScroll: true,
     replace: true
   });
 };
 
-watch([search, selectedCategory, selectedEstado], () => {
+watch([search, selectedCategory], () => {
   debouncedSearch();
 });
 
 const handleProductCreated = () => {
   showCreateDialog.value = false;
   router.reload({ only: ['productos'] });
-};
-
-//Función para ir a la página de detalles
-const verDetalles = (proyectoId: number) => {
-  router.visit(proyectos.show(proyectoId).url);
-};
-
-const goToDetalles = (id: number) => {
-  router.visit(proyectos.show(id).url);
 };
 
 </script>
@@ -133,30 +116,17 @@ const goToDetalles = (id: number) => {
             class="w-full rounded-xl border-2 px-5 py-3 text-sm transition-all focus:outline-none focus:ring-2"
             style="border-color: #e0e0e0; background-color: #FAFAFA; color: #212121; focus:border-color: #233C7A; focus:ring-color: rgba(35, 60, 122, 0.1);"
           >
-            <option value="">Todas las Categorías</option>
+            <option :value="null">Todas las Categorías</option>
             <option v-for="categoria in categorias" :key="categoria.id" :value="categoria.id">
               {{ categoria.category_name }}
             </option>
           </select>
         </div>
 
-        <!-- Filtro por Estado -->
-        <div class="flex-1">
-          <select
-            v-model="selectedEstado"
-            class="w-full rounded-xl border-2 px-5 py-3 text-sm transition-all focus:outline-none focus:ring-2"
-            style="border-color: #e0e0e0; background-color: #FAFAFA; color: #212121; focus:border-color: #233C7A; focus:ring-color: rgba(35, 60, 122, 0.1);"
-          >
-            <option value="">Todos los Estados</option>
-            <option value="1">Activo</option>
-            <option value="0">Inactivo</option>
-          </select>
-        </div>
-
         <!-- Botón Limpiar Filtros -->
         <button
           @click="clearFilters"
-          v-if="search || selectedCategory || selectedEstado"
+          v-if="search || selectedCategory !== null"
           class="rounded-xl border-2 px-5 py-3 text-sm font-semibold transition-all hover:bg-gray-100 focus:outline-none focus:ring-2"
           style="border-color: #e0e0e0; background-color: #FAFAFA; color: #212121; focus:border-color: #233C7A; focus:ring-color: rgba(35, 60, 122, 0.1);"
         >

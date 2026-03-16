@@ -379,35 +379,14 @@ const formatNumber = (num: number) => {
                                     </td>
                                     <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
                                         <div v-if="item.data_saved" class="space-y-1">
-                                            <!-- Alerta de Precio Corregido -->
-                                            <div v-if="item.data_saved.price_corrected" class="rounded bg-orange-100 p-2 dark:bg-orange-900/40">
-                                                <div class="flex items-center gap-1 text-orange-800 dark:text-orange-300">
-                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                                    </svg>
-                                                    <span class="font-semibold">Precio Corregido</span>
-                                                </div>
-                                                <p v-if="item.data_saved.price_correction_note" class="mt-1 text-xs text-orange-700 dark:text-orange-400">{{ item.data_saved.price_correction_note }}</p>
-                                            </div>
-
-                                            <!-- Alerta de Precio Calculado -->
-                                            <div v-if="item.data_saved.price_calculated" class="rounded bg-blue-100 p-2 dark:bg-blue-900/40">
-                                                <div class="flex items-center gap-1 text-blue-800 dark:text-blue-300">
-                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                                    </svg>
-                                                    <span class="font-semibold">Precio Calculado</span>
-                                                </div>
-                                                <p class="mt-1 text-xs text-blue-700 dark:text-blue-400">Moneda faltante calculada con tasa 6.95</p>
-                                            </div>
-
                                             <!-- Precios -->
                                             <div v-if="item.data_saved.price_usd" class="text-green-600">Precio USD: ${{ item.data_saved.price_usd }}</div>
                                             <div v-if="item.data_saved.price_bob" class="text-green-600">Precio BOB: Bs{{ item.data_saved.price_bob }}</div>
                                             <div v-if="item.data_saved.superficie_util" class="text-blue-600">Superficie: {{ item.data_saved.superficie_util }} m²</div>
+                                            <div v-if="item.data_saved.superficie_construida" class="text-blue-600">Construida: {{ item.data_saved.superficie_construida }} m²</div>
                                             <div v-if="item.data_saved.habitaciones" class="text-gray-700">Habitaciones: {{ item.data_saved.habitaciones }}</div>
                                             <div v-if="item.data_saved.banos" class="text-gray-700">Baños: {{ item.data_saved.banos }}</div>
-                                            <div v-if="item.data_saved.ambientes" class="text-gray-700">Ambientes: {{ item.data_saved.ambientes }}</div>
+                                            <div v-if="item.data_saved.cocheras" class="text-gray-700">Cocheras: {{ item.data_saved.cocheras }}</div>
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3">
@@ -425,25 +404,55 @@ const formatNumber = (num: number) => {
                 </div>
 
                 <!-- Skipped Items -->
-                <div v-if="result.skipped_list && result.skipped_list.length > 0" class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Items Omitidos (Primeros 10)</h2>
+                <div v-if="result.skipped_list && result.skipped_list.length > 0" class="rounded-lg border border-orange-200 bg-orange-50 p-6 dark:border-orange-900 dark:bg-orange-900/20">
+                    <h2 class="mb-4 text-lg font-semibold text-orange-900 dark:text-orange-200">Items Omitidos (Primeros 20 de {{ formatNumber(result.skipped) }})</h2>
+                    <div class="mb-3 text-sm text-orange-800 dark:text-orange-300">
+                        <p>Estos items tienen datos incompletos que pueden afectar negativamente tu ACM:</p>
+                    </div>
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead class="bg-gray-50 dark:bg-gray-900">
+                        <table class="min-w-full divide-y divide-orange-200 dark:divide-orange-700">
+                            <thead class="bg-orange-100 dark:bg-orange-900">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">ID</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Nombre</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Razón</th>
+                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-orange-900 dark:text-white">ID</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-orange-800 dark:text-orange-300">Nombre</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-orange-800 dark:text-orange-300">Motivo</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-orange-800 dark:text-orange-300">Precio</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-orange-800 dark:text-orange-300">Superficie</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-for="item in result.skipped_list" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-white">{{ item.id }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">{{ item.name }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ item.reason }}</td>
+                            <tbody class="divide-y divide-orange-200 dark:divide-orange-700">
+                                <tr v-for="item in result.skipped_list" :key="item.id" class="hover:bg-orange-100 dark:hover:bg-orange-900/30">
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm font-mono font-bold text-orange-600 dark:text-orange-400">{{ item.id }}</td>
+                                    <td class="px-4 py-3 text-sm text-orange-900 dark:text-orange-100 max-w-xs truncate">{{ item.name }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3">
+                                        <span v-if="item.reason === 'sin_precio_superficie'" class="rounded-full bg-red-200 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+                                            Sin precio
+                                        </span>
+                                        <span v-else-if="item.reason === 'precio_sin_superficie'" class="rounded-full bg-orange-200 px-2 py-1 text-xs font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                                            Precio sin superficie
+                                        </span>
+                                        <span v-else class="rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                                            {{ item.reason }}
+                                        </span>
+                                        <div v-if="item.reason_text" class="mt-1 text-xs text-orange-700 dark:text-orange-300">{{ item.reason_text }}</div>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-orange-900 dark:text-orange-100">
+                                        <div v-if="item.price_usd" class="text-green-600">${{ item.price_usd }}</div>
+                                        <div v-if="item.price_bob" class="text-blue-600">Bs{{ item.price_bob }}</div>
+                                        <div v-if="!item.price_usd && !item.price_bob" class="text-gray-500">Sin precio</div>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-orange-900 dark:text-orange-100">
+                                        <div v-if="item.superficie_util" class="text-orange-600">{{ item.superficie_util }} m²</div>
+                                        <div v-if="item.superficie_construida" class="text-purple-600">{{ item.superficie_construida }} m²</div>
+                                        <div v-if="!item.superficie_util && !item.superficie_construida" class="text-gray-500">Sin superficie</div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <div v-if="result.skipped > 20" class="mt-4 text-center text-sm text-orange-800 dark:text-orange-300">
+                        ... y {{ formatNumber(result.skipped - 20) }} items más omitidos.
                     </div>
                 </div>
 
@@ -512,25 +521,30 @@ const formatNumber = (num: number) => {
                         </div>
                     </div>
 
-                    <!-- Alerta de Precios Corregidos -->
-                    <div v-if="result?.prices_corrected > 0 || result?.prices_calculated > 0" class="mb-6 rounded-lg border-2 border-orange-300 bg-orange-50 p-4 dark:border-orange-900 dark:bg-orange-900/20">
+                    <!-- Alerta de Productos Omitidos -->
+                    <div v-if="result?.skipped > 0" class="mb-6 rounded-lg border-2 border-orange-300 bg-orange-50 p-4 dark:border-orange-900 dark:bg-orange-900/20">
                         <div class="flex items-start gap-3">
                             <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
                                 <svg class="h-5 w-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Precios Ajustados</h3>
+                                <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Productos Omitidos</h3>
                                 <div class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                                    <p v-if="result?.prices_corrected > 0">
-                                        <strong class="text-orange-800 dark:text-orange-300">{{ result.prices_corrected }}</strong> productos con precios corregidos (incoherentes)
+                                    <p>
+                                        <strong class="text-orange-800 dark:text-orange-300">{{ result.skipped }}</strong> productos fueron omitidos porque tienen datos incompletos.
                                     </p>
-                                    <p v-if="result?.prices_calculated > 0">
-                                        <strong class="text-blue-800 dark:text-blue-300">{{ result.prices_calculated }}</strong> productos con precios calculados (faltaba moneda)
-                                    </p>
+                                    <div v-if="result?.skipped_reasons" class="mt-2 space-y-1">
+                                        <p v-if="result.skipped_reasons['sin_precio_superficie']" class="text-red-800 dark:text-red-300">
+                                            • <strong>{{ result.skipped_reasons['sin_precio_superficie'] }}</strong> sin precio (USD ni BOB)
+                                        </p>
+                                        <p v-if="result.skipped_reasons['precio_sin_superficie']" class="text-orange-800 dark:text-orange-300">
+                                            • <strong>{{ result.skipped_reasons['precio_sin_superficie'] }}</strong> con precio pero sin superficie
+                                        </p>
+                                    </div>
                                     <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                                        Tasa de cambio usada: 1 USD = $6.95 BOB
+                                        Esta protección evita que datos incompletos afecten los cálculos de tu ACM/Radar.
                                     </p>
                                 </div>
                             </div>

@@ -120,6 +120,7 @@ class PropiedadPublicController extends Controller
                     'ano_construccion' => $product->ano_construccion,
                     'antiguedad' => $product->ano_construccion ? (date('Y') - $product->ano_construccion) : null,
                     'comision' => $product->comision,
+                    'descripcion' => $product->description,
                     'location' => [
                         'id' => $product->location->id,
                         'latitude' => $product->location->latitude,

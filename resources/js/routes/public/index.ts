@@ -3,7 +3,7 @@ import contacto6f4417 from './contacto'
 import propiedad from './propiedad'
 import mapa from './mapa'
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:10
  * @route '/contacto'
  */
 export const contacto = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -17,7 +17,7 @@ contacto.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:10
  * @route '/contacto'
  */
 contacto.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ contacto.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:10
  * @route '/contacto'
  */
 contacto.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -33,7 +33,7 @@ contacto.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:10
  * @route '/contacto'
  */
 contacto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -42,7 +42,7 @@ contacto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:10
  * @route '/contacto'
  */
     const contactoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -51,7 +51,7 @@ contacto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:10
  * @route '/contacto'
  */
         contactoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -59,7 +59,7 @@ contacto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:10
  * @route '/contacto'
  */
         contactoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -152,7 +152,7 @@ propiedades.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     propiedades.form = propiedadesForm
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:30
  * @route '/sobre-nosotros'
  */
 export const sobre = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -166,7 +166,7 @@ sobre.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:30
  * @route '/sobre-nosotros'
  */
 sobre.url = (options?: RouteQueryOptions) => {
@@ -174,7 +174,7 @@ sobre.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:30
  * @route '/sobre-nosotros'
  */
 sobre.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -182,7 +182,7 @@ sobre.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:30
  * @route '/sobre-nosotros'
  */
 sobre.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -191,7 +191,7 @@ sobre.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:30
  * @route '/sobre-nosotros'
  */
     const sobreForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -200,7 +200,7 @@ sobre.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:30
  * @route '/sobre-nosotros'
  */
         sobreForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -208,7 +208,7 @@ sobre.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see [serialized-closure]:2
+ * @see routes/public.php:30
  * @route '/sobre-nosotros'
  */
         sobreForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

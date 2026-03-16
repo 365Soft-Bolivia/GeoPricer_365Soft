@@ -11,4 +11,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
 
         // Analizar y reordenar productos
         Route::post('/data-reorder/analyze', [DataReorderController::class, 'analyze'])->name('admin.data-reorder.analyze');
+
+        // Analizar productos fuera de Bolivia
+        Route::post('/data-reorder/analyze-outside-bolivia', [DataReorderController::class, 'analyzeOutsideBolivia'])->name('admin.data-reorder.analyze-outside-bolivia');
     });

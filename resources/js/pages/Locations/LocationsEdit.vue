@@ -46,7 +46,7 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Ubicaciones', href: ubicaciones().url },
+    { title: 'Ubicaciones', href: ubicaciones.url() },
     { title: 'Editar Ubicaciones', href: '/ubicaciones/editar' },
 ];
 
@@ -331,7 +331,7 @@ const deleteLocation = async () => {
 };
 
 const goBack = () => {
-    router.visit(ubicaciones().url);
+    router.visit(ubicaciones.url());
 };
 
 const clearSelection = () => {

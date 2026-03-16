@@ -2,10 +2,8 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import ProyectosEditDialog from './ProyectosEditDialog.vue';
-import { admin } from '@/routes-custom';
+import { proyectos, proyectosShow, proyectosToggle, proyectosDestroy } from '@/routes-custom';
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
-
-const { proyectos } = admin;
 
 interface Category {
   id: number;
@@ -121,7 +119,7 @@ const visiblePages = computed(() => {
 
 const toggleStatus = (id: number) => {
   if (confirm('¿Estás seguro de cambiar el estado de este proyecto?')) {
-    router.post(proyectos.toggle(id).url, {}, {
+    router.post(proyectosToggle(id), {}, {
       preserveScroll: true,
       onSuccess: () => {
         router.reload({ only: ['productos'] });
@@ -132,7 +130,7 @@ const toggleStatus = (id: number) => {
 
 const deleteProduct = (id: number, name: string) => {
   if (confirm(`¿Estás seguro de eliminar el proyecto "${name}"? Esta acción no se puede deshacer.`)) {
-    router.delete(proyectos.destroy(id).url, {
+    router.delete(proyectosDestroy(id), {
       preserveScroll: true,
       onSuccess: () => {
         router.reload({ only: ['productos'] });
@@ -143,7 +141,7 @@ const deleteProduct = (id: number, name: string) => {
 
 // CAMBIADO: Navega a la página de detalles
 const viewProduct = (id: number) => {
-  router.visit(proyectos.show(id).url);
+  router.visit(proyectosShow(id));
 };
 
 const editProduct = (product: Producto) => {
@@ -178,7 +176,7 @@ const goToPage = (page: number) => {
     ...currentFilters(), // Mantener los filtros actuales (búsqueda, etc.)
   };
 
-  router.get(proyectos.index().url, params, { preserveScroll: true });
+  router.get(proyectos(), params, { preserveScroll: true });
 };
 </script>
 

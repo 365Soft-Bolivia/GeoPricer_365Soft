@@ -10,7 +10,7 @@ import { MapPin, Plus, Edit3 } from 'lucide-vue-next';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Ubicaciones',
-        href: ubicaciones().url,
+        href: ubicaciones.url(),
     },
 ];
 
@@ -43,7 +43,7 @@ const navigateTo = (route: string) => {
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <!-- Botón: Ver Mapa -->
                         <button
-                            @click="navigateTo(ubicaciones.mapa().url)"
+                            @click="navigateTo(ubicaciones.mapa().url())"
                             class="group relative overflow-hidden rounded-2xl p-10 text-white shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1"
                             style="background: linear-gradient(135deg, #233C7A 0%, #1a2e5f 100%);"
                         >
@@ -72,7 +72,7 @@ const navigateTo = (route: string) => {
 
                         <!-- Botón: Asignar Ubicación -->
                         <button
-                            @click="navigateTo(ubicaciones.asignar().url)"
+                            @click="navigateTo(ubicaciones.asignar().url())"
                             class="group relative overflow-hidden rounded-2xl p-10 text-white shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1"
                             style="background: linear-gradient(135deg, #E0081D 0%, #b30613 100%);"
                         >
@@ -101,7 +101,7 @@ const navigateTo = (route: string) => {
 
                         <!-- Botón: Editar Ubicaciones -->
                         <button
-                            @click="navigateTo(ubicaciones.editar().url)"
+                            @click="navigateTo(ubicaciones.editar().url())"
                             class="group relative overflow-hidden rounded-2xl p-10 text-white shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1"
                             style="background: linear-gradient(135deg, #233C7A 0%, #1a2e5f 100%);"
                         >

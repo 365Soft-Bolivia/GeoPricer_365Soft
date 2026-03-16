@@ -52,7 +52,7 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Ubicaciones', href: ubicaciones().url },
+    { title: 'Ubicaciones', href: ubicaciones.url() },
     { title: 'Asignar Ubicación', href: '/ubicaciones/asignar' },
 ];
 
@@ -362,7 +362,7 @@ const clearSelection = () => {
     }
 };
 
-const goBack = () => router.visit(ubicaciones().url);
+const goBack = () => router.visit(ubicaciones.url());
 
 onMounted(() => initMap());
 onUnmounted(() => {

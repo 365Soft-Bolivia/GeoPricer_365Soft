@@ -36,11 +36,12 @@ defineProps<{
   pagination?: Pagination;
   filters?: {
     search?: string;
+    categoria?: number;
   };
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Proyectos', href: '/proyectos' },
+  { title: 'Proyectos', href: '/admin/proyectos' },
 ];
 </script>
 

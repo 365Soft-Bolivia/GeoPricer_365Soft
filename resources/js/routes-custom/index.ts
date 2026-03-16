@@ -1,10 +1,6 @@
 /**
- * Static route helpers — independent of Wayfinder-generated files.
- * These DO NOT import from @/routes or @/wayfinder because wayfinder:generate
- * wipes and rewrites those directories at build time on Railway.
- *
- * Each export is a callable function (returning the URL string) that also
- * has .url() and .form() methods, matching the Wayfinder route API.
+ * Static route helpers — completely independent of Wayfinder.
+ * Todas las rutas se definen aquí de forma estática y segura.
  */
 
 type Method = 'get' | 'post' | 'put' | 'delete';
@@ -12,13 +8,8 @@ type Method = 'get' | 'post' | 'put' | 'delete';
 function makeRoute(url: string, method: Method = 'get') {
   const fn = () => url;
   fn.url = () => url;
-  fn.form = () => ({ action: url, method });
   return fn;
 }
-
-// Importar rutas wayfinder para módulos que necesitan sub-rutas
-import ubicacionesRoutes from '@/routes/admin/ubicaciones';
-import proyectosRoutes from '@/routes/admin/proyectos';
 
 /** GET /admin/dashboard */
 export const dashboard = makeRoute('/admin/dashboard');
@@ -38,6 +29,16 @@ export const home = makeRoute('/');
 /** GET /admin/proyectos */
 export const proyectos = makeRoute('/admin/proyectos');
 
+/** POST /admin/proyectos (crear nuevo) */
+export const proyectosStore = makeRoute('/admin/proyectos', 'post');
+
+// Sub-rutas de proyectos (funciones simples que retornan URLs)
+export const proyectosShow = (id: number) => `/admin/proyectos/${id}`;
+export const proyectosEdit = (id: number) => `/admin/proyectos/${id}/editar`;
+export const proyectosUpdate = (id: number) => `/admin/proyectos/${id}`;
+export const proyectosToggle = (id: number) => `/admin/proyectos/${id}/toggle`;
+export const proyectosDestroy = (id: number) => `/admin/proyectos/${id}`;
+
 /** GET /admin/categorias */
 export const categorias = makeRoute('/admin/categorias');
 
@@ -47,8 +48,82 @@ export const accesos = makeRoute('/admin/accesos');
 /** GET /admin/roles */
 export const roles = makeRoute('/admin/roles');
 
-/** GET /admin/ubicaciones */
-export const ubicaciones = makeRoute('/admin/ubicaciones');
+/** GET /admin/ubicaciones - Rutas completas del módulo */
+export const ubicaciones = {
+  // Ruta raíz
+  url: () => '/admin/ubicaciones',
+  
+  // Sub-rutas principales - son funciones invocables
+  mapa: (options?: any) => ({
+    url: () => '/admin/ubicaciones/mapa',
+    get: () => ({ url: '/admin/ubicaciones/mapa', method: 'get' as const }),
+    form: () => ({ action: '/admin/ubicaciones/mapa', method: 'get' as const }),
+  }),
+  
+  asignar: (options?: any) => ({
+    url: () => '/admin/ubicaciones/asignar',
+    get: () => ({ url: '/admin/ubicaciones/asignar', method: 'get' as const }),
+    form: () => ({ action: '/admin/ubicaciones/asignar', method: 'get' as const }),
+  }),
+  
+  editar: (options?: any) => ({
+    url: () => '/admin/ubicaciones/editar',
+    get: () => ({ url: '/admin/ubicaciones/editar', method: 'get' as const }),
+    form: () => ({ action: '/admin/ubicaciones/editar', method: 'get' as const }),
+  }),
+  
+  // Endpoints de API
+  api: {
+    listar: {
+      url: () => '/admin/ubicaciones/api/listar',
+      get: () => ({ url: '/admin/ubicaciones/api/listar', method: 'get' as const }),
+    },
+    
+    store: (productId: number | { id: number }) => {
+      const id = typeof productId === 'number' ? productId : productId.id;
+      return {
+        url: () => `/admin/ubicaciones/api/${id}`,
+        form: () => ({ 
+          action: `/admin/ubicaciones/api/${id}`, 
+          method: 'post' as const
+        }),
+      };
+    },
+    
+    show: (productId: number | { id: number }) => {
+      const id = typeof productId === 'number' ? productId : productId.id;
+      return {
+        url: () => `/admin/ubicaciones/api/${id}/obtener`,
+        get: () => ({ 
+          url: `/admin/ubicaciones/api/${id}/obtener`, 
+          method: 'get' as const
+        }),
+      };
+    },
+    
+    toggleActive: (productId: number | { id: number }) => {
+      const id = typeof productId === 'number' ? productId : productId.id;
+      return {
+        url: () => `/admin/ubicaciones/api/${id}/toggle-status`,
+      };
+    },
+    
+    destroy: (productId: number | { id: number }) => {
+      const id = typeof productId === 'number' ? productId : productId.id;
+      return {
+        url: () => `/admin/ubicaciones/api/${id}`,
+      };
+    },
+    
+    nearby: {
+      url: () => '/admin/ubicaciones/api/cercanos',
+      form: () => ({ 
+        action: '/admin/ubicaciones/api/cercanos', 
+        method: 'post' as const
+      }),
+    },
+  },
+};
 
 /** GET /admin/data-import */
 export const dataImport = makeRoute('/admin/data-import');
@@ -59,13 +134,19 @@ export const dataReorder = makeRoute('/admin/data-reorder');
 /** Group all admin routes for navigation */
 export const admin = {
   dashboard,
-  proyectos: proyectosRoutes,
+  proyectos,
+  proyectosStore,
+  proyectosShow,
+  proyectosEdit,
+  proyectosUpdate,
+  proyectosToggle,
+  proyectosDestroy,
   categorias,
   accesos: {
     listar: accesos,
   },
   roles,
-  ubicaciones: ubicacionesRoutes,
+  ubicaciones,
   dataImport,
   dataReorder,
 };

@@ -28,7 +28,6 @@ const breadcrumbs: BreadcrumbItem[] = [
                 >
                     <PlaceholderPattern />
                     <h1 style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
-                        Hola Mundo testeo 2 aver si funciona
                     </h1>
                 </div>
                 <div
