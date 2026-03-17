@@ -1,12 +1,32 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { MapPin } from 'lucide-vue-next';
-import { publicRoutes } from '@/routes-custom'; // Importamos desde el directorio seguro - fixed
+import { publicRoutes } from '@/routes-custom';
+import { useAppearance } from '@/composables/useAppearance';
 
 const mobileMenuOpen = ref(false);
+const { appearance } = useAppearance();
 
 const { home } = publicRoutes;
+
+// Determinar si el tema es oscuro
+const isDarkMode = computed(() => {
+    if (appearance.value === 'dark') return true;
+    if (appearance.value === 'light') return false;
+    // appearance === 'system', detectar preferencia del sistema
+    if (typeof window !== 'undefined') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+});
+
+// Seleccionar el icono adecuado según el tema
+const logoSrc = computed(() => {
+    return isDarkMode.value
+        ? '/Recurso 2Analytics 2.png' // Icono para modo oscuro
+        : '/Recurso 1Analytics 1.png'; // Icono para modo claro
+});
 
 const navigation = [
     { name: 'Inicio', href: home().url },
@@ -21,7 +41,7 @@ const navigation = [
                 <div class="flex items-center">
                     <Link :href="home()" class="flex items-center group">
                         <div class="bg-white p-2 rounded-lg mr-3 shadow-lg group-hover:scale-110 transition-transform">
-                            <img src="/logoalfa.png" alt="Alfa Inmobiliaria Bolivia" class="h-14 w-auto object-contain" />
+                            <img :src="logoSrc" alt="Alfa Inmobiliaria Bolivia" class="h-14 w-auto object-contain" />
                         </div>
                         <div class="flex flex-col">
                             <span class="text-2xl font-bold text-white tracking-tight" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">

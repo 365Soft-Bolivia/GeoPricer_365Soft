@@ -108,6 +108,7 @@ class DataReorderController extends Controller
         $validator = Validator::make($request->all(), [
             'dry_run' => 'sometimes|boolean',
             'clean_html' => 'sometimes|boolean',
+            'delete_without_location' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -124,10 +125,15 @@ class DataReorderController extends Controller
         try {
             $isDryRun = $request->input('dry_run', true);
             $cleanHtml = $request->input('clean_html', false);
+            $deleteWithoutLocation = $request->input('delete_without_location', false);
             $batchSize = 1000; // Procesar de 1000 en 1000
 
             // Log para debugging
-            \Log::info('DataReorder: Iniciando análisis', ['dry_run' => $isDryRun, 'clean_html' => $cleanHtml]);
+            \Log::info('DataReorder: Iniciando análisis', [
+                'dry_run' => $isDryRun,
+                'clean_html' => $cleanHtml,
+                'delete_without_location' => $deleteWithoutLocation
+            ]);
 
             // Contar total de productos
             $totalProducts = Product::count();
@@ -172,18 +178,21 @@ class DataReorderController extends Controller
             $incorrectOperation = 0;
             $bothIncorrect = 0;
             $processedCount = 0;
+            $productsWithoutLocation = 0; // Contador específico de productos sin ubicación
             $productsToDelete = []; // Productos incompletos para eliminar
 
-            Product::with(['category'])->chunk($batchSize, function ($products) use (
+            Product::with(['category', 'location'])->chunk($batchSize, function ($products) use (
                 &$changes,
                 &$correct,
                 &$incorrectCategory,
                 &$incorrectOperation,
                 &$bothIncorrect,
                 &$processedCount,
+                &$productsWithoutLocation,
                 &$productsToDelete,
                 &$categoryMap,
-                $totalProducts
+                $totalProducts,
+                &$deleteWithoutLocation
             ) {
                 foreach ($products as $product) {
                     try {
@@ -196,6 +205,24 @@ class DataReorderController extends Controller
 
                         $hasPrice = ($product->price_usd > 0) || ($product->price_bob > 0);
                         $hasSurface = ($product->superficie_util > 0) || ($product->superficie_construida > 0);
+                        $hasLocation = $product->location !== null;
+
+                        // CASO 0: NO tiene ubicación -> ELIMINAR (si está activado el flag)
+                        if ($deleteWithoutLocation && !$hasLocation) {
+                            $productsToDelete[] = [
+                                'id' => $product->id,
+                                'codigo' => $product->codigo_inmueble ?? $product->sku ?? $product->id,
+                                'name' => $product->name,
+                                'reason' => 'sin_ubicacion',
+                                'price_usd' => $product->price_usd,
+                                'price_bob' => $product->price_bob,
+                                'superficie_util' => $product->superficie_util,
+                                'superficie_construida' => $product->superficie_construida,
+                            ];
+                            $productsWithoutLocation++; // Incrementar contador específico
+                            $processedCount++;
+                            continue; // Pasar al siguiente producto
+                        }
 
                         // CASO 1: Tiene precio pero NO tiene superficie -> ELIMINAR
                         if ($hasPrice && !$hasSurface) {
@@ -300,7 +327,8 @@ class DataReorderController extends Controller
             \Log::info('DataReorder: Análisis completado', [
                 'correct' => $correct,
                 'changes' => count($changes),
-                'to_delete' => count($productsToDelete)
+                'to_delete' => count($productsToDelete),
+                'without_location' => $productsWithoutLocation
             ]);
 
             // Aplicar cambios si no es dry run
@@ -331,7 +359,7 @@ class DataReorderController extends Controller
                 \Log::info('DataReorder: Descripciones con HTML detectadas', ['html_with_html' => $htmlCleaned]);
             }
 
-            if (!$isDryRun && (!empty($changes) || !empty($productsToDelete) || $cleanHtml)) {
+            if (!$isDryRun && (!empty($changes) || !empty($productsToDelete) || $cleanHtml || $productsWithoutLocation > 0)) {
                 DB::beginTransaction();
                 try {
                     // 1. Actualizar productos con cambios de categoría/operación
@@ -380,7 +408,12 @@ class DataReorderController extends Controller
                     }
 
                     DB::commit();
-                    \Log::info('DataReorder: Cambios aplicados', ['applied' => $applied, 'deleted' => $deleted, 'html_cleaned' => $htmlCleaned]);
+                    \Log::info('DataReorder: Cambios aplicados', [
+                        'applied' => $applied,
+                        'deleted' => $deleted,
+                        'deleted_without_location' => $productsWithoutLocation,
+                        'html_cleaned' => $htmlCleaned
+                    ]);
                 } catch (\Exception $e) {
                     DB::rollBack();
                     \Log::error('DataReorder: Error aplicando cambios', [
@@ -405,6 +438,8 @@ class DataReorderController extends Controller
                     'deleted_count' => count($productsToDelete),
                     'products_to_delete' => array_slice($productsToDelete, 0, 50), // Primeros 50 a eliminar
                     'deleted' => $deleted,
+                    'products_without_location' => $productsWithoutLocation,
+                    'delete_without_location_enabled' => $deleteWithoutLocation,
                     'html_cleaned' => $htmlCleaned,
                     'products_with_html' => $productsWithHtml, // Productos con HTML detectados
                     'clean_html_enabled' => $cleanHtml,

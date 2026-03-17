@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { admin } from '@/routes-custom';
+import { router } from '@inertiajs/vue3';
 
 interface Category {
   id: number;
@@ -47,8 +47,6 @@ const emit = defineEmits<{
   updated: [];
 }>();
 
-const { proyectos } = admin;
-
 const form = useForm({
   name: props.product.name,
   codigo_inmueble: props.product.codigo_inmueble,
@@ -78,10 +76,75 @@ const form = useForm({
 const currentTab = ref<'general' | 'detalles' | 'otros'>('general');
 
 const submit = () => {
-  form.put(proyectos.update(props.product.id).url, {
+  // -------- VALIDACIÓN DE AL MENOS UN PRECIO --------
+  if (!form.price_usd && !form.price_bob) {
+    form.setError('price_usd', 'Debes ingresar al menos un precio (USD o BOB).');
+    form.setError('price_bob', 'Debes ingresar al menos un precio (USD o BOB).');
+    currentTab.value = 'general';
+    return;
+  }
+
+  // -------- VALIDACIÓN OBLIGATORIA DE CATEGORÍA --------
+  if (!form.category_id) {
+    form.setError('category_id', 'Debes seleccionar una categoría.');
+    currentTab.value = 'general';
+    return;
+  }
+
+  // Preparar datos limpiando strings vacíos
+  const cleanData = {
+    name: form.name || '',
+    codigo_inmueble: form.codigo_inmueble || '',
+    price_usd: form.price_usd || null,
+    price_bob: form.price_bob || null,
+    superficie_util: form.superficie_util || null,
+    superficie_construida: form.superficie_construida || null,
+    ambientes: form.ambientes || null,
+    habitaciones: form.habitaciones || null,
+    banos: form.banos || null,
+    cocheras: form.cocheras || null,
+    ano_construccion: form.ano_construccion || null,
+    operacion: form.operacion || 'venta',
+    comision: form.comision || null,
+    taxes: form.taxes || null,
+    description: form.description || '',
+    category_id: form.category_id || null,
+    sku: form.sku || '',
+    hsn_sac_code: form.hsn_sac_code || '',
+    allow_purchase: form.allow_purchase ?? true,
+    is_public: form.is_public ?? true,
+    downloadable: form.downloadable ?? false,
+    downloadable_file: form.downloadable_file || '',
+  };
+
+  console.log('DEBUG: Enviando PUT a /admin/proyectos/' + props.product.id);
+  console.log('DEBUG: Datos a enviar:', cleanData);
+
+  router.put(`/admin/proyectos/${props.product.id}`, cleanData, {
     preserveScroll: true,
-    onSuccess: () => {
-      emit('updated');
+    onSuccess: (page) => {
+      console.log('DEBUG: Response page:', page);
+      console.log('DEBUG: page.props:', page.props);
+
+      // Verificar si hay errores del backend
+      if (page.props.errors && Object.keys(page.props.errors).length > 0) {
+        // Mostrar errores en el formulario
+        Object.keys(page.props.errors).forEach(key => {
+          const errorValue = page.props.errors[key];
+          if (Array.isArray(errorValue)) {
+            form.setError(key, errorValue[0]);
+          } else {
+            form.setError(key, errorValue);
+          }
+        });
+        // Mantener el diálogo abierto para que el usuario corrija los errores
+      } else if (page.props.flash && page.props.flash.success) {
+        // Si hay mensaje de éxito en flash, cerrar el diálogo y emitir evento
+        emit('updated');
+      } else {
+        // Si no hay errores ni éxito, emitir igual (por defecto)
+        emit('updated');
+      }
     },
   });
 };

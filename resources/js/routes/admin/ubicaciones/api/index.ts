@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ProductLocationController::listar
- * @see app/Http/Controllers/ProductLocationController.php:67
+ * @see app/Http/Controllers/ProductLocationController.php:71
  * @route '/admin/ubicaciones/api/listar'
  */
 export const listar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ listar.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::listar
- * @see app/Http/Controllers/ProductLocationController.php:67
+ * @see app/Http/Controllers/ProductLocationController.php:71
  * @route '/admin/ubicaciones/api/listar'
  */
 listar.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ listar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::listar
- * @see app/Http/Controllers/ProductLocationController.php:67
+ * @see app/Http/Controllers/ProductLocationController.php:71
  * @route '/admin/ubicaciones/api/listar'
  */
 listar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ listar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ProductLocationController::listar
- * @see app/Http/Controllers/ProductLocationController.php:67
+ * @see app/Http/Controllers/ProductLocationController.php:71
  * @route '/admin/ubicaciones/api/listar'
  */
 listar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ listar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::listar
- * @see app/Http/Controllers/ProductLocationController.php:67
+ * @see app/Http/Controllers/ProductLocationController.php:71
  * @route '/admin/ubicaciones/api/listar'
  */
     const listarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ listar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::listar
- * @see app/Http/Controllers/ProductLocationController.php:67
+ * @see app/Http/Controllers/ProductLocationController.php:71
  * @route '/admin/ubicaciones/api/listar'
  */
         listarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ listar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ProductLocationController::listar
- * @see app/Http/Controllers/ProductLocationController.php:67
+ * @see app/Http/Controllers/ProductLocationController.php:71
  * @route '/admin/ubicaciones/api/listar'
  */
         listarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ listar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     listar.form = listarForm
 /**
 * @see \App\Http\Controllers\ProductLocationController::show
- * @see app/Http/Controllers/ProductLocationController.php:113
+ * @see app/Http/Controllers/ProductLocationController.php:117
  * @route '/admin/ubicaciones/api/{product}/obtener'
  */
 export const show = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::show
- * @see app/Http/Controllers/ProductLocationController.php:113
+ * @see app/Http/Controllers/ProductLocationController.php:117
  * @route '/admin/ubicaciones/api/{product}/obtener'
  */
 show.url = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -127,7 +127,7 @@ show.url = (args: { product: number | { id: number } } | [product: number | { id
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::show
- * @see app/Http/Controllers/ProductLocationController.php:113
+ * @see app/Http/Controllers/ProductLocationController.php:117
  * @route '/admin/ubicaciones/api/{product}/obtener'
  */
 show.get = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -136,7 +136,7 @@ show.get = (args: { product: number | { id: number } } | [product: number | { id
 })
 /**
 * @see \App\Http\Controllers\ProductLocationController::show
- * @see app/Http/Controllers/ProductLocationController.php:113
+ * @see app/Http/Controllers/ProductLocationController.php:117
  * @route '/admin/ubicaciones/api/{product}/obtener'
  */
 show.head = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -146,7 +146,7 @@ show.head = (args: { product: number | { id: number } } | [product: number | { i
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::show
- * @see app/Http/Controllers/ProductLocationController.php:113
+ * @see app/Http/Controllers/ProductLocationController.php:117
  * @route '/admin/ubicaciones/api/{product}/obtener'
  */
     const showForm = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -156,7 +156,7 @@ show.head = (args: { product: number | { id: number } } | [product: number | { i
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::show
- * @see app/Http/Controllers/ProductLocationController.php:113
+ * @see app/Http/Controllers/ProductLocationController.php:117
  * @route '/admin/ubicaciones/api/{product}/obtener'
  */
         showForm.get = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -165,7 +165,7 @@ show.head = (args: { product: number | { id: number } } | [product: number | { i
         })
             /**
 * @see \App\Http\Controllers\ProductLocationController::show
- * @see app/Http/Controllers/ProductLocationController.php:113
+ * @see app/Http/Controllers/ProductLocationController.php:117
  * @route '/admin/ubicaciones/api/{product}/obtener'
  */
         showForm.head = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -181,7 +181,7 @@ show.head = (args: { product: number | { id: number } } | [product: number | { i
     show.form = showForm
 /**
 * @see \App\Http\Controllers\ProductLocationController::store
- * @see app/Http/Controllers/ProductLocationController.php:142
+ * @see app/Http/Controllers/ProductLocationController.php:146
  * @route '/admin/ubicaciones/api/{product}'
  */
 export const store = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -196,7 +196,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::store
- * @see app/Http/Controllers/ProductLocationController.php:142
+ * @see app/Http/Controllers/ProductLocationController.php:146
  * @route '/admin/ubicaciones/api/{product}'
  */
 store.url = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -229,7 +229,7 @@ store.url = (args: { product: number | { id: number } } | [product: number | { i
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::store
- * @see app/Http/Controllers/ProductLocationController.php:142
+ * @see app/Http/Controllers/ProductLocationController.php:146
  * @route '/admin/ubicaciones/api/{product}'
  */
 store.post = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -239,7 +239,7 @@ store.post = (args: { product: number | { id: number } } | [product: number | { 
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::store
- * @see app/Http/Controllers/ProductLocationController.php:142
+ * @see app/Http/Controllers/ProductLocationController.php:146
  * @route '/admin/ubicaciones/api/{product}'
  */
     const storeForm = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -249,7 +249,7 @@ store.post = (args: { product: number | { id: number } } | [product: number | { 
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::store
- * @see app/Http/Controllers/ProductLocationController.php:142
+ * @see app/Http/Controllers/ProductLocationController.php:146
  * @route '/admin/ubicaciones/api/{product}'
  */
         storeForm.post = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -260,7 +260,7 @@ store.post = (args: { product: number | { id: number } } | [product: number | { 
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\ProductLocationController::toggleStatus
- * @see app/Http/Controllers/ProductLocationController.php:202
+ * @see app/Http/Controllers/ProductLocationController.php:206
  * @route '/admin/ubicaciones/api/{product}/toggle-status'
  */
 export const toggleStatus = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -275,7 +275,7 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::toggleStatus
- * @see app/Http/Controllers/ProductLocationController.php:202
+ * @see app/Http/Controllers/ProductLocationController.php:206
  * @route '/admin/ubicaciones/api/{product}/toggle-status'
  */
 toggleStatus.url = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -308,7 +308,7 @@ toggleStatus.url = (args: { product: number | { id: number } } | [product: numbe
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::toggleStatus
- * @see app/Http/Controllers/ProductLocationController.php:202
+ * @see app/Http/Controllers/ProductLocationController.php:206
  * @route '/admin/ubicaciones/api/{product}/toggle-status'
  */
 toggleStatus.post = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -318,7 +318,7 @@ toggleStatus.post = (args: { product: number | { id: number } } | [product: numb
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::toggleStatus
- * @see app/Http/Controllers/ProductLocationController.php:202
+ * @see app/Http/Controllers/ProductLocationController.php:206
  * @route '/admin/ubicaciones/api/{product}/toggle-status'
  */
     const toggleStatusForm = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -328,7 +328,7 @@ toggleStatus.post = (args: { product: number | { id: number } } | [product: numb
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::toggleStatus
- * @see app/Http/Controllers/ProductLocationController.php:202
+ * @see app/Http/Controllers/ProductLocationController.php:206
  * @route '/admin/ubicaciones/api/{product}/toggle-status'
  */
         toggleStatusForm.post = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -339,7 +339,7 @@ toggleStatus.post = (args: { product: number | { id: number } } | [product: numb
     toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\ProductLocationController::destroy
- * @see app/Http/Controllers/ProductLocationController.php:238
+ * @see app/Http/Controllers/ProductLocationController.php:242
  * @route '/admin/ubicaciones/api/{product}'
  */
 export const destroy = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -354,7 +354,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::destroy
- * @see app/Http/Controllers/ProductLocationController.php:238
+ * @see app/Http/Controllers/ProductLocationController.php:242
  * @route '/admin/ubicaciones/api/{product}'
  */
 destroy.url = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -387,7 +387,7 @@ destroy.url = (args: { product: number | { id: number } } | [product: number | {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::destroy
- * @see app/Http/Controllers/ProductLocationController.php:238
+ * @see app/Http/Controllers/ProductLocationController.php:242
  * @route '/admin/ubicaciones/api/{product}'
  */
 destroy.delete = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -397,7 +397,7 @@ destroy.delete = (args: { product: number | { id: number } } | [product: number 
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::destroy
- * @see app/Http/Controllers/ProductLocationController.php:238
+ * @see app/Http/Controllers/ProductLocationController.php:242
  * @route '/admin/ubicaciones/api/{product}'
  */
     const destroyForm = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -412,7 +412,7 @@ destroy.delete = (args: { product: number | { id: number } } | [product: number 
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::destroy
- * @see app/Http/Controllers/ProductLocationController.php:238
+ * @see app/Http/Controllers/ProductLocationController.php:242
  * @route '/admin/ubicaciones/api/{product}'
  */
         destroyForm.delete = (args: { product: number | { id: number } } | [product: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -428,7 +428,7 @@ destroy.delete = (args: { product: number | { id: number } } | [product: number 
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\ProductLocationController::cercanos
- * @see app/Http/Controllers/ProductLocationController.php:266
+ * @see app/Http/Controllers/ProductLocationController.php:270
  * @route '/admin/ubicaciones/api/cercanos'
  */
 export const cercanos = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -443,7 +443,7 @@ cercanos.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::cercanos
- * @see app/Http/Controllers/ProductLocationController.php:266
+ * @see app/Http/Controllers/ProductLocationController.php:270
  * @route '/admin/ubicaciones/api/cercanos'
  */
 cercanos.url = (options?: RouteQueryOptions) => {
@@ -452,7 +452,7 @@ cercanos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::cercanos
- * @see app/Http/Controllers/ProductLocationController.php:266
+ * @see app/Http/Controllers/ProductLocationController.php:270
  * @route '/admin/ubicaciones/api/cercanos'
  */
 cercanos.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -462,7 +462,7 @@ cercanos.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::cercanos
- * @see app/Http/Controllers/ProductLocationController.php:266
+ * @see app/Http/Controllers/ProductLocationController.php:270
  * @route '/admin/ubicaciones/api/cercanos'
  */
     const cercanosForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -472,7 +472,7 @@ cercanos.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::cercanos
- * @see app/Http/Controllers/ProductLocationController.php:266
+ * @see app/Http/Controllers/ProductLocationController.php:270
  * @route '/admin/ubicaciones/api/cercanos'
  */
         cercanosForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

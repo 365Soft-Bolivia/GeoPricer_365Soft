@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { type BreadcrumbItem } from '@/types';
@@ -17,9 +17,15 @@ const breadcrumbs: BreadcrumbItem[] = [
 const isAnalyzing = ref(false);
 const isDryRun = ref(true);
 const cleanHtml = ref(true);
+const deleteWithoutLocation = ref(false);
 const result = ref<any>(null);
 const resultOutside = ref<any>(null);
 const error = ref<string | null>(null);
+
+// Propiedad computada para el contador de productos sin ubicación
+const productsWithoutLocationCount = computed(() => {
+    return result.value?.products_without_location || 0;
+});
 
 // Función para obtener el token CSRF con múltiples fallbacks
 const getCsrfToken = (): string => {
@@ -72,6 +78,7 @@ const analyzeProducts = async () => {
             body: JSON.stringify({
                 dry_run: isDryRun.value,
                 clean_html: cleanHtml.value,
+                delete_without_location: deleteWithoutLocation.value,
             }),
         });
 
@@ -227,6 +234,12 @@ const formatNumber = (num: number) => {
                             <input type="checkbox" v-model="cleanHtml" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
                             <span class="text-sm text-gray-700 dark:text-gray-300">
                                 Limpiar HTML de descripciones
+                            </span>
+                        </label>
+                        <label class="flex items-center gap-2 border-2 border-red-200 rounded px-2" :class="deleteWithoutLocation ? 'bg-red-50' : ''">
+                            <input type="checkbox" v-model="deleteWithoutLocation" class="h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500">
+                            <span class="text-sm text-red-700 dark:text-red-300">
+                                ⚠️ Eliminar productos sin ubicación ({{ productsWithoutLocationCount || 0 }})
                             </span>
                         </label>
                     </div>
@@ -562,6 +575,59 @@ const formatNumber = (num: number) => {
 
                     <div v-if="result.html_cleaned > 50" class="mt-4 text-center text-sm text-amber-800 dark:text-amber-300">
                         ... y {{ formatNumber(result.html_cleaned - 50) }} productos más con HTML.
+                    </div>
+                </div>
+
+                <!-- Products Without Location Section -->
+                <div v-if="result.products_without_location > 0" class="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-900/20">
+                    <h2 class="mb-4 text-lg font-semibold text-red-900 dark:text-red-200">
+                        Productos Sin Ubicación (Primeros 50 de {{ formatNumber(result.products_without_location) }})
+                    </h2>
+                    <div class="mb-3 text-sm text-red-800 dark:text-red-300">
+                        <p>Estos productos no tienen coordenadas geográficas asignadas:</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-red-200 dark:divide-red-700">
+                            <thead class="bg-red-100 dark:bg-red-900">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-red-900 dark:text-white bg-red-100 dark:bg-red-900">CÓDIGO</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">NOMBRE</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">PRECIO USD</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">PRECIO BOB</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">SUPERFICIE ÚTIL</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">SUPERFICIE CONSTRUIDA</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-800 dark:text-red-300">RAZÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-red-200 dark:divide-red-700">
+                                <tr v-for="item in result.products_to_delete" :key="item.codigo" class="hover:bg-red-100 dark:hover:bg-red-900/30">
+                                    <td class="whitespace-nowrap px-4 py-3 text-sm font-mono font-bold text-red-600 dark:text-red-400">{{ item.codigo }}</td>
+                                    <td class="px-4 py-3 text-sm text-red-900 dark:text-red-100 max-w-xs truncate">{{ item.name }}</td>
+                                    <td class="px-4 py-3 text-sm text-red-800 dark:text-red-200">
+                                        {{ item.price_usd ? '$' + formatNumber(item.price_usd) : '-' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-red-800 dark:text-red-200">
+                                        {{ item.price_bob ? 'Bs ' + formatNumber(item.price_bob) : '-' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-red-800 dark:text-red-200">
+                                        {{ item.superficie_util ? formatNumber(item.superficie_util) + ' m²' : '-' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-red-800 dark:text-red-200">
+                                        {{ item.superficie_construida ? formatNumber(item.superficie_construida) + ' m²' : '-' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-red-800 dark:text-red-200">
+                                        <span v-if="item.reason === 'sin_ubicacion'" class="inline-flex items-center gap-1">
+                                            <span class="px-2 py-1 bg-red-200 text-red-900 text-xs font-bold rounded">⚠️ Sin Ubicación</span>
+                                        </span>
+                                        <span v-else class="px-2 py-1 bg-red-200 text-red-900 text-xs font-bold rounded">{{ item.reason }}</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="result.products_without_location > 50" class="mt-4 text-center text-sm text-red-800 dark:text-red-300">
+                        ... y {{ formatNumber(result.products_without_location - 50) }} productos más sin ubicación.
                     </div>
                 </div>
 

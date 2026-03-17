@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { admin } from '@/routes-custom';
-
-const { proyectos } = admin;
 
 interface Category {
   id: number;
@@ -62,7 +59,37 @@ const submit = () => {
     return;
   }
 
-  form.post(proyectos.store().url, {
+  // Preparar datos limpiando strings vacíos
+  const cleanData = {
+    name: form.name || '',
+    codigo_inmueble: form.codigo_inmueble || '',
+    price_usd: form.price_usd || null,
+    price_bob: form.price_bob || null,
+    superficie_util: form.superficie_util || null,
+    superficie_construida: form.superficie_construida || null,
+    ambientes: form.ambientes || null,
+    habitaciones: form.habitaciones || null,
+    banos: form.banos || null,
+    cocheras: form.cocheras || null,
+    ano_construccion: form.ano_construccion || null,
+    operacion: form.operacion || 'venta',
+    comision: form.comision || null,
+    taxes: form.taxes || null,
+    description: form.description || '',
+    category_id: form.category_id || null,
+    sku: form.sku || '',
+    hsn_sac_code: form.hsn_sac_code || '',
+    allow_purchase: form.allow_purchase ?? true,
+    is_public: form.is_public ?? true,
+    downloadable: form.downloadable ?? false,
+    downloadable_file: form.downloadable_file || '',
+  };
+
+  // Usar directamente la URL como string para evitar problemas
+  const submitUrl = '/admin/proyectos';
+
+  form.post(submitUrl, {
+    data: cleanData,
     preserveScroll: true,
     onSuccess: () => {
       emit('created');
@@ -110,22 +137,22 @@ const submit = () => {
                 <div class="border-b border-gray-200 dark:border-gray-700">
                   <nav class="-mb-px flex space-x-8">
                     <button type="button" @click="currentTab = 'general'"
-                      :class="currentTab === 'general' 
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                      :class="currentTab === 'general'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400'"
                       class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium">
                       Información General
                     </button>
                     <button type="button" @click="currentTab = 'detalles'"
-                      :class="currentTab === 'detalles' 
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                      :class="currentTab === 'detalles'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400'"
                       class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium">
                       Detalles del Inmueble
                     </button>
                     <button type="button" @click="currentTab = 'otros'"
-                      :class="currentTab === 'otros' 
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                      :class="currentTab === 'otros'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400'"
                       class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium">
                       Otros Datos
@@ -232,7 +259,7 @@ const submit = () => {
                       <select v-model="form.category_id" required class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm
                                                                         focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
                                                                         dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm">
-                        <option value="">Seleccione una categoría</option>
+                        <option :value="null">Seleccione una categoría</option>
                         <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
                           {{ cat.category_name }}
                         </option>

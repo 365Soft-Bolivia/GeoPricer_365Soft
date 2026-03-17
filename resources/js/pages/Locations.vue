@@ -147,7 +147,7 @@ const navigateTo = (route: string) => {
                                 </div>
                             </div>
                             <div class="text-5xl font-bold" style="font-family: 'Montserrat', sans-serif; font-weight: 700; color: #233C7A;">
-                                {{ $page.props.productsConUbicacion?.length || 0 }}
+                                {{ $page.props.totalPropiedades || 0 }}
                             </div>
                         </div>
 

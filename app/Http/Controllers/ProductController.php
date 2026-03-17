@@ -97,7 +97,54 @@ class ProductController extends Controller
             ],
         ]);
     }
-    
+
+    public function create()
+    {
+        $categorias = ProductCategory::orderBy('category_name')
+            ->get(['id', 'category_name']);
+
+        return Inertia::render('Proyectos/ProyectosCreate', [
+            'categorias' => $categorias,
+        ]);
+    }
+
+    public function edit(int $id)
+    {
+        $producto = Product::with(['category'])->findOrFail($id);
+        $categorias = ProductCategory::orderBy('category_name')
+            ->get(['id', 'category_name']);
+
+        return Inertia::render('Proyectos/ProyectosEdit', [
+            'producto' => [
+                'id' => $producto->id,
+                'name' => $producto->name,
+                'codigo_inmueble' => $producto->codigo_inmueble,
+                'price_usd' => $producto->price_usd,
+                'price_bob' => $producto->price_bob,
+                'superficie_util' => $producto->superficie_util,
+                'superficie_construida' => $producto->superficie_construida,
+                'ambientes' => $producto->ambientes,
+                'habitaciones' => $producto->habitaciones,
+                'banos' => $producto->banos,
+                'cocheras' => $producto->cocheras,
+                'ano_construccion' => $producto->ano_construccion,
+                'operacion' => $producto->operacion,
+                'comision' => $producto->comision,
+                'taxes' => $producto->taxes,
+                'description' => $producto->description,
+                'sku' => $producto->sku,
+                'hsn_sac_code' => $producto->hsn_sac_code,
+                'allow_purchase' => $producto->allow_purchase,
+                'is_public' => $producto->is_public,
+                'downloadable' => $producto->downloadable,
+                'downloadable_file' => $producto->downloadable_file,
+                'default_image' => $producto->default_image,
+                'category_id' => $producto->category_id,
+            ],
+            'categorias' => $categorias,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -163,6 +210,10 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        // LOG: Registrar que recibimos la petición
+        \Log::info('UPDATE REQUEST - ID: ' . $id);
+        \Log::info('UPDATE REQUEST - Datos recibidos: ' . json_encode($request->all()));
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'codigo_inmueble' => 'required|string|max:255|unique:products,codigo_inmueble,' . $product->id,
@@ -207,6 +258,7 @@ class ProductController extends Controller
 
         // Validar que al menos un precio esté presente
         if (!$request->price_usd && !$request->price_bob) {
+            \Log::info('UPDATE VALIDATION ERROR - No hay precios');
             return redirect()->back()
                 ->withErrors(['price_usd' => 'Debes ingresar al menos un precio (USD o BOB).', 'price_bob' => 'Debes ingresar al menos un precio (USD o BOB).'])
                 ->withInput();
@@ -214,7 +266,11 @@ class ProductController extends Controller
 
         $validated['last_updated_by'] = auth()->id();
 
+        \Log::info('UPDATE VALIDATED DATA: ' . json_encode($validated));
+
         $product->update($validated);
+
+        \Log::info('UPDATE SUCCESS - Producto actualizado');
 
         return redirect()->back()
             ->with('success', 'Proyecto actualizado correctamente.');

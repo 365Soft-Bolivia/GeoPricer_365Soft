@@ -56,7 +56,7 @@ analyze.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     analyze.form = analyzeForm
 /**
 * @see \App\Http\Controllers\DataReorderController::analyzeOutsideBolivia
- * @see app/Http/Controllers/DataReorderController.php:1101
+ * @see app/Http/Controllers/DataReorderController.php:1136
  * @route '/admin/data-reorder/analyze-outside-bolivia'
  */
 export const analyzeOutsideBolivia = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -71,7 +71,7 @@ analyzeOutsideBolivia.definition = {
 
 /**
 * @see \App\Http\Controllers\DataReorderController::analyzeOutsideBolivia
- * @see app/Http/Controllers/DataReorderController.php:1101
+ * @see app/Http/Controllers/DataReorderController.php:1136
  * @route '/admin/data-reorder/analyze-outside-bolivia'
  */
 analyzeOutsideBolivia.url = (options?: RouteQueryOptions) => {
@@ -80,7 +80,7 @@ analyzeOutsideBolivia.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\DataReorderController::analyzeOutsideBolivia
- * @see app/Http/Controllers/DataReorderController.php:1101
+ * @see app/Http/Controllers/DataReorderController.php:1136
  * @route '/admin/data-reorder/analyze-outside-bolivia'
  */
 analyzeOutsideBolivia.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -90,7 +90,7 @@ analyzeOutsideBolivia.post = (options?: RouteQueryOptions): RouteDefinition<'pos
 
     /**
 * @see \App\Http\Controllers\DataReorderController::analyzeOutsideBolivia
- * @see app/Http/Controllers/DataReorderController.php:1101
+ * @see app/Http/Controllers/DataReorderController.php:1136
  * @route '/admin/data-reorder/analyze-outside-bolivia'
  */
     const analyzeOutsideBoliviaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -100,7 +100,7 @@ analyzeOutsideBolivia.post = (options?: RouteQueryOptions): RouteDefinition<'pos
 
             /**
 * @see \App\Http\Controllers\DataReorderController::analyzeOutsideBolivia
- * @see app/Http/Controllers/DataReorderController.php:1101
+ * @see app/Http/Controllers/DataReorderController.php:1136
  * @route '/admin/data-reorder/analyze-outside-bolivia'
  */
         analyzeOutsideBoliviaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -19,6 +19,9 @@ class ProductLocationController extends Controller
      */
     public function index(): Response
     {
+        // Obtener total de todas las propiedades
+        $totalPropiedades = Product::count();
+
         // Obtener productos sin ubicación para el selector
         $productsSinUbicacion = Product::doesntHave('location')
             ->select('id', 'name', 'codigo_inmueble', 'operacion', 'price_usd', 'price_bob')
@@ -53,6 +56,7 @@ class ProductLocationController extends Controller
             });
 
         return Inertia::render('Locations', [
+            'totalPropiedades' => $totalPropiedades,
             'productsSinUbicacion' => $productsSinUbicacion,
             'productsConUbicacion' => $productsConUbicacion,
             'defaultCenter' => [

@@ -1,8 +1,29 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { publicRoutes } from '@/routes-custom'; // Fixed import name
+import { publicRoutes } from '@/routes-custom';
+import { useAppearance } from '@/composables/useAppearance';
+import { computed } from 'vue';
 
 const { home } = publicRoutes;
+const { appearance } = useAppearance();
+
+// Determinar si el tema es oscuro
+const isDarkMode = computed(() => {
+    if (appearance.value === 'dark') return true;
+    if (appearance.value === 'light') return false;
+    // appearance === 'system', detectar preferencia del sistema
+    if (typeof window !== 'undefined') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+});
+
+// Seleccionar el icono adecuado según el tema
+const logoSrc = computed(() => {
+    return isDarkMode.value
+        ? '/Recurso 2Analytics 2.png' // Icono para modo oscuro
+        : '/Recurso 1Analytics 1.png'; // Icono para modo claro
+});
 
 const currentYear = new Date().getFullYear();
 </script>
@@ -18,7 +39,7 @@ const currentYear = new Date().getFullYear();
                 <div class="space-y-6">
                     <div class="flex items-center space-x-3">
                         <div class="bg-white p-2 rounded-xl shadow-lg">
-                            <img src="/logoalfa.png" alt="Alfa Inmobiliaria Bolivia" class="h-20 w-auto object-contain" />
+                            <img :src="logoSrc" alt="Alfa Inmobiliaria Bolivia" class="h-20 w-auto object-contain" />
                         </div>
                         <div>
                             <h3 class="text-2xl font-bold" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">Alfa Inmobiliaria</h3>

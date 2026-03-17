@@ -2,7 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
 import api from './api'
 /**
 * @see \App\Http\Controllers\ProductLocationController::mapa
- * @see app/Http/Controllers/ProductLocationController.php:362
+ * @see app/Http/Controllers/ProductLocationController.php:366
  * @route '/admin/ubicaciones/mapa'
  */
 export const mapa = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -17,7 +17,7 @@ mapa.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::mapa
- * @see app/Http/Controllers/ProductLocationController.php:362
+ * @see app/Http/Controllers/ProductLocationController.php:366
  * @route '/admin/ubicaciones/mapa'
  */
 mapa.url = (options?: RouteQueryOptions) => {
@@ -26,7 +26,7 @@ mapa.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::mapa
- * @see app/Http/Controllers/ProductLocationController.php:362
+ * @see app/Http/Controllers/ProductLocationController.php:366
  * @route '/admin/ubicaciones/mapa'
  */
 mapa.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ mapa.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ProductLocationController::mapa
- * @see app/Http/Controllers/ProductLocationController.php:362
+ * @see app/Http/Controllers/ProductLocationController.php:366
  * @route '/admin/ubicaciones/mapa'
  */
 mapa.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ mapa.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::mapa
- * @see app/Http/Controllers/ProductLocationController.php:362
+ * @see app/Http/Controllers/ProductLocationController.php:366
  * @route '/admin/ubicaciones/mapa'
  */
     const mapaForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -55,7 +55,7 @@ mapa.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::mapa
- * @see app/Http/Controllers/ProductLocationController.php:362
+ * @see app/Http/Controllers/ProductLocationController.php:366
  * @route '/admin/ubicaciones/mapa'
  */
         mapaForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -64,7 +64,7 @@ mapa.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ProductLocationController::mapa
- * @see app/Http/Controllers/ProductLocationController.php:362
+ * @see app/Http/Controllers/ProductLocationController.php:366
  * @route '/admin/ubicaciones/mapa'
  */
         mapaForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -80,7 +80,7 @@ mapa.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     mapa.form = mapaForm
 /**
 * @see \App\Http\Controllers\ProductLocationController::asignar
- * @see app/Http/Controllers/ProductLocationController.php:426
+ * @see app/Http/Controllers/ProductLocationController.php:430
  * @route '/admin/ubicaciones/asignar'
  */
 export const asignar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -95,7 +95,7 @@ asignar.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::asignar
- * @see app/Http/Controllers/ProductLocationController.php:426
+ * @see app/Http/Controllers/ProductLocationController.php:430
  * @route '/admin/ubicaciones/asignar'
  */
 asignar.url = (options?: RouteQueryOptions) => {
@@ -104,7 +104,7 @@ asignar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::asignar
- * @see app/Http/Controllers/ProductLocationController.php:426
+ * @see app/Http/Controllers/ProductLocationController.php:430
  * @route '/admin/ubicaciones/asignar'
  */
 asignar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -113,7 +113,7 @@ asignar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ProductLocationController::asignar
- * @see app/Http/Controllers/ProductLocationController.php:426
+ * @see app/Http/Controllers/ProductLocationController.php:430
  * @route '/admin/ubicaciones/asignar'
  */
 asignar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -123,7 +123,7 @@ asignar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::asignar
- * @see app/Http/Controllers/ProductLocationController.php:426
+ * @see app/Http/Controllers/ProductLocationController.php:430
  * @route '/admin/ubicaciones/asignar'
  */
     const asignarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -133,7 +133,7 @@ asignar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::asignar
- * @see app/Http/Controllers/ProductLocationController.php:426
+ * @see app/Http/Controllers/ProductLocationController.php:430
  * @route '/admin/ubicaciones/asignar'
  */
         asignarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -142,7 +142,7 @@ asignar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ProductLocationController::asignar
- * @see app/Http/Controllers/ProductLocationController.php:426
+ * @see app/Http/Controllers/ProductLocationController.php:430
  * @route '/admin/ubicaciones/asignar'
  */
         asignarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -158,7 +158,7 @@ asignar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     asignar.form = asignarForm
 /**
 * @see \App\Http\Controllers\ProductLocationController::editar
- * @see app/Http/Controllers/ProductLocationController.php:463
+ * @see app/Http/Controllers/ProductLocationController.php:467
  * @route '/admin/ubicaciones/editar'
  */
 export const editar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -173,7 +173,7 @@ editar.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::editar
- * @see app/Http/Controllers/ProductLocationController.php:463
+ * @see app/Http/Controllers/ProductLocationController.php:467
  * @route '/admin/ubicaciones/editar'
  */
 editar.url = (options?: RouteQueryOptions) => {
@@ -182,7 +182,7 @@ editar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ProductLocationController::editar
- * @see app/Http/Controllers/ProductLocationController.php:463
+ * @see app/Http/Controllers/ProductLocationController.php:467
  * @route '/admin/ubicaciones/editar'
  */
 editar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -191,7 +191,7 @@ editar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ProductLocationController::editar
- * @see app/Http/Controllers/ProductLocationController.php:463
+ * @see app/Http/Controllers/ProductLocationController.php:467
  * @route '/admin/ubicaciones/editar'
  */
 editar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -201,7 +201,7 @@ editar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ProductLocationController::editar
- * @see app/Http/Controllers/ProductLocationController.php:463
+ * @see app/Http/Controllers/ProductLocationController.php:467
  * @route '/admin/ubicaciones/editar'
  */
     const editarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -211,7 +211,7 @@ editar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ProductLocationController::editar
- * @see app/Http/Controllers/ProductLocationController.php:463
+ * @see app/Http/Controllers/ProductLocationController.php:467
  * @route '/admin/ubicaciones/editar'
  */
         editarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -220,7 +220,7 @@ editar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ProductLocationController::editar
- * @see app/Http/Controllers/ProductLocationController.php:463
+ * @see app/Http/Controllers/ProductLocationController.php:467
  * @route '/admin/ubicaciones/editar'
  */
         editarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
