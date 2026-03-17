@@ -60,14 +60,31 @@ const formatPrice = (price: string | number) => {
                 <div class="max-w-4xl mx-auto text-center">
                     <!-- Logo/Brand -->
                     <div class="mb-6">
-                        <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
-                            <div class="w-10 h-10 bg-[#FAB90E] rounded-lg flex items-center justify-center shadow-lg">
-                                <span class="text-[#233C7A] font-bold text-xl">A</span>
+                        <div class="flex flex-col items-center gap-4">
+                            <!-- Logo grande y responsivo con efectos de luz blanca -->
+                            <div class="relative group">
+                                <!-- Glow blanco animado detrás del logo -->
+                                <div class="absolute -inset-2 bg-white rounded-2xl blur-2xl opacity-20 group-hover:opacity-50 animate-white-glow transition-all duration-700"></div>
+
+                                <!-- Contenedor principal con efectos de luz blanca -->
+                                <div class="relative bg-gradient-to-br from-white/20 via-white/10 to-white/5 backdrop-blur-md p-4 md:p-6 lg:p-8 rounded-2xl border border-white/20 shadow-2xl transition-all duration-500 group-hover:scale-105 group-hover:border-white/40 group-hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]">
+                                    <!-- Border pulsante blanco -->
+                                    <div class="absolute inset-0 rounded-2xl bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-sm animate-pulse-border"></div>
+
+                                    <!-- Logo con efectos de luz blanca -->
+                                    <img
+                                        src="/Recurso 2Analytics 2.png"
+                                        alt="ALFA Analytics"
+                                        class="relative h-20 md:h-32 lg:h-40 w-auto object-contain transition-all duration-500 group-hover:brightness-125 group-hover:drop-shadow-[0_0_30px_rgba(255,255,255,0.6)] filter drop-shadow-xl"
+                                    />
+                                </div>
                             </div>
-                            <div class="text-left">
-                                <h1 class="text-white font-bold text-lg">ALFA</h1>
-                                <p class="text-blue-200 text-xs">GeoPricer</p>
-                            </div>
+
+                            <!-- Texto del brand con efecto de luz blanca -->
+                            <!-- <div class="text-center">
+                                <h1 class="text-white font-bold text-2xl md:text-3xl lg:text-4xl tracking-wide transition-all duration-300 group-hover:text-white/90 group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">ALFA</h1>
+                                <p class="text-blue-200 text-sm md:text-base lg:text-lg font-semibold transition-all duration-300 group-hover:text-blue-100 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">Analytics</p>
+                            </div> -->
                         </div>
                     </div>
 
@@ -99,8 +116,8 @@ const formatPrice = (price: string | number) => {
                             <div class="text-xs md:text-sm text-blue-100">Propiedades</div>
                         </div>
                         <div class="text-center p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                            <div class="text-2xl md:text-3xl font-bold text-[#FAB90E] mb-1">5</div>
-                            <div class="text-xs md:text-sm text-blue-100">Departamentos</div>
+                            <div class="text-2xl md:text-3xl font-bold text-[#FAB90E] mb-1">+20</div>
+                            <div class="text-xs md:text-sm text-blue-100">Agencias</div>
                         </div>
                         <div class="text-center p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
                             <div class="text-2xl md:text-3xl font-bold text-[#FAB90E] mb-1">24/7</div>
@@ -146,10 +163,45 @@ const formatPrice = (price: string | number) => {
     animation-delay: 4s;
 }
 
+/* Animación de glow blanco para el logo */
+@keyframes white-glow {
+    0%, 100% {
+        opacity: 0.2;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.35;
+        transform: scale(1.05);
+    }
+}
+
+.animate-white-glow {
+    animation: white-glow 4s ease-in-out infinite;
+}
+
+/* Animación del borde pulsante blanco */
+@keyframes pulse-border {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 0.15;
+    }
+}
+
+.animate-pulse-border {
+    animation: pulse-border 0.5s ease-out forwards;
+}
+
 /* Efecto de glassmorphism mejorado */
 .backdrop-blur-sm {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-md {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 /* Transiciones suaves para elementos interactivos */

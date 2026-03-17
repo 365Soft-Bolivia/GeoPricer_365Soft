@@ -69,12 +69,12 @@ const currentYear = new Date().getFullYear();
                                 Inicio
                             </Link>
                         </li>
-                        <li>
+                        <!-- <li>
                             <Link href="/mapa-propiedades" class="flex items-center group text-[#F5F5F5]/90 hover:text-[#FAB90E] transition-all duration-300">
                                 <span class="w-2 h-2 bg-[#233C7A] rounded-full mr-3 group-hover:bg-[#FAB90E] group-hover:scale-125 transition-all"></span>
                                 Mapa Interactivo
                             </Link>
-                        </li>
+                        </li> -->
                     </ul>
                 </div>
 
@@ -103,13 +103,13 @@ const currentYear = new Date().getFullYear();
                         </li>
                     </ul>
 
-                    <!-- CTA Button -->
+                    <!-- CTA Button
                     <Link href="/mapa-propiedades" class="mt-6 inline-flex items-center justify-center gap-2 bg-[#FAB90E] hover:bg-[#ffc932] text-[#212121] px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 w-full" style="font-family: 'Montserrat', sans-serif; font-weight: 700;">
                         <span>Ver Mapa Interactivo</span>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                         </svg>
-                    </Link>
+                    </Link> -->
                 </div>
             </div>
 

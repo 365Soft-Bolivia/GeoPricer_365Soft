@@ -67,14 +67,14 @@ const navigation = [
                     </Link>
 
                     <!-- Botón CTA Mapa -->
-                    <Link
+                    <!-- <Link
                         href="/mapa-propiedades"
                         class="flex items-center gap-2 bg-[#FAB90E] hover:bg-[#ffc932] text-[#212121] px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ml-4"
                         title="Ver mapa interactivo de propiedades"
                     >
                         <MapPin :size="18" class="animate-pulse" />
                         <span>Mapa Interactivo</span>
-                    </Link>
+                    </Link> -->
                 </div>
 
                 <!-- Botón Menú Móvil -->
