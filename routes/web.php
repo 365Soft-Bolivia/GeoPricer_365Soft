@@ -5,8 +5,9 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Http\Controllers\Public\HomeController;
 
-// Rutas públicas
-Route::get('/', [HomeController::class, 'index'])->name('home');
+// Ruta raíz eliminada para evitar conflictos con la ruta pública
+// La ruta / está ahora en routes/public.php con protección de autenticación pública
+// Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Redirigir /admin a dashboard o login
 Route::get('/admin', function () {
@@ -41,4 +42,9 @@ require __DIR__.'/productLocations.php';
 require __DIR__.'/products.php';
 require __DIR__.'/data-import.php';
 require __DIR__.'/data-reorder.php';
+
+// Rutas de autenticación pública (deben ir antes de public.php)
+require __DIR__.'/public-auth.php';
+
+// Rutas públicas protegidas (propiedades, mapa, etc.)
 require __DIR__.'/public.php';

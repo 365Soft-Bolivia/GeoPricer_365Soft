@@ -20,6 +20,7 @@ class UsersTableSeeder extends Seeder
                 'company_id' => 1,
                 'name' => 'Administrador',
                 'email' => 'administrador@gmail.com',
+                'username' => 'admin',
                 'password' => '$2y$12$9jNXpnRBew/hV7XQLsC0O.K6RNppcjL1NQzVB80PD2l7iuJXN1Ky2',
                 'two_factor_secret' => null,
                 'two_factor_recovery_codes' => null,

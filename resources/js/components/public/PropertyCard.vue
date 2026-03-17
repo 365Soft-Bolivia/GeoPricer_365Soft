@@ -15,7 +15,8 @@ import {
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import publicRoutes from '@/routes/public/index.ts';
+// Property detail routes are not yet implemented
+// import publicRoutes from '@/routes/public/index.ts';
 
 interface Props {
     propiedad: {
@@ -257,10 +258,10 @@ const imageHeightClasses = computed(() => {
         <!-- Footer con CTA -->
         <CardFooter class="p-5 pt-0">
             <Button
-                :as="Link"
-                :href="publicRoutes.propiedad.show.url(propiedad.id)"
-                class="w-full bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] hover:from-[#E0081D] hover:to-[#233C7A] text-white font-bold py-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]" style="font-family: 'Montserrat', sans-serif; font-weight: 700;"
+                disabled
+                class="w-full bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] hover:from-[#E0081D] hover:to-[#233C7A] text-white font-bold py-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-not-allowed opacity-50" style="font-family: 'Montserrat', sans-serif; font-weight: 700;"
                 size="default"
+                title="Detalles no disponibles"
             >
                 <span class="flex items-center justify-center gap-2">
                     Ver Detalles

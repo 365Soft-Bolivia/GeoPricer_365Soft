@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import PublicLayout from '@/layouts/PublicLayout.vue';
+import PublicAuthenticatedLayout from '@/layouts/PublicAuthenticatedLayout.vue';
 import {
     Heart,
     Users,
@@ -15,10 +15,10 @@ import {
     Lightbulb,
     Globe
 } from 'lucide-vue-next';
-import publicRoutes from '@/routes/public/index.ts';
+import publicRoutes from '@/routes/public';
 
 defineOptions({
-    layout: PublicLayout
+    layout: PublicAuthenticatedLayout
 });
 
 // Datos dinámicos que podrían venir del CMS en el futuro
@@ -335,7 +335,7 @@ const companyData = {
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
                     <Link
-                        :href="publicRoutes.propiedades.url()"
+                        :href="publicRoutes.mapa.propiedades.url()"
                         class="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
                     >
                         <Building class="w-5 h-5 mr-2" />

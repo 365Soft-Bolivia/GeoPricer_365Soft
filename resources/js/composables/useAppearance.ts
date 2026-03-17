@@ -5,7 +5,7 @@ export type Appearance = 'light' | 'dark' | 'system';
 const APPEARANCE_KEY = 'appearance';
 
 // Estado reactivo compartido entre todas las instancias
-const appearance = ref<Appearance>('system');
+const appearance = ref<Appearance>('light'); // Tema claro por defecto
 let isInitialized = false;
 let mediaQuery: MediaQueryList | null = null;
 let mediaQueryHandler: (() => void) | null = null;

@@ -25,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Registrar middleware personalizado de roles
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'login.rate.limit' => \App\Http\Middleware\LoginRateLimiter::class,
+            'public.auth' => \App\Http\Middleware\PublicAuth::class,
         ]);
     })
 

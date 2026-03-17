@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight, Grid, List, MapPin, Bed, Bath, Car, Home, Ma
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Pagination from '@/components/public/Pagination.vue';
-import publicRoutes from '@/routes/public/index.ts';
+// Property detail routes are not yet implemented
+// import publicRoutes from '@/routes/public/index.ts';
 
 interface ProductImage {
     id: number;
@@ -316,10 +317,10 @@ const total = computed(() => props.pagination?.total || 0);
                     <!-- Acciones -->
                     <div class="flex gap-2 pt-2">
                         <Button
-                            :as="Link"
-                            :href="publicRoutes.propiedad.show.url(propiedad.id)"
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                            disabled
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm cursor-not-allowed opacity-50"
                             size="sm"
+                            title="Detalles no disponibles"
                         >
                             Ver Detalles
                         </Button>
@@ -492,9 +493,9 @@ const total = computed(() => props.pagination?.total || 0);
                         <!-- Acciones -->
                         <div class="flex gap-3">
                             <Button
-                                :as="Link"
-                                :href="publicRoutes.propiedad.show.url(propiedad.id)"
-                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                disabled
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white cursor-not-allowed opacity-50"
+                                title="Detalles no disponibles"
                             >
                                 Ver Detalles
                             </Button>

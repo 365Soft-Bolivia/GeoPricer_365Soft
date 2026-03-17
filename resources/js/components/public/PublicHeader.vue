@@ -1,45 +1,56 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
-import { MapPin } from 'lucide-vue-next';
-import { publicRoutes } from '@/routes-custom';
+import { Link, usePage } from '@inertiajs/vue3';
+import { MapPin, User, LogOut, AlertTriangle } from 'lucide-vue-next';
+import publicRoutes from '@/routes/public';
 import { useAppearance } from '@/composables/useAppearance';
+import { router } from '@inertiajs/vue3';
+import AlertDialog from '@/components/ui/alert-dialog/AlertDialog.vue';
+import AlertDialogTrigger from '@/components/ui/alert-dialog/AlertDialogTrigger.vue';
+import AlertDialogContent from '@/components/ui/alert-dialog/AlertDialogContent.vue';
+import AlertDialogHeader from '@/components/ui/alert-dialog/AlertDialogHeader.vue';
+import AlertDialogTitle from '@/components/ui/alert-dialog/AlertDialogTitle.vue';
+import AlertDialogDescription from '@/components/ui/alert-dialog/AlertDialogDescription.vue';
+import AlertDialogFooter from '@/components/ui/alert-dialog/AlertDialogFooter.vue';
+import AlertDialogAction from '@/components/ui/alert-dialog/AlertDialogAction.vue';
+import AlertDialogCancel from '@/components/ui/alert-dialog/AlertDialogCancel.vue';
 
 const mobileMenuOpen = ref(false);
+const logoutDialogOpen = ref(false);
 const { appearance } = useAppearance();
+const page = usePage();
 
-const { home } = publicRoutes;
+// Ya importamos publicHome directamente desde @/routes
 
-// Determinar si el tema es oscuro
-const isDarkMode = computed(() => {
-    if (appearance.value === 'dark') return true;
-    if (appearance.value === 'light') return false;
-    // appearance === 'system', detectar preferencia del sistema
-    if (typeof window !== 'undefined') {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-});
+// Información del usuario actual
+const user = computed(() => page.props.auth?.user);
 
-// Seleccionar el icono adecuado según el tema
-const logoSrc = computed(() => {
-    return isDarkMode.value
-        ? '/Recurso 2Analytics 2.png' // Icono para modo oscuro
-        : '/Recurso 1Analytics 1.png'; // Icono para modo claro
-});
+// Manejo de logout
+const handleLogout = () => {
+    // Cerrar el menú móvil si está abierto
+    mobileMenuOpen.value = false;
+    // Ejecutar el logout usando rutas públicas
+    router.visit(publicRoutes.logout(), {
+        method: 'post',
+    });
+};
 
-const navigation = [
-    { name: 'Inicio', href: home().url },
-];
+// Abrir el diálogo de confirmación de logout
+const showLogoutConfirmation = () => {
+    logoutDialogOpen.value = true;
+};
+
+// Logo fijo siempre el mismo (sin cambio por tema)
+const logoSrc = '/Recurso 1Analytics 1.png';
 </script>
 
 <template>
     <header class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] shadow-2xl sticky top-0 z-50 border-b-4 border-[#FAB90E]">
         <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex h-20 justify-between items-center">
-                <!-- Logo -->
+                <!-- Logo fijo (sin cambio por tema) -->
                 <div class="flex items-center">
-                    <Link :href="home()" class="flex items-center group">
+                    <Link :href="publicRoutes.home()" class="flex items-center group">
                         <div class="bg-white p-2 rounded-lg mr-3 shadow-lg group-hover:scale-110 transition-transform">
                             <img :src="logoSrc" alt="Alfa Inmobiliaria Bolivia" class="h-14 w-auto object-contain" />
                         </div>
@@ -56,15 +67,61 @@ const navigation = [
 
                 <!-- Navegación Desktop -->
                 <div class="hidden md:flex md:items-center md:space-x-1">
-                    <Link
-                        v-for="item in navigation"
-                        :key="item.name"
-                        :href="item.href"
-                        class="text-white/90 hover:text-white hover:bg-white/10 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 relative group"
-                    >
-                        {{ item.name }}
-                        <span class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-[#FAB90E] group-hover:w-full transition-all duration-300"></span>
-                    </Link>
+                    <!-- Información de usuario autenticado -->
+                    <div v-if="user" class="ml-4 flex items-center gap-3 bg-white/10 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/20">
+                        <div class="flex items-center gap-2">
+                            <div class="bg-[#FAB90E] p-2 rounded-lg">
+                                <User :size="16" class="text-[#212121]" />
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-white">
+                                    {{ user?.name || 'Usuario' }}
+                                </span>
+                                <span class="text-xs text-[#FAB90E]">
+                                    Sesión activa
+                                </span>
+                            </div>
+                        </div>
+
+                        <AlertDialog v-model:open="logoutDialogOpen">
+                            <AlertDialogTrigger as-child>
+                                <button
+                                    class="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 hover:text-red-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 border border-red-500/30 hover:border-red-500/50"
+                                    title="Cerrar sesión"
+                                >
+                                    <LogOut :size="14" />
+                                    <span>Salir</span>
+                                </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
+                                            <AlertTriangle :size="24" class="text-red-600 dark:text-red-400" />
+                                        </div>
+                                        <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
+                                    </div>
+                                    <AlertDialogDescription>
+                                        ¿Estás seguro que deseas cerrar tu sesión actual? Deberás ingresar tus credenciales nuevamente para acceder al sistema.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter class="gap-2">
+                                    <AlertDialogCancel
+                                        @click="logoutDialogOpen = false"
+                                        class="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                    >
+                                        Cancelar
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                        @click="handleLogout"
+                                        class="bg-red-600 hover:bg-red-700 text-white"
+                                    >
+                                        Cerrar Sesión
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
 
                     <!-- Botón CTA Mapa -->
                     <!-- <Link
@@ -94,15 +151,33 @@ const navigation = [
             <!-- Menú Móvil -->
             <div v-if="mobileMenuOpen" class="md:hidden pb-6 animate-fade-in">
                 <div class="flex flex-col space-y-2 bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-                    <Link
-                        v-for="item in navigation"
-                        :key="item.name"
-                        :href="item.href"
-                        class="text-white hover:text-[#FAB90E] hover:bg-white/10 px-4 py-3 rounded-lg text-base font-semibold transition-all"
-                        @click="mobileMenuOpen = false"
-                    >
-                        {{ item.name }}
-                    </Link>
+                    <!-- Información de usuario autenticado móvil -->
+                    <div v-if="user" class="mt-4 pt-4 border-t border-white/20">
+                        <div class="flex items-center gap-3 bg-[#FAB90E]/20 px-4 py-3 rounded-xl border border-[#FAB90E]/30">
+                            <div class="bg-[#FAB90E] p-2 rounded-lg">
+                                <User :size="18" class="text-[#212121]" />
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-white">
+                                    {{ user?.name || 'Usuario' }}
+                                </span>
+                                <span class="text-xs text-[#FAB90E]">
+                                    Sesión activa
+                                </span>
+                            </div>
+                        </div>
+
+                        <AlertDialog v-model:open="logoutDialogOpen">
+                            <AlertDialogTrigger as-child>
+                                <button
+                                    class="flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 hover:text-red-200 px-4 py-3 rounded-xl text-sm font-bold transition-all mt-2 border border-red-500/30 hover:border-red-500/50"
+                                >
+                                    <LogOut :size="18" />
+                                    <span>Cerrar Sesión</span>
+                                </button>
+                            </AlertDialogTrigger>
+                        </AlertDialog>
+                    </div>
 
                     <!-- Botón CTA móvil -->
                     <Link

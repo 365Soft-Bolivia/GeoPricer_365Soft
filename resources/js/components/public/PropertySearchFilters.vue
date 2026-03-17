@@ -9,7 +9,8 @@ import {
     FileText,
     Check,
     Search,
-    ArrowRight
+    ArrowRight,
+    LoaderCircle
 } from 'lucide-vue-next';
 
 interface Props {
@@ -33,6 +34,7 @@ const props = withDefaults(defineProps<Props>(), {
 // Estado local - Igual que el mapa: number para categoría
 const categoriaSeleccionada = ref<number | null>(null);
 const operacionSeleccionada = ref<string | null>(null);
+const cargando = ref<boolean>(false);
 
 // Filtros adicionales (desactivados - solo búsqueda por categoría y operación)
 
@@ -45,6 +47,11 @@ const operacionesDisponibles = [
 // Validar que se haya seleccionado al menos una opción
 const puedeBuscar = computed(() => {
     return categoriaSeleccionada.value !== null || operacionSeleccionada.value !== null;
+});
+
+// Determinar si el botón está deshabilitado
+const botonDeshabilitado = computed(() => {
+    return !puedeBuscar.value || cargando.value;
 });
 
 const nombreCategoriaSeleccionada = computed(() => {
@@ -71,6 +78,9 @@ const buscarPropiedades = () => {
         alert('Por favor, selecciona al menos una categoría o tipo de operación');
         return;
     }
+
+    // Activar estado de carga
+    cargando.value = true;
 
     const params: Record<string, any> = {};
 
@@ -212,14 +222,15 @@ const buscarPropiedades = () => {
                 @click="buscarPropiedades"
                 :class="[
                     'w-full py-5 rounded-2xl font-bold text-xl transition-all shadow-xl flex items-center justify-center gap-3',
-                    puedeBuscar
+                    puedeBuscar && !cargando.value
                         ? 'bg-gradient-to-r from-[#233C7A] via-[#2a4a94] to-[#233C7A] text-white hover:from-[#1a2e5f] hover:via-[#233C7A] hover:to-[#1a2e5f] hover:shadow-2xl'
                         : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                 ]"
-                :disabled="!puedeBuscar"
+                :disabled="botonDeshabilitado"
             >
-                <Search :size="28" />
-                Ver Mapa con Propiedades
+                <LoaderCircle v-if="cargando.value" :size="28" class="animate-spin" />
+                <Search v-else :size="28" />
+                {{ cargando.value ? 'Cargando...' : 'Ver Mapa con Propiedades' }}
             </button>
         </div>
     </div>

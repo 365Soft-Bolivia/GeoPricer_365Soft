@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { Search, Grid, List, Download, Share, Filter, Menu, X, ChevronLeft } from 'lucide-vue-next';
-import PublicLayout from '@/layouts/PublicLayout.vue';
+import PublicAuthenticatedLayout from '@/layouts/PublicAuthenticatedLayout.vue';
 import PropertyCard from '@/components/public/PropertyCard.vue';
 import PropertyFiltersSidebar from '@/components/public/PropertyFiltersSidebar.vue';
 import PropertyCardSkeleton from '@/components/public/PropertyCardSkeleton.vue';
@@ -18,7 +18,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import publicRoutes from '@/routes/public/index.ts';
+import publicRoutes from '@/routes/public';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-vue-next"; 
 
@@ -59,7 +59,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 defineOptions({
-    layout: PublicLayout
+    layout: PublicAuthenticatedLayout
 });
 
 // Estado del componente
@@ -135,7 +135,7 @@ const handleFilter = (newFilters: any) => {
     }
 
     // Navegar con los nuevos filtros
-    router.get(publicRoutes.propiedades.url(params), {}, {
+    router.get(publicRoutes.mapa.propiedades.url(params), {}, {
         preserveScroll: true,
         onFinish: () => {
             loading.value = false;
@@ -152,7 +152,7 @@ const handlePageChange = (page: number) => {
     if (page === currentPage.value) return;
 
     const params = { ...props.filtros, page: page.toString() };
-    router.get('/propiedades', params, {
+    router.get('/mapa-propiedades', params, {
         preserveScroll: false,
         onStart: () => {
             loading.value = true;
@@ -167,7 +167,7 @@ const handlePageChange = (page: number) => {
 
 const handlePerPageChange = (newPerPage: number) => {
     const params = { ...props.filtros, per_page: newPerPage.toString(), page: '1' };
-    router.get('/propiedades', params, {
+    router.get('/mapa-propiedades', params, {
         preserveScroll: false,
         onStart: () => {
             loading.value = true;
@@ -196,7 +196,7 @@ const handleShare = async (propiedad: any) => {
         const shareData = {
             title: propiedad.name,
             text: `¡Mira esta propiedad en 365Soft! ${propiedad.codigo_inmueble}`,
-            url: window.location.origin + publicRoutes.propiedad.show.url(propiedad.id)
+            url: window.location.origin + `/mapa-propiedades`
         };
 
         if (navigator.share) {
@@ -277,7 +277,7 @@ const applyFilters = () => {
     params.page = '1';
 
     // Usar router.get para actualizar la URL y los datos
-    router.get('/propiedades', params, {
+    router.get('/mapa-propiedades', params, {
         preserveScroll: true,
         preserveState: false, // Importante: para que las props se actualicen
         onFinish: () => {

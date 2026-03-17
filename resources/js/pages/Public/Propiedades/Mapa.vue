@@ -902,7 +902,7 @@ const averagePricePerSqm = computed(() => {
 
 // Funciones de navegación
 const goBack = () => {
-  router.visit('/propiedades');
+  router.visit('/');
 };
 
 const goToHome = () => {
@@ -910,7 +910,7 @@ const goToHome = () => {
 };
 
 const goToProperties = () => {
-  router.visit('/propiedades');
+  router.visit('/mapa-propiedades');
 };
 
 // Función para confirmar selección y cargar el mapa
@@ -1355,7 +1355,7 @@ const searchLocation = async (query: string) => {
         {
           headers: {
             'Accept-Language': 'es',
-            'User-Agent': 'GeoPricer/1.0'
+            'User-Agent': 'AcmAnalytics/1.0'
           }
         }
       );

@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             RoleUserTableSeeder::class,         // 3. Relaciones rol-usuario
             // SessionsTableSeeder::class,         // 4. Sesiones
             ProductCategorySeeder::class,       // 5. Categorías de productos
+            PublicUserSeeder::class,            // 6. Usuarios públicos
         ]);
     }
 }

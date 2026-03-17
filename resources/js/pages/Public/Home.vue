@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import PublicLayout from '@/layouts/PublicLayout.vue';
+import PublicAuthenticatedLayout from '@/layouts/PublicAuthenticatedLayout.vue';
 import { MapPin, Award, CheckCircle } from 'lucide-vue-next';
 import PropertySearchFilters from '@/components/public/PropertySearchFilters.vue';
 
@@ -31,7 +31,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 defineOptions({
-    layout: PublicLayout
+    layout: PublicAuthenticatedLayout
 });
 
 const formatPrice = (price: string | number) => {

@@ -13,19 +13,22 @@ Route::post('/contacto', [ContactoController::class, 'store'])->name('public.con
 
 /*
 |--------------------------------------------------------------------------
-| Rutas Públicas (sin autenticación)
+| Rutas Públicas (simplificado)
 |--------------------------------------------------------------------------
+|
+| Sistema público simplificado sin catálogo de propiedades.
+| Solo mantiene el mapa como funcionalidad principal.
 */
 
-// Listado de propiedades público (filtros básicos y avanzados)
-Route::get('/propiedades', [PropiedadPublicController::class, 'index'])->name('public.propiedades');
+// Rutas protegidas - requieren autenticación
+Route::middleware(['public.auth'])->group(function () {
+    // Home pública
+    Route::get('/', [HomeController::class, 'index'])->name('public.home');
 
-// Detalle de una propiedad
-Route::get('/propiedad/{id}', [PropiedadPublicController::class, 'show'])->name('public.propiedad.show');
+    // Mapa interactivo de propiedades públicas
+    Route::get('/mapa-propiedades', [PropiedadPublicController::class, 'mapa'])->name('public.mapa.propiedades');
 
-// Mapa interactivo de propiedades públicas
-Route::get('/mapa-propiedades', [PropiedadPublicController::class, 'mapa'])->name('public.mapa.propiedades');
-
-// Otras páginas públicas
-Route::get('/sobre-nosotros', fn() => Inertia::render('Public/SobreNosotros'))->name('public.sobre');
+    // Otras páginas públicas
+    Route::get('/sobre-nosotros', fn() => Inertia::render('Public/SobreNosotros'))->name('public.sobre');
+});
 

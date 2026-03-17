@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import PublicLayout from '@/layouts/PublicLayout.vue';
+import PublicAuthenticatedLayout from '@/layouts/PublicAuthenticatedLayout.vue';
 import {
     ChevronLeft, ChevronRight, MapPin, Bed, Bath, Car, Home,
     Maximize2, Calendar, Phone, MessageCircle, Share2, X,
@@ -58,7 +58,7 @@ interface Props {
 const props = defineProps<Props>();
 
 defineOptions({
-    layout: PublicLayout
+    layout: PublicAuthenticatedLayout
 });
 
 // Estado de la galería
@@ -273,7 +273,7 @@ const openGoogleMaps = () => {
 
 const breadcrumbs = computed(() => [
     { label: 'Inicio', href: '/' },
-    { label: 'Propiedades', href: '/propiedades' },
+    { label: 'Mapa de Propiedades', href: '/mapa-propiedades' },
     { label: props.propiedad.name, current: true }
 ]);
 </script>
