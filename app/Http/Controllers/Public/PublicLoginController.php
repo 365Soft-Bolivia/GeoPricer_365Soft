@@ -64,7 +64,7 @@ class PublicLoginController extends Controller
 
             throw ValidationException::withMessages([
                 'username' => 'Las credenciales proporcionadas no son correctas.',
-            ])->onlyInput('username', 'remember');
+            ]);
         }
 
         // Verificar estado del usuario
@@ -76,7 +76,7 @@ class PublicLoginController extends Controller
 
             throw ValidationException::withMessages([
                 'username' => 'Tu cuenta está inactiva. Contacta al administrador.',
-            ])->onlyInput('username', 'remember');
+            ]);
         }
 
         // Verificar si el login está habilitado
@@ -88,7 +88,7 @@ class PublicLoginController extends Controller
 
             throw ValidationException::withMessages([
                 'username' => 'El acceso a tu cuenta ha sido deshabilitado. Contacta al administrador.',
-            ])->onlyInput('username', 'remember');
+            ]);
         }
 
         // Verificar credenciales (email y contraseña)
@@ -100,7 +100,7 @@ class PublicLoginController extends Controller
 
             throw ValidationException::withMessages([
                 'username' => 'Las credenciales proporcionadas no son correctas.',
-            ])->onlyInput('username', 'remember');
+            ]);
         }
 
         // Verificar que el usuario tenga un rol válido para acceso público
@@ -113,7 +113,7 @@ class PublicLoginController extends Controller
 
             return back()->withErrors([
                 'username' => 'Tu cuenta no tiene los permisos necesarios. Contacta al administrador.',
-            ])->onlyInput('username', 'remember');
+            ]);
         }
 
         $userRoleName = $user->roles->first()->name;
@@ -128,7 +128,7 @@ class PublicLoginController extends Controller
 
             return back()->withErrors([
                 'username' => 'Acceso no autorizado. Tu cuenta no tiene permisos para este sistema.',
-            ])->onlyInput('username', 'remember');
+            ]);
         }
 
         // Login exitoso - actualizar intento y regenerar sesión
