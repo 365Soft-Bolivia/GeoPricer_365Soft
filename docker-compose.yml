@@ -11,7 +11,7 @@ services:
     image: geopricer-nginx:latest
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - storage_public:/var/www/html/public/storage:ro
     depends_on:
@@ -99,7 +99,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
       interval: 10s
@@ -110,12 +110,30 @@ services:
       - app-network
 
   # ─────────────────────────────────────────────
+  # phpMyAdmin
+  # ─────────────────────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 50M
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ─────────────────────────────────────────────
   # Redis
   # ─────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
