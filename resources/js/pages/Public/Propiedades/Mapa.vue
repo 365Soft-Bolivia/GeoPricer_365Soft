@@ -72,7 +72,7 @@ const props = defineProps<{
   };
 }>();
 
-const defaultCenter = props.defaultCenter || { lat: -17.38, lng: -66.16 };
+const defaultCenter = props.defaultCenter || { lat: -17.4167, lng: -66.1667 };
 
 /* ================= MAP ================= */
 const mapContainer = ref<HTMLElement | null>(null);
@@ -1016,7 +1016,7 @@ const closeDropdowns = () => {
 const initMap = () => {
   if (!mapContainer.value) return;
 
-  map = L.map(mapContainer.value).setView([defaultCenter.lat, defaultCenter.lng], 13);
+  map = L.map(mapContainer.value).setView([defaultCenter.lat, defaultCenter.lng], 6);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
