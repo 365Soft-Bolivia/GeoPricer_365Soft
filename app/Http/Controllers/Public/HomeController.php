@@ -49,7 +49,15 @@ class HomeController extends Controller
 
         // Opciones para filtros basadas en datos reales
         $filter_options = [
-            'categorias' => ProductCategory::orderBy('category_name')->pluck('category_name', 'id'),
+            // Solo categorías que tienen propiedades públicas (como en el mapa)
+            'categorias' => Product::where('is_public', true)
+                ->whereNotNull('category_id')
+                ->with('category')
+                ->get()
+                ->pluck('category.category_name', 'category.id')
+                ->unique()
+                ->sort()
+                ->toArray(),
             'operaciones' => [
                 'venta' => 'Venta',
                 'alquiler' => 'Alquiler',

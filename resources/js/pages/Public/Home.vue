@@ -23,8 +23,8 @@ const props = withDefaults(defineProps<Props>(), {
         categorias: {},
         operaciones: {
             'venta': 'Venta',
-            'alquiler': 'Alquiler',
-            'anticretico': 'Anticrético'
+            // 'alquiler': 'Alquiler',
+            // 'anticretico': 'Anticrético'
         },
         rango_precios: {}
     })

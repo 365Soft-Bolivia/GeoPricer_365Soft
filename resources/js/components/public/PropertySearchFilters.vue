@@ -24,9 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
     options: () => ({
         categorias: {},
         operaciones: {
-            'venta': 'Venta',
-            'alquiler': 'Alquiler',
-            'anticretico': 'Anticrético'
+            'venta': 'Venta'
         }
     })
 });
@@ -39,9 +37,7 @@ const cargando = ref<boolean>(false);
 // Filtros adicionales (desactivados - solo búsqueda por categoría y operación)
 
 const operacionesDisponibles = [
-    { value: 'venta', label: 'Venta', icon: DollarSign },
-    { value: 'alquiler', label: 'Alquiler', icon: Key },
-    { value: 'anticretico', label: 'Anticrético', icon: FileText },
+    { value: 'venta', label: 'Venta', icon: DollarSign }
 ];
 
 // Validar que se haya seleccionado al menos una opción

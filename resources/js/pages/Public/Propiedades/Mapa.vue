@@ -140,9 +140,7 @@ const canLoadMap = computed(() => {
 });
 
 const operacionesDisponibles = [
-  { value: 'venta', label: 'Venta', icon: DollarSign },
-  { value: 'alquiler', label: 'Alquiler', icon: Key },
-  { value: 'anticretico', label: 'Anticrético', icon: FileText },
+  { value: 'venta', label: 'Venta', icon: DollarSign }
 ];
 
 const nombreCategoriaSeleccionada = computed(() => {
@@ -233,9 +231,7 @@ const getPriceDisplay = (product: Product) => {
 const getPopupContent = (product: Product, extraInfo: string = '') => {
   // Badge de operación con color
   const operacionColors = {
-    'venta': 'bg-[#233C7A]',      /* Azul Alfa */
-    'alquiler': 'bg-[#E0081D]',   /* Rojo Alfa */
-    'anticretico': 'bg-[#FAB90E]' /* Amarillo Alfa */
+    'venta': 'bg-[#233C7A]'      /* Azul Alfa */
   };
   const operacionColor = operacionColors[product.operacion as keyof typeof operacionColors] || 'bg-gray-500';
 
