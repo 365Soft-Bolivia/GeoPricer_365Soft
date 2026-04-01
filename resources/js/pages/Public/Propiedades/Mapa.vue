@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
-import { ArrowLeft, Navigation, X, Search, Radar, MapPin, Home, Filter, ChevronDown, DollarSign, Building, Key, FileText, Check } from 'lucide-vue-next';
+import { ArrowLeft, Navigation, X, Search, Radar, MapPin, Home, Filter, ChevronDown, DollarSign, Building, Key, FileText, Check, Edit, Eye, Trash2 } from 'lucide-vue-next';
 import PropertyDetailsModal from '@/components/public/PropertyDetailsModal.vue';
 
 // Fix para iconos de Leaflet
@@ -115,6 +115,15 @@ const tieneFiltrosAplicados = props.filtrosAplicados && (
 );
 const showSelectionScreen = ref(!tieneFiltrosAplicados); // No mostrar si hay filtros
 const showFilterPanel = ref(false); // Mostrar panel lateral de filtros en el mapa
+
+/* ================= MODO EDICIÓN - DESCARTE DE PROPIEDADES ================= */
+const isEditing = ref(false); // Modo edición activado
+const discardedProperties = ref<Product[]>([]); // Propiedades descartadas temporalmente
+const showOptionsModal = ref(false); // Modal de opciones (enviar a admin o solo excluir)
+const showReasonModal = ref(false); // Modal para ingresar motivo
+const selectedReason = ref<string>(''); // Motivo seleccionado
+const additionalNotes = ref<string>(''); // Notas adicionales
+const isSubmitting = ref(false); // Enviando reportes
 
 // Modal state
 const selectedProperty = ref<Product | null>(null);
@@ -816,10 +825,18 @@ const totalPropiedadesFiltradas = computed(() => {
 
 /* ================= COMPUTED ================= */
 const filteredResults = computed(() => {
-  if (!searchQuery.value) return results.value;
+  let resultsToFilter = results.value;
+
+  // Excluir propiedades descartadas si estamos en modo edición
+  if (isEditing.value && discardedProperties.value.length > 0) {
+    const discardedIds = discardedProperties.value.map(p => p.id);
+    resultsToFilter = resultsToFilter.filter(p => !discardedIds.includes(p.id));
+  }
+
+  if (!searchQuery.value) return resultsToFilter;
 
   const query = searchQuery.value.toLowerCase();
-  return results.value.filter(p =>
+  return resultsToFilter.filter(p =>
     p.name.toLowerCase().includes(query) ||
     p.codigo_inmueble.toLowerCase().includes(query) ||
     (p.category && p.category.toLowerCase().includes(query))
@@ -1739,6 +1756,411 @@ const search = () => {
   updateRadarMarkers();
 };
 
+/* ================= GENERAR PDF ================= */
+const generarPDF = async () => {
+  try {
+    // Importar jsPDF dinámicamente
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+
+    // Crear documento PDF (orientación landscape para mejor visualización de tablas)
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Colores de Alfa
+    const colors = {
+      azul: '#233C7A',
+      amarillo: '#FAB90E',
+      rojo: '#E0081D',
+      gray: '#6B7280'
+    };
+
+    // ================= HEADER =================
+    // Agregar logo de Alfa
+    const logoUrl = '/logoalfa.png';
+    try {
+      doc.addImage(logoUrl, 'PNG', 15, 10, 25, 25);
+    } catch (error) {
+      console.warn('No se pudo cargar el logo:', error);
+    }
+
+    // Título principal
+    doc.setFontSize(24);
+    doc.setTextColor(parseInt(colors.azul.slice(1, 3), 16), parseInt(colors.azul.slice(3, 5), 16), parseInt(colors.azul.slice(5, 7), 16));
+    doc.setFont('helvetica', 'bold');
+    doc.text('Alfa Analytics - Reporte de Análisis', 45, 18);
+
+    // Subtítulo
+    doc.setFontSize(12);
+    doc.setTextColor(parseInt(colors.gray.slice(1, 3), 16), parseInt(colors.gray.slice(3, 5), 16), parseInt(colors.gray.slice(5, 7), 16));
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Análisis de propiedades en área de radar - Radio: ${radarRadius.value}m`, 45, 25);
+
+    // Fecha y hora
+    doc.setFontSize(10);
+    const fecha = new Date().toLocaleDateString('es-BO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    doc.text(`Generado: ${fecha}`, 45, 30);
+
+    // ================= INFORMACIÓN DE FILTROS =================
+    let yPos = 45;
+
+    // Línea separadora
+    doc.setDrawColor(parseInt(colors.azul.slice(1, 3), 16), parseInt(colors.azul.slice(3, 5), 16), parseInt(colors.azul.slice(5, 7), 16));
+    doc.setLineWidth(0.5);
+    doc.line(15, yPos, 280, yPos);
+    yPos += 10;
+
+    // Filtros aplicados
+    doc.setFontSize(14);
+    doc.setTextColor(parseInt(colors.azul.slice(1, 3), 16), parseInt(colors.azul.slice(3, 5), 16), parseInt(colors.azul.slice(5, 7), 16));
+    doc.setFont('helvetica', 'bold');
+    doc.text('Filtros Aplicados:', 15, yPos);
+    yPos += 7;
+
+    doc.setFontSize(11);
+    doc.setTextColor(parseInt(colors.gray.slice(1, 3), 16), parseInt(colors.gray.slice(3, 5), 16), parseInt(colors.gray.slice(5, 7), 16));
+    doc.setFont('helvetica', 'normal');
+
+    const operacionTexto = operacionSeleccionada.value
+      ? operacionSeleccionada.value.charAt(0).toUpperCase() + operacionSeleccionada.value.slice(1)
+      : 'Todas';
+    doc.text(`• Operación: ${operacionTexto}`, 20, yPos);
+    yPos += 6;
+    doc.text(`• Categoría: ${nombreCategoriaSeleccionada.value || 'Todas'}`, 20, yPos);
+    yPos += 6;
+    doc.text(`• Propiedades encontradas: ${filteredResults.value.length}`, 20, yPos);
+    yPos += 10;
+
+    // ================= TABLA DE PROPIEDADES =================
+    if (filteredResults.value.length > 0) {
+      // Preparar datos para la tabla
+      const tableData = filteredResults.value.map((p, index) => {
+        // Determinar precio según operación
+        let precioTexto = '';
+        if (operacionSeleccionada.value === 'venta' || !operacionSeleccionada.value) {
+          if (p.price_usd) precioTexto = `$${p.price_usd.toLocaleString('es-BO')} USD`;
+          else if (p.price_bob) precioTexto = `Bs. ${p.price_bob.toLocaleString('es-BO')} BOB`;
+        } else if (operacionSeleccionada.value === 'alquiler') {
+          if (p.price_usd) precioTexto = `$${p.price_usd.toLocaleString('es-BO')} USD/mes`;
+          else if (p.price_bob) precioTexto = `Bs. ${p.price_bob.toLocaleString('es-BO')} BOB/mes`;
+        } else if (operacionSeleccionada.value === 'anticretico') {
+          if (p.price_usd) precioTexto = `$${p.price_usd.toLocaleString('es-BO')} USD`;
+          else if (p.price_bob) precioTexto = `Bs. ${p.price_bob.toLocaleString('es-BO')} BOB`;
+        }
+
+        return [
+          index + 1,
+          p.name,
+          p.codigo_inmueble || 'N/A',
+          p.category || 'N/A',
+          precioTexto,
+          p.superficie_util ? `${p.superficie_util} m²` : 'N/A',
+          p.superficie_construida ? `${p.superficie_construida} m²` : 'N/A'
+        ];
+      });
+
+      // Generar tabla
+      autoTable(doc, {
+        startY: yPos,
+        head: [['#', 'Propiedad', 'Código', 'Categoría', 'Precio', 'Sup. Útil', 'Sup. Const.']],
+        body: tableData,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [35, 60, 122], // Azul Alfa (#233C7A)
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' }, // #
+          1: { cellWidth: 60 }, // Propiedad
+          2: { cellWidth: 25 }, // Código
+          3: { cellWidth: 25 }, // Categoría
+          4: { cellWidth: 40, halign: 'right' }, // Precio
+          5: { cellWidth: 25, halign: 'center' }, // Sup. Útil
+          6: { cellWidth: 25, halign: 'center' }  // Sup. Const.
+        },
+        margin: { top: 10, left: 15, right: 15, bottom: 10 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    } else {
+      doc.setFontSize(11);
+      doc.setTextColor(parseInt(colors.gray.slice(1, 3), 16), parseInt(colors.gray.slice(3, 5), 16), parseInt(colors.gray.slice(5, 7), 16));
+      doc.text('No se encontraron propiedades en el área del radar.', 15, yPos);
+      yPos += 10;
+    }
+
+    // ================= ESTADÍSTICAS Y PROMEDIOS =================
+    // Nueva página para estadísticas
+    doc.addPage();
+
+    // Título de estadísticas
+    doc.setFontSize(18);
+    doc.setTextColor(parseInt(colors.azul.slice(1, 3), 16), parseInt(colors.azul.slice(3, 5), 16), parseInt(colors.azul.slice(5, 7), 16));
+    doc.setFont('helvetica', 'bold');
+    doc.text('Estadísticas y Promedios', 15, 20);
+
+    yPos = 35;
+
+    // Según la operación, mostrar diferentes estadísticas
+    if (operacionSeleccionada.value === 'venta' || !operacionSeleccionada.value) {
+      // ================= VENTA: Promedios por m² =================
+      doc.setFontSize(14);
+      doc.setTextColor(parseInt(colors.azul.slice(1, 3), 16), parseInt(colors.azul.slice(3, 5), 16), parseInt(colors.azul.slice(5, 7), 16));
+      doc.setFont('helvetica', 'bold');
+      doc.text('Precio Promedio por m²', 15, yPos);
+      yPos += 10;
+
+      // Superficie Útil
+      if (averagePricePerSqm.value.util.usd || averagePricePerSqm.value.util.bob) {
+        doc.setFillColor(35, 60, 122); // Azul Alfa
+        doc.rect(15, yPos, 265, 25, 'F');
+        yPos += 8;
+
+        doc.setFontSize(12);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Superficie Útil', 20, yPos);
+        yPos += 7;
+
+        doc.setFontSize(11);
+        if (averagePricePerSqm.value.util.usd) {
+          doc.text(`USD: $${averagePricePerSqm.value.util.usd.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/m²`, 25, yPos);
+        }
+        if (averagePricePerSqm.value.util.bob) {
+          doc.text(`BOB: Bs. ${averagePricePerSqm.value.util.bob.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/m²`, 130, yPos);
+        }
+        yPos += 12;
+      }
+
+      // Superficie Construida
+      if (averagePricePerSqm.value.construida.usd || averagePricePerSqm.value.construida.bob) {
+        doc.setFillColor(35, 60, 122); // Azul Alfa
+        doc.rect(15, yPos, 265, 25, 'F');
+        yPos += 8;
+
+        doc.setFontSize(12);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Superficie Construida', 20, yPos);
+        yPos += 7;
+
+        doc.setFontSize(11);
+        if (averagePricePerSqm.value.construida.usd) {
+          doc.text(`USD: $${averagePricePerSqm.value.construida.usd.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/m²`, 25, yPos);
+        }
+        if (averagePricePerSqm.value.construida.bob) {
+          doc.text(`BOB: Bs. ${averagePricePerSqm.value.construida.bob.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/m²`, 130, yPos);
+        }
+        yPos += 12;
+      }
+    } else if (operacionSeleccionada.value === 'alquiler' && averageAlquiler.value.count > 0) {
+      // ================= ALQUILER: Promedios =================
+      doc.setFontSize(14);
+      doc.setTextColor(parseInt(colors.rojo.slice(1, 3), 16), parseInt(colors.rojo.slice(3, 5), 16), parseInt(colors.rojo.slice(5, 7), 16));
+      doc.setFont('helvetica', 'bold');
+      doc.text('Promedio de Alquiler', 15, yPos);
+      yPos += 10;
+
+      doc.setFillColor(224, 8, 29); // Rojo Alfa
+      doc.rect(15, yPos, 265, 25, 'F');
+      yPos += 8;
+
+      doc.setFontSize(12);
+      doc.setTextColor(255, 255, 255);
+      doc.text('Promedio en la Zona', 20, yPos);
+      yPos += 7;
+
+      doc.setFontSize(11);
+      if (averageAlquiler.value.usd) {
+        doc.text(`USD: $${averageAlquiler.value.usd.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mes`, 25, yPos);
+      }
+      if (averageAlquiler.value.bob) {
+        doc.text(`BOB: Bs. ${averageAlquiler.value.bob.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mes`, 130, yPos);
+      }
+      yPos += 12;
+
+      doc.setFontSize(10);
+      doc.text(`Basado en ${averageAlquiler.value.count} propiedades en el área`, 25, yPos);
+    } else if (operacionSeleccionada.value === 'anticretico' && averageAnticreticoMensual.value.count > 0) {
+      // ================= ANTICRÉTICO: Equivalencia Mensual =================
+      doc.setFontSize(14);
+      doc.setTextColor(parseInt(colors.amarillo.slice(1, 3), 16), parseInt(colors.amarillo.slice(3, 5), 16), parseInt(colors.amarillo.slice(5, 7), 16));
+      doc.setFont('helvetica', 'bold');
+      doc.text('Equivalencia Mensual de Anticrético', 15, yPos);
+      yPos += 10;
+
+      doc.setFillColor(250, 185, 14); // Amarillo Alfa
+      doc.rect(15, yPos, 265, 25, 'F');
+      yPos += 8;
+
+      doc.setFontSize(12);
+      doc.setTextColor(35, 60, 122); // Texto azul sobre amarillo
+      doc.text('Equivalencia Mensual (30% anual)', 20, yPos);
+      yPos += 7;
+
+      doc.setFontSize(11);
+      if (averageAnticreticoMensual.value.usd) {
+        doc.text(`USD: $${averageAnticreticoMensual.value.usd.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mes`, 25, yPos);
+      }
+      if (averageAnticreticoMensual.value.bob) {
+        doc.text(`BOB: Bs. ${averageAnticreticoMensual.value.bob.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mes`, 130, yPos);
+      }
+      yPos += 12;
+
+      doc.setFontSize(10);
+      doc.text(`Basado en ${averageAnticreticoMensual.value.count} propiedades en el área`, 25, yPos);
+    }
+
+    // ================= FOOTER =================
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(9);
+      doc.setTextColor(parseInt(colors.gray.slice(1, 3), 16), parseInt(colors.gray.slice(3, 5), 16), parseInt(colors.gray.slice(5, 7), 16));
+      doc.setFont('helvetica', 'normal');
+
+      // Footer centrado
+      doc.text(
+        `Página ${i} de ${pageCount} - Alfa Analytics - Reporte generado el ${new Date().toLocaleDateString('es-BO')}`,
+        148,
+        287,
+        { align: 'center' }
+      );
+    }
+
+    // ================= DESCARGAR PDF =================
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    doc.save(`alfa-analytics-reporte-radar-${timestamp}.pdf`);
+
+  } catch (error) {
+    console.error('Error al generar PDF:', error);
+    alert('Error al generar el PDF. Por favor, intente nuevamente.');
+  }
+};
+
+/* ================= FUNCIONES MODO EDICIÓN ================= */
+// Activar modo edición
+const activateEditMode = () => {
+  isEditing.value = true;
+  discardedProperties.value = [];
+};
+
+// Deshacer cambios y salir del modo edición
+const cancelEditMode = () => {
+  isEditing.value = false;
+  discardedProperties.value = [];
+};
+
+// Descartar una propiedad
+const discardProperty = (property: Product) => {
+  if (!discardedProperties.value.find(p => p.id === property.id)) {
+    discardedProperties.value.push(property);
+  }
+};
+
+// Restaurar una propiedad descartada
+const restoreProperty = (property: Product) => {
+  discardedProperties.value = discardedProperties.value.filter(p => p.id !== property.id);
+};
+
+// Al presionar LISTO - mostrar modal de opciones
+const onDoneEditing = () => {
+  if (discardedProperties.value.length === 0) {
+    isEditing.value = false;
+    return;
+  }
+  showOptionsModal.value = true;
+};
+
+// Opción 1: Solo excluir del análisis
+const excludeFromAnalysis = () => {
+  isEditing.value = false;
+  discardedProperties.value = [];
+  showOptionsModal.value = false;
+};
+
+// Opción 2: Enviar al admin
+const sendToAdmin = () => {
+  showOptionsModal.value = false;
+  showReasonModal.value = true;
+};
+
+// Cancelar modal de opciones
+const cancelOptionsModal = () => {
+  showOptionsModal.value = false;
+};
+
+// Cancelar modal de motivo
+const cancelReasonModal = () => {
+  showReasonModal.value = false;
+  selectedReason.value = '';
+  additionalNotes.value = '';
+};
+
+// Enviar reportes al admin
+const submitReports = async () => {
+  if (!selectedReason.value) {
+    alert('Por favor, selecciona un motivo');
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  try {
+    const response = await fetch('/api/discarded-reports', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.getAttribute('content') || '',
+      },
+      body: JSON.stringify({
+        discarded_properties: discardedProperties.value.map(p => ({
+          product_id: p.id,
+          reason: selectedReason.value,
+          additional_notes: additionalNotes.value,
+          snapshot: p,
+        })),
+        radar_center_lat: radarCenter.value?.lat || null,
+        radar_center_lng: radarCenter.value?.lng || null,
+        radar_radius: radarRadius.value || null,
+      }),
+    });
+
+    if (response.ok) {
+      alert(`¡Éxito! ${discardedProperties.value.length} reportes enviados al admin`);
+      isEditing.value = false;
+      discardedProperties.value = [];
+      showReasonModal.value = false;
+      selectedReason.value = '';
+      additionalNotes.value = '';
+    } else {
+      throw new Error('Error al enviar reportes');
+    }
+  } catch (error) {
+    console.error('Error al enviar reportes:', error);
+    alert('Error al enviar los reportes. Por favor, intente nuevamente.');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
 // Función para actualizar marcadores del radar
 const updateRadarMarkers = () => {
   if (!map || !markerClusterGroup) return;
@@ -2466,10 +2888,25 @@ const resetRadar = () => {
           <div
             v-for="p in filteredResults"
             :key="p.id"
-            @click="focusProperty(p)"
-            class="cursor-pointer border border-gray-200 hover:border-blue-500 p-2 sm:p-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-[1.01] hover:shadow-sm"
+            @click="!isEditing && focusProperty(p)"
+            :class="[
+              'border p-2 sm:p-3 rounded-lg transition-all transform hover:scale-[1.01] hover:shadow-sm relative',
+              isEditing
+                ? 'cursor-default border-red-300 bg-red-50'
+                : 'cursor-pointer border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+            ]"
           >
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
+            <!-- Botón X (solo en modo edición) -->
+            <button
+              v-if="isEditing"
+              @click.stop="discardProperty(p)"
+              class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg transition-all hover:scale-110 z-10"
+              title="Descartar propiedad"
+            >
+              <X :size="16" />
+            </button>
+
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2 pr-8">
               <h4 class="font-bold text-gray-800 text-sm sm:text-base line-clamp-2 flex-1">{{ p.name }}</h4>
 
               <!-- PRECIO SEGÚN OPERACIÓN -->
@@ -2813,6 +3250,58 @@ const resetRadar = () => {
               </p>
             </div>
           </div>
+
+          <!-- ================= BOTONES DE ACCIÓN ================= -->
+          <div class="border-t border-white/20 p-3 bg-white/5">
+            <!-- Mensaje de propiedades descartadas (modo edición) -->
+            <div v-if="isEditing && discardedProperties.length > 0" class="mb-3 px-3 py-2 bg-red-100/90 border border-red-400 rounded-lg">
+              <p class="text-sm text-red-800 font-semibold text-center">
+                {{ discardedProperties.length }} propiedad{{ discardedProperties.length !== 1 ? 'es' : '' }} descartada{{ discardedProperties.length !== 1 ? 's' : '' }}
+              </p>
+            </div>
+
+            <!-- Botones normales (no edición) -->
+            <div v-if="!isEditing" class="grid grid-cols-2 gap-2">
+              <button
+                @click="activateEditMode"
+                class="bg-white hover:bg-gray-100 text-[#233C7A] font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 group"
+                title="Editar propiedades"
+              >
+                <Edit :size="20" class="group-hover:scale-110 transition-transform" />
+                <span class="text-sm">Editar</span>
+              </button>
+
+              <button
+                @click="generarPDF"
+                class="bg-white hover:bg-gray-100 text-[#233C7A] font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 group"
+                title="Descargar reporte en PDF"
+              >
+                <FileText :size="20" class="group-hover:scale-110 transition-transform" />
+                <span class="text-sm">PDF</span>
+              </button>
+            </div>
+
+            <!-- Botones modo edición -->
+            <div v-else class="grid grid-cols-2 gap-2">
+              <button
+                @click="cancelEditMode"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                title="Cancelar edición"
+              >
+                <X :size="20" />
+                <span class="text-sm">Cancelar</span>
+              </button>
+
+              <button
+                @click="onDoneEditing"
+                class="bg-[#FAB90E] hover:bg-[#e5a80d] text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                title="Finalizar edición"
+              >
+                <Check :size="20" />
+                <span class="text-sm">Listo</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </transition>
@@ -2941,6 +3430,144 @@ const resetRadar = () => {
       :show="showPropertyModal"
       @close="closePropertyModal"
     />
+
+    <!-- MODAL DE OPCIONES (Enviar a admin o solo excluir) -->
+    <div v-if="showOptionsModal" class="fixed inset-0 z-[9999] flex items-center justify-center">
+      <div class="absolute inset-0 bg-black bg-opacity-50" @click="cancelOptionsModal"></div>
+
+      <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-[#233C7A] to-[#1e325e] text-white px-6 py-4">
+          <h3 class="text-xl font-bold text-center">¿Qué deseas hacer?</h3>
+          <p class="text-sm text-center mt-1 opacity-90">
+            Con {{ discardedProperties.length }} propiedad{{ discardedProperties.length !== 1 ? 'es' : '' }} descartada{{ discardedProperties.length !== 1 ? 's' : '' }}
+          </p>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 space-y-3">
+          <!-- Opción 1: Enviar al admin -->
+          <button
+            @click="sendToAdmin"
+            class="w-full p-4 border-2 border-[#233C7A] hover:bg-[#233C7A] hover:text-white rounded-lg transition-all text-left group"
+          >
+            <div class="flex items-start gap-3">
+              <div class="bg-[#233C7A] text-white p-2 rounded-lg group-hover:bg-white group-hover:text-[#233C7A] transition-colors">
+                <FileText :size="24" />
+              </div>
+              <div class="flex-1">
+                <h4 class="font-bold text-lg">📤 Enviar al Admin</h4>
+                <p class="text-sm text-gray-600 group-hover:text-white/80">
+                  Crear reporte en el panel de administración con el motivo del descarte
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <!-- Opción 2: Solo excluir -->
+          <button
+            @click="excludeFromAnalysis"
+            class="w-full p-4 border-2 border-gray-300 hover:bg-gray-100 rounded-lg transition-all text-left group"
+          >
+            <div class="flex items-start gap-3">
+              <div class="bg-gray-400 text-white p-2 rounded-lg group-hover:bg-white group-hover:text-gray-600 transition-colors">
+                <Trash2 :size="24" />
+              </div>
+              <div class="flex-1">
+                <h4 class="font-bold text-lg">🚫 Solo excluir de este análisis</h4>
+                <p class="text-sm text-gray-600">
+                  Excluir temporalmente sin crear reporte (solo para este PDF/análisis)
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-6 py-4">
+          <button
+            @click="cancelOptionsModal"
+            class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DE MOTIVO (cuando se envía al admin) -->
+    <div v-if="showReasonModal" class="fixed inset-0 z-[9999] flex items-center justify-center">
+      <div class="absolute inset-0 bg-black bg-opacity-50" @click="cancelReasonModal"></div>
+
+      <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-[#FAB90E] to-[#E0081D] text-white px-6 py-4">
+          <h3 class="text-xl font-bold text-center">Motivo del descarte</h3>
+          <p class="text-sm text-center mt-1 opacity-90">
+            ¿Por qué descartas estas propiedades?
+          </p>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 space-y-4">
+          <!-- Dropdown de motivos -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Selecciona el motivo principal <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="selectedReason"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#233C7A] focus:border-transparent"
+            >
+              <option value="">-- Selecciona una opción --</option>
+              <option value="precio_alto">💰 Precio muy alto</option>
+              <option value="datos_incorrectos">❌ Datos incorrectos</option>
+              <option value="ubicacion_erronea">📍 Ubicación errónea</option>
+              <option value="no_disponible">🚫 Propiedad no disponible</option>
+              <option value="otro">📝 Otro</option>
+            </select>
+          </div>
+
+          <!-- Notas adicionales -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Notas adicionales (opcional)
+            </label>
+            <textarea
+              v-model="additionalNotes"
+              rows="3"
+              placeholder="Agrega más detalles si lo deseas..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#233C7A] focus:border-transparent resize-none"
+            ></textarea>
+          </div>
+
+          <!-- Info -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            <p class="font-semibold mb-1">ℹ️ Información</p>
+            <p>Se crearán {{ discardedProperties.length }} reporte{{ discardedProperties.length !== 1 ? 's' : '' }} en el módulo de Reportes del admin.</p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-6 py-4 flex gap-3">
+          <button
+            @click="cancelReasonModal"
+            :disabled="isSubmitting"
+            class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            @click="submitReports"
+            :disabled="isSubmitting"
+            class="flex-1 px-4 py-2 bg-gradient-to-r from-[#FAB90E] to-[#E0081D] hover:from-[#E0081D] hover:to-[#FAB90E] text-white rounded-lg font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <span v-if="isSubmitting">Enviando...</span>
+            <span v-else>Enviar Reportes</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
