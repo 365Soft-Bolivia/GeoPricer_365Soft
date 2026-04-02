@@ -179,7 +179,9 @@ const canLoadMap = computed(() => {
 });
 
 const operacionesDisponibles = [
-  { value: 'venta', label: 'Venta', icon: DollarSign }
+  { value: 'venta', label: 'Venta', icon: DollarSign },
+  { value: 'alquiler', label: 'Alquiler', icon: Key },
+  { value: 'anticretico', label: 'Anticrético', icon: FileText }
 ];
 
 const nombreCategoriaSeleccionada = computed(() => {

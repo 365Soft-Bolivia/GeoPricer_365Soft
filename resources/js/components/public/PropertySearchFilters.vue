@@ -37,7 +37,9 @@ const cargando = ref<boolean>(false);
 // Filtros adicionales (desactivados - solo búsqueda por categoría y operación)
 
 const operacionesDisponibles = [
-    { value: 'venta', label: 'Venta', icon: DollarSign }
+    { value: 'venta', label: 'Venta', icon: DollarSign },
+    { value: 'alquiler', label: 'Alquiler', icon: Key },
+    { value: 'anticretico', label: 'Anticrético', icon: FileText }
 ];
 
 // Validar que se haya seleccionado al menos una opción
@@ -218,15 +220,15 @@ const buscarPropiedades = () => {
                 @click="buscarPropiedades"
                 :class="[
                     'w-full py-5 rounded-2xl font-bold text-xl transition-all shadow-xl flex items-center justify-center gap-3',
-                    puedeBuscar && !cargando.value
+                    puedeBuscar && !cargando
                         ? 'bg-gradient-to-r from-[#233C7A] via-[#2a4a94] to-[#233C7A] text-white hover:from-[#1a2e5f] hover:via-[#233C7A] hover:to-[#1a2e5f] hover:shadow-2xl'
                         : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                 ]"
                 :disabled="botonDeshabilitado"
             >
-                <LoaderCircle v-if="cargando.value" :size="28" class="animate-spin" />
+                <LoaderCircle v-if="cargando" :size="28" class="animate-spin" />
                 <Search v-else :size="28" />
-                {{ cargando.value ? 'Cargando...' : 'Ver Mapa con Propiedades' }}
+                {{ cargando ? 'Cargando...' : 'Ver Mapa con Propiedades' }}
             </button>
         </div>
     </div>
