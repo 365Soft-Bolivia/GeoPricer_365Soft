@@ -93,53 +93,12 @@ class PropiedadPublicController extends Controller
             \Log::info('Filtro ubicaciones aplicado:', ['ubicaciones' => $ubicaciones]);
         }
 
-        // Contar resultados antes de obtener
+        // Contar resultados (NO obtener las propiedades, se cargarán progresivamente en el frontend)
         $totalCount = $query->count();
         \Log::info('Total de propiedades filtradas:', ['total' => $totalCount]);
 
-        // Obtener propiedades filtradas
-        $productsConUbicacion = $query->get()
-            ->map(function ($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'codigo_inmueble' => $product->codigo_inmueble ?? $product->sku ?? 'N/A',
-                    'price_usd' => $product->price_usd ? (float) $product->price_usd : null,
-                    'price_bob' => $product->price_bob ? (float) $product->price_bob : null,
-                    'operacion' => $product->operacion,
-                    'default_image' => $product->default_image,
-                    'category' => $product->category?->category_name ?? null,
-                    'category_id' => $product->category_id,
-                    // Campos informativos adicionales
-                    'habitaciones' => $product->habitaciones,
-                    'banos' => $product->banos,
-                    'ambientes' => $product->ambientes,
-                    'cocheras' => $product->cocheras,
-                    'superficie_util' => $product->superficie_util,
-                    'superficie_construida' => $product->superficie_construida,
-                    'ano_construccion' => $product->ano_construccion,
-                    'antiguedad' => $product->ano_construccion ? (date('Y') - $product->ano_construccion) : null,
-                    'comision' => $product->comision,
-                    'descripcion' => $product->description,
-                    'location' => [
-                        'id' => $product->location->id,
-                        'latitude' => $product->location->latitude,
-                        'longitude' => $product->location->longitude,
-                        'address' => $product->location->address,
-                        'is_active' => $product->location->is_active,
-                    ],
-                    // Incluir todas las imágenes del producto
-                    'images' => $product->images->map(function ($image) {
-                        return [
-                            'id' => $image->id,
-                            'image_path' => $image->image_path,
-                            'original_name' => $image->original_name,
-                            'is_primary' => $image->is_primary,
-                            'order' => $image->order,
-                        ];
-                    })->toArray(),
-                ];
-            });
+        // NO cargar propiedades al inicio - se cargarán progresivamente via AJAX
+        $productsConUbicacion = collect(); // Colección vacía
 
         // Obtener categorías disponibles que tengan propiedades públicas con ubicación
         $categoriasDisponibles = Product::where('is_public', true)

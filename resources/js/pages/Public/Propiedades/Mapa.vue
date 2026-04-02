@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -8,6 +8,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
 import { ArrowLeft, Navigation, X, Search, Radar, MapPin, Home, Filter, ChevronDown, DollarSign, Building, Key, FileText, Check, Eye } from 'lucide-vue-next';
 import PropertyDetailsModal from '@/components/public/PropertyDetailsModal.vue';
+import axios from 'axios';
 
 // Fix para iconos de Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -108,6 +109,18 @@ const searchQuery = ref('');
 const radarMode = ref(false); // Modo de colocación de radar
 const radarPlaced = ref(false); // Si el radar ya está colocado
 
+/* ================= PROGRESSIVE LOADING STATE ================= */
+const loadingState = ref({
+  loaded: 0,
+  total: 0,
+  isLoading: false,
+  isComplete: false,
+  cancelled: false,
+  progress: 0
+});
+let currentCursor: string | null = null;
+const loadedProperties = ref<Product[]>([]); // Propiedades cargadas progresivamente
+
 // Verificar si hay filtros aplicados para decidir si mostrar pantalla de selección
 const tieneFiltrosAplicados = props.filtrosAplicados && (
   props.filtrosAplicados.categoria !== null ||
@@ -125,6 +138,27 @@ const tempResults = ref<Product[]>([]); // Resultados temporales antes de confir
 const selectedProperty = ref<Product | null>(null);
 const showPropertyModal = ref(false);
 
+/* ================= AUTO-HIDE SUCCESS MESSAGE ================= */
+let successMessageTimeout: number | null = null;
+
+// Watch para ocultar automáticamente el mensaje de éxito después de 5 segundos
+watch(() => loadingState.value.isComplete, (isComplete) => {
+  if (isComplete) {
+    // Limpiar timeout anterior si existe
+    if (successMessageTimeout) {
+      clearTimeout(successMessageTimeout);
+    }
+
+    // Ocultar después de 5 segundos
+    successMessageTimeout = window.setTimeout(() => {
+      loadingState.value.isComplete = false;
+      console.log('Mensaje de éxito ocultado automáticamente (5 segundos)');
+    }, 5000);
+  }
+});
+
+// Limpiar timeout al desmontar el componente
+// NOTA: Hay otro onUnmounted más abajo que también maneja la limpieza
 /* ================= FILTROS ================= */
 // Inicializar con los filtros aplicados si existen
 const categoriaSeleccionada = ref<number | null>(props.filtrosAplicados?.categoria ?? null);
@@ -159,12 +193,15 @@ const nombreOperacionSeleccionada = computed(() => {
 });
 
 const productosFiltrados = computed(() => {
-  // Si no hay filtros seleccionados, no mostrar nada para evitar cargar todos los datos
+  // Usar las propiedades cargadas progresivamente en lugar de props.productsConUbicacion
+  const source = loadedProperties.value.length > 0 ? loadedProperties.value : props.productsConUbicacion;
+
+  // Si no hay filtros seleccionados, retornar las propiedades cargadas
   if (!categoriaSeleccionada.value && !operacionSeleccionada.value) {
-    return [];
+    return source;
   }
 
-  return props.productsConUbicacion.filter(product => {
+  return source.filter(product => {
     if (!product.location.is_active) return false;
 
     // Filtro por categoría (si está seleccionada)
@@ -915,16 +952,36 @@ const goToProperties = () => {
 };
 
 // Función para confirmar selección y cargar el mapa
-const confirmSelectionAndLoadMap = () => {
+const confirmSelectionAndLoadMap = async () => {
   if (!canLoadMap.value) {
     alert('Por favor, selecciona al menos una categoría o tipo de operación');
     return;
   }
+
+  console.time('Tiempo total hasta mapa visible');
+
+  // Ocultar pantalla de selección INMEDIATAMENTE
   showSelectionScreen.value = false;
-  // Inicializar el mapa después de la confirmación
-  setTimeout(() => {
-    initMap();
-  }, 100);
+
+  // Forzar re-render para mostrar el mapa vacío
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  // Inicializar el mapa INMEDIATAMENTE (esto es rápido, <100ms)
+  console.time('initMap');
+  initMap();
+  console.timeEnd('initMap');
+
+  // Preparar filtros
+  const filtros = {
+    categoria: categoriaSeleccionada.value,
+    operacion: operacionSeleccionada.value
+  };
+
+  console.log('Mapa inicializado, iniciando carga progresiva...');
+  console.timeEnd('Tiempo total hasta mapa visible');
+
+  // Iniciar carga progresiva (esto NO bloquea el mapa)
+  loadPropertiesProgressive(filtros);
 };
 
 // Función para abrir el panel lateral de filtros
@@ -1082,7 +1139,8 @@ const initMap = () => {
   });
 
   map.addLayer(markerClusterGroup);
-  updateMarkers();
+  // NO llamar a updateMarkers() aquí - los marcadores se agregan progresivamente
+  // con loadPropertiesProgressive() -> addMarkersToMap()
 
   // Solo escuchar clicks cuando el modo radar está activo
   map.on('click', (e) => {
@@ -1092,6 +1150,222 @@ const initMap = () => {
   });
 };
 
+/* ================= PROGRESSIVE LOADING FUNCTIONS ================= */
+
+/**
+ * Obtiene un chunk de propiedades desde el backend usando axios
+ */
+const fetchPropertyChunk = async (cursor: string | null, filtros: any) => {
+  console.time(`fetchPropertyChunk (cursor: ${cursor ? 'yes' : 'no'})`);
+
+  try {
+    const response = await axios.post('/api/v1/propiedades/mapa-chunk', {
+      cursor: cursor,
+      filtros: filtros
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+      }
+    });
+
+    console.timeEnd(`fetchPropertyChunk (cursor: ${cursor ? 'yes' : 'no'})`);
+
+    console.log('Respuesta axios:', {
+      status: response.status,
+      data_length: response.data.data?.length,
+      chunk_size: response.data.chunk_size,
+      has_more: response.data.has_more,
+      total_count: response.data.total_count
+    });
+
+    return response.data;
+  } catch (error) {
+    console.timeEnd(`fetchPropertyChunk (cursor: ${cursor ? 'yes' : 'no'})`);
+    console.error('Error fetching property chunk:', error);
+
+    if (axios.isAxiosError(error)) {
+      throw new Error(`Error ${error.response?.status}: ${error.response?.data?.message || error.message}`);
+    }
+
+    throw error;
+  }
+};
+
+/**
+ * Agrega marcadores al mapa de forma acumulativa (no borra los anteriores)
+ */
+const addMarkersToMap = (newProperties: Product[]) => {
+  if (!map || !markerClusterGroup) {
+    console.error('Mapa o markerClusterGroup no está inicializado');
+    return;
+  }
+
+  console.log(`Agregando ${newProperties.length} marcadores al mapa...`);
+
+  // Guardar propiedades en loadedProperties para usar en filtros y radar
+  loadedProperties.value.push(...newProperties);
+
+  newProperties.forEach((product) => {
+    const operacionIcon = getOperacionIcon(product.operacion);
+    const customIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `
+        <div style="
+          background: ${getOperacionColor(product.operacion)};
+          border: 3px solid white;
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        ">${operacionIcon}</div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+      popupAnchor: [0, -36]
+    });
+
+    const marker = L.marker([product.location.latitude, product.location.longitude], {
+      icon: customIcon
+    });
+
+    marker.bindPopup(getPopupContent(product));
+
+    markerClusterGroup.addLayer(marker);
+    markers.push(marker);
+  });
+
+  console.log(`Total de marcadores en el mapa: ${markers.length}`);
+};
+
+/**
+ * Carga propiedades de forma progresiva en chunks de 500
+ */
+const loadPropertiesProgressive = async (filtros: any) => {
+  console.log('='.repeat(60));
+  console.log('Iniciando carga progresiva de propiedades (chunks de 500)...', filtros);
+  console.time('loadPropertiesProgressive - TIEMPO TOTAL');
+
+  // Resetear estado de carga
+  loadingState.value = {
+    loaded: 0,
+    total: 0,
+    isLoading: true,
+    isComplete: false,
+    cancelled: false,
+    progress: 0
+  };
+  currentCursor = null;
+  loadedProperties.value = []; // Limpiar propiedades anteriores
+
+  try {
+    let response: any; // Declarar fuera del do-while para que esté disponible en el while
+    let chunkNumber = 0;
+
+    do {
+      chunkNumber++;
+      console.log(`\n📦 Chunk #${chunkNumber} - Iniciando...`);
+
+      // Verificar si el usuario canceló
+      if (loadingState.value.cancelled) {
+        console.log('❌ Carga cancelada por el usuario');
+        break;
+      }
+
+      // Obtener chunk del backend
+      response = await fetchPropertyChunk(currentCursor, filtros);
+
+      console.log('✅ Chunk recibido del backend:', {
+        success: response.success,
+        data_length: response.data?.length,
+        chunk_size: response.chunk_size,
+        has_more: response.has_more,
+        total_count: response.total_count,
+        next_cursor: response.next_cursor ? 'present' : 'null'
+      });
+
+      if (!response.success) {
+        throw new Error(response.message || 'Error al cargar propiedades');
+      }
+
+      // Actualizar total (solo el primer chunk lo trae)
+      if (response.total_count !== null) {
+        loadingState.value.total = response.total_count;
+        console.log(`📊 Total de propiedades: ${loadingState.value.total}`);
+      }
+
+      // Agregar marcadores al mapa
+      console.time(`addMarkersToMap - Chunk #${chunkNumber}`);
+      addMarkersToMap(response.data);
+      console.timeEnd(`addMarkersToMap - Chunk #${chunkNumber}`);
+
+      // Actualizar contador
+      loadingState.value.loaded += response.chunk_size;
+
+      // Calcular progreso
+      if (loadingState.value.total > 0) {
+        loadingState.value.progress = Math.round(
+          (loadingState.value.loaded / loadingState.value.total) * 100
+        );
+      }
+
+      // Actualizar cursor para el siguiente chunk
+      currentCursor = response.next_cursor;
+
+      console.log(`✅ Chunk #${chunkNumber} completado: ${loadingState.value.loaded}/${loadingState.value.total} (${loadingState.value.progress}%)`);
+
+      // Pausa moderada para carga gradual (1 segundo entre chunks)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+    } while (response.has_more && !loadingState.value.cancelled);
+
+    // Carga completada
+    loadingState.value.isComplete = true;
+    loadingState.value.isLoading = false;
+
+    console.log('='.repeat(60));
+    console.log('✅ Carga progresiva completada:', {
+      total_loaded: loadingState.value.loaded,
+      cancelled: loadingState.value.cancelled,
+      total_chunks: chunkNumber
+    });
+    console.timeEnd('loadPropertiesProgressive - TIEMPO TOTAL');
+    console.log('='.repeat(60));
+
+  } catch (error) {
+    console.error('Error en carga progresiva:', error);
+    loadingState.value.isLoading = false;
+
+    // NO redirigir, solo mostrar error
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+
+    console.error('Detalles del error:', {
+      message: errorMessage,
+      error: error,
+      cursor: currentCursor,
+      loaded: loadingState.value.loaded,
+      total: loadingState.value.total
+    });
+
+    // Mostrar error más informativo
+    alert(`Error al cargar propiedades: ${errorMessage}\n\nPropiedades cargadas: ${loadingState.value.loaded}\n\nPor favor, recarga la página.`);
+  }
+};
+
+/**
+ * Cancela la carga progresiva
+ */
+const cancelProgressiveLoading = () => {
+  console.log('Cancelando carga progresiva...');
+  loadingState.value.cancelled = true;
+  loadingState.value.isLoading = false;
+};
+
+// Mantener la función updateMarkers para compatibilidad con otras funcionalidades
 const updateMarkers = () => {
   console.log('updateMarkers llamado');
   console.log('Estado del mapa:', { mapInitialized: !!map, clusterInitialized: !!markerClusterGroup });
@@ -1100,6 +1374,12 @@ const updateMarkers = () => {
     operacion: operacionSeleccionada.value
   });
   console.log('Productos a mostrar:', productosFiltrados.value.length);
+
+  // Si hay una carga progresiva en curso, NO interferir
+  if (loadingState.value.isLoading) {
+    console.log('Carga progresiva en curso, omitiendo updateMarkers');
+    return;
+  }
 
   if (!map || !markerClusterGroup) {
     console.error('Mapa o markerClusterGroup no está inicializado');
@@ -1169,9 +1449,26 @@ const getOperacionColor = (operacion: string) => {
 onMounted(() => {
   attachPopupButtonListeners();
   addFullScreenStyles();
+
   // No inicializar el mapa hasta que se seleccionen los filtros
   if (!showSelectionScreen.value) {
+    // El mapa ya viene con filtros aplicados
     initMap();
+
+    // Iniciar carga progresiva si hay filtros aplicados
+    if (props.filtrosAplicados && (props.filtrosAplicados.categoria || props.filtrosAplicados.operacion)) {
+      const filtros = {
+        categoria: props.filtrosAplicados.categoria,
+        operacion: props.filtrosAplicados.operacion,
+        precio_min: props.filtrosAplicados.precio_min,
+        precio_max: props.filtrosAplicados.precio_max,
+        habitaciones: props.filtrosAplicados.habitaciones,
+        banos: props.filtrosAplicados.banos,
+        ubicaciones: props.filtrosAplicados.ubicaciones
+      };
+
+      loadPropertiesProgressive(filtros);
+    }
   }
 });
 
@@ -1179,6 +1476,7 @@ onUnmounted(() => {
   removeFullScreenStyles();
   if (pulseInterval) clearInterval(pulseInterval);
   if (searchTimeout) clearTimeout(searchTimeout);
+  if (successMessageTimeout) clearTimeout(successMessageTimeout);
   if (map) {
     if (markerClusterGroup) {
       map.removeLayer(markerClusterGroup);
@@ -3546,6 +3844,87 @@ const resetRadar = () => {
       </div>
     </transition>
 
+    <!-- Indicador de Carga Progresiva -->
+    <transition name="fade-slide">
+      <div v-if="loadingState.isLoading && !loadingState.isComplete"
+           class="fixed bottom-6 right-6 z-[2000] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden min-w-[320px] max-w-[400px]">
+        <!-- Header con gradiente -->
+        <div class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] px-4 py-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <span class="text-white font-semibold text-sm">Cargando propiedades...</span>
+            </div>
+            <button
+              @click="cancelProgressiveLoading"
+              class="text-white/80 hover:text-white transition-colors text-xs font-medium underline"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <!-- Body con progreso -->
+        <div class="p-4 space-y-3">
+          <!-- Progress bar -->
+          <div class="relative">
+            <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-gradient-to-r from-[#FAB90E] to-[#E0081D] transition-all duration-300 ease-out rounded-full"
+                :style="{ width: loadingState.progress + '%' }"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Info de progreso -->
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">
+              <span class="font-semibold text-[#233C7A]">{{ loadingState.loaded }}</span>
+              <span v-if="loadingState.total > 0">
+                de {{ loadingState.total.toLocaleString() }}
+              </span>
+              propiedades
+            </span>
+            <span v-if="loadingState.total > 0" class="font-semibold text-[#E0081D]">
+              {{ loadingState.progress }}%
+            </span>
+          </div>
+
+          <!-- Mensaje informativo -->
+          <p class="text-xs text-gray-500 text-center">
+            Cargando en grupos de 500 propiedades para mayor velocidad 🚀
+          </p>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Mensaje de carga completada -->
+    <transition name="fade-slide">
+      <div v-if="loadingState.isComplete && !loadingState.isLoading"
+           class="fixed bottom-6 right-6 z-[2000] bg-green-50 border border-green-200 rounded-xl shadow-2xl px-6 py-4 flex items-center gap-3">
+        <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-green-800 text-sm">
+            ¡Carga completa! 🎉
+          </p>
+          <p class="text-green-600 text-xs">
+            {{ loadingState.loaded.toLocaleString() }} propiedades cargadas
+          </p>
+        </div>
+        <button
+          @click="loadingState.isComplete = false"
+          class="ml-2 text-green-600 hover:text-green-800 transition-colors"
+          title="Cerrar"
+        >
+          <X :size="18" />
+        </button>
+      </div>
+    </transition>
+
     <!-- Modal de Detalles de Propiedad -->
     <PropertyDetailsModal
       v-if="selectedProperty"
@@ -3566,6 +3945,26 @@ const resetRadar = () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Animación de fade-slide para el indicador de carga */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(20px) translateX(20px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(20px) translateX(20px);
+}
+
+.fade-slide-leave-active {
+  transition-duration: 0.3s;
 }
 
 /* Animación de fade-down para el buscador */
