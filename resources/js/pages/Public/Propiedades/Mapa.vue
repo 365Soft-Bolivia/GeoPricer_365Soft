@@ -2609,7 +2609,7 @@ const resetRadar = () => {
 <template>
   <Head title="Mapa Interactivo de Propiedades" />
 
-  <div class="relative w-screen h-screen overflow-hidden" @click="showCategoryDropdown = false; showOperationDropdown = false; handleOutsideClick();">
+  <div class="relative w-screen h-[100dvh] overflow-hidden" @click="showCategoryDropdown = false; showOperationDropdown = false; handleOutsideClick();">
 
     <!-- PANTALLA DE SELECCIÓN DE FILTROS -->
     <transition name="fade">
@@ -3566,10 +3566,10 @@ const resetRadar = () => {
     <transition name="slide-left">
       <div
         v-if="showFilterPanel"
-        class="absolute left-0 top-0 h-full w-full sm:w-96 bg-white shadow-2xl z-[1300] flex flex-col"
+        class="fixed top-0 left-0 h-[100dvh] w-full sm:w-96 bg-white dark:bg-gray-900 shadow-2xl z-[1300] flex flex-col"
       >
         <!-- Header -->
-        <div class="bg-gradient-to-r from-[#FAB90E] to-[#E0081D] text-white p-4 flex justify-between items-center flex-shrink-0">
+        <div class="bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] text-white p-4 flex justify-between items-center flex-shrink-0">
           <div>
             <h3 class="font-bold text-lg">Cambiar Filtros</h3>
             <p class="text-xs text-white/80">Selecciona las nuevas opciones</p>
@@ -3611,7 +3611,7 @@ const resetRadar = () => {
           <!-- Operaciones -->
           <div>
             <h2 class="text-base font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-              <DollarSign :size="18" class="text-green-600" />
+              <DollarSign :size="18" class="text-emerald-600" />
               Tipo de Operación <span class="text-xs font-normal text-gray-500">(opcional)</span>
             </h2>
             <div class="space-y-2">
@@ -3622,29 +3622,29 @@ const resetRadar = () => {
                 :class="[
                   'w-full text-left px-3 py-2 rounded-lg border-2 transition-all flex items-center justify-between text-sm',
                   operacionSeleccionada === op.value
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-green-300 dark:hover:border-green-500'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-emerald-300 dark:hover:border-emerald-500'
                 ]"
               >
                 <div class="flex items-center gap-2">
                   <component :is="op.icon" :size="16" />
                   <span class="font-medium text-gray-700 dark:text-gray-200">{{ op.label }}</span>
                 </div>
-                <Check v-if="operacionSeleccionada === op.value" :size="16" class="text-green-600" />
+                <Check v-if="operacionSeleccionada === op.value" :size="16" class="text-emerald-600" />
               </button>
             </div>
           </div>
 
           <!-- Información -->
-          <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-            <p class="text-xs text-purple-700 dark:text-purple-300">
+          <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+            <p class="text-xs text-amber-800 dark:text-amber-300">
               💡 <strong>Tip:</strong> Debes seleccionar al menos una opción (categoría u operación) para aplicar los filtros.
             </p>
           </div>
         </div>
 
         <!-- Footer -->
-        <div class="border-t bg-gray-50 dark:bg-gray-800 p-4 flex-shrink-0">
+        <div class="border-t bg-gray-50 dark:bg-gray-800 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex-shrink-0">
           <div class="space-y-3">
             <!-- Resumen -->
             <div class="text-center">
@@ -3666,7 +3666,7 @@ const resetRadar = () => {
                 :class="[
                   'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all',
                   canLoadMap
-                    ? 'bg-gradient-to-r from-[#FAB90E] to-[#E0081D] text-white hover:from-[#E0081D] hover:to-[#FAB90E]'
+                    ? 'bg-[#233C7A] text-white hover:bg-[#1e2d4d] shadow-md'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 ]"
                 :disabled="!canLoadMap"
