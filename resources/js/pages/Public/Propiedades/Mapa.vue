@@ -61,7 +61,6 @@ const props = defineProps<{
   productsConUbicacion: Product[];
   categoriasDisponibles: Record<number, string>;
   totalPropiedades: number;
-  defaultCenter?: { lat: number; lng: number };
   filtrosAplicados?: {
     categoria?: number | null;
     operacion?: string | null;
@@ -73,7 +72,9 @@ const props = defineProps<{
   };
 }>();
 
-const defaultCenter = props.defaultCenter || { lat: -17.4167, lng: -66.1667 };
+// Centro de Bolivia como fallback si el usuario deniega la geolocalización
+const FALLBACK_CENTER = { lat: -17.0, lng: -65.0 };
+const FALLBACK_ZOOM = 6;
 
 /* ================= MAP ================= */
 const mapContainer = ref<HTMLElement | null>(null);
@@ -271,70 +272,85 @@ const getPriceDisplay = (product: Product) => {
   return prices.join('<br>') || '<span class="text-gray-400">Precio no disponible</span>';
 };
 
-// Generar popup HTML mejorado sin imagen y con botón
+// Genera el popup inicial con datos básicos + skeleton para los detalles
 const getPopupContent = (product: Product, extraInfo: string = '') => {
-  // Badge de operación con color
-  const operacionColors = {
-    'venta': 'bg-[#233C7A]'      /* Azul Alfa */
+
+  const operacionColors: Record<string, string> = {
+    'venta': '#233C7A',
+    'alquiler': '#E0081D',
+    'anticretico': '#FAB90E',
   };
-  const operacionColor = operacionColors[product.operacion as keyof typeof operacionColors] || 'bg-gray-500';
+  const color = operacionColors[product.operacion] || '#6b7280';
+  const operacionLabel = product.operacion.charAt(0).toUpperCase() + product.operacion.slice(1);
 
   return `
-    <div class="property-popup min-w-[280px] max-w-[320px]">
-      <div class="p-3 space-y-2">
-        <!-- Tipo de operación -->
-        <div class="flex items-center justify-between">
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold text-white ${operacionColor}">
-            ${product.operacion.charAt(0).toUpperCase() + product.operacion.slice(1)}
-          </span>
-          ${product.ambientes ? `<span class="text-xs text-gray-500">${product.ambientes} amb.</span>` : ''}
+    <div class="property-popup" data-property-id="${product.id}" style="min-width:280px;max-width:320px;font-family:sans-serif;">
+      <div style="padding:12px;">
+
+        <!-- Operación + precio (disponibles al instante) -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="background:${color};color:white;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;">${operacionLabel}</span>
+          <span style="font-size:13px;font-weight:700;color:#111;">${getPriceDisplay(product)}</span>
         </div>
 
-        <!-- Título -->
-        <div>
-          <h3 class="font-bold text-sm text-gray-900 leading-tight line-clamp-2">${product.name}</h3>
-          <p class="text-xs text-gray-500 mt-0.5">${product.codigo_inmueble}</p>
+        <!-- Nombre -->
+        <p style="font-size:13px;font-weight:600;color:#111;margin:0 0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${product.name}</p>
+        <p style="font-size:11px;color:#6b7280;margin:0 0 8px;">${product.codigo_inmueble}</p>
+
+        <!-- Skeleton mientras carga el detalle -->
+        <div class="popup-skeleton" style="animation:pulse 1.5s infinite;">
+          <div style="height:10px;background:#e5e7eb;border-radius:4px;width:80%;margin-bottom:6px;"></div>
+          <div style="height:10px;background:#e5e7eb;border-radius:4px;width:60%;"></div>
         </div>
 
-        <!-- Precio -->
-        <div class="py-1">
-          ${getPriceDisplay(product)}
-        </div>
+        <!-- Contenedor de detalles (se llena con fetch) -->
+        <div class="popup-details" style="display:none;font-size:12px;color:#374151;margin-bottom:8px;"></div>
 
-        <!-- Características principales -->
-        <div class="flex flex-wrap gap-1 text-xs text-gray-600">
-          ${product.habitaciones ? `<span class="flex items-center gap-1">🛏️ ${product.habitaciones}</span>` : ''}
-          ${product.banos ? `<span class="flex items-center gap-1">🚿 ${product.banos}</span>` : ''}
-          ${product.cocheras ? `<span class="flex items-center gap-1">🚗 ${product.cocheras}</span>` : ''}
-          ${product.superficie_construida ? `<span class="flex items-center gap-1">📐 ${product.superficie_construida}m²</span>` : ''}
-        </div>
+        ${extraInfo ? `<div style="font-size:11px;color:#2563eb;font-weight:600;margin-bottom:6px;">${extraInfo}</div>` : ''}
 
-        <!-- Información extra (distancia, etc.) -->
-        ${extraInfo ? `<div class="text-xs text-blue-600 font-medium">${extraInfo}</div>` : ''}
-
-        <!-- Botón Ver Detalles -->
+        <!-- Botón -->
         <button
           data-property-id="${product.id}"
-          class="view-property-btn w-full mt-2 py-2 px-3 bg-gradient-to-r from-[#233C7A] to-[#1e2d4d] hover:from-[#E0081D] hover:to-[#233C7A] text-white text-xs font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+          class="view-property-btn"
+          style="width:100%;padding:8px;background:linear-gradient(to right,#233C7A,#1e2d4d);color:white;font-size:12px;font-weight:700;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
           </svg>
           Ver Ficha Completa
         </button>
       </div>
-
-      <style>
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-      </style>
+      <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
     </div>
   `;
+};
+
+// Rellena el popup con los detalles cargados desde el endpoint de preview
+const fillPopupDetails = (container: Element | null, data: any) => {
+  if (!container) return;
+  const skeleton = container.querySelector('.popup-skeleton') as HTMLElement | null;
+  const details = container.querySelector('.popup-details') as HTMLElement | null;
+  if (!skeleton || !details) return;
+
+  const features = [
+    data.habitaciones  ? `🛏️ ${data.habitaciones} hab.` : '',
+    data.banos         ? `🚿 ${data.banos} baños` : '',
+    data.cocheras      ? `🚗 ${data.cocheras}` : '',
+    data.superficie_construida ? `📐 ${data.superficie_construida}m²` : '',
+    data.ambientes     ? `🏠 ${data.ambientes} amb.` : '',
+  ].filter(Boolean).join('&nbsp;&nbsp;');
+
+  const primaryImage = data.images?.find((img: any) => img.is_primary) || data.images?.[0];
+
+  details.innerHTML = `
+    ${primaryImage ? `<img src="${primaryImage.image_path}" alt="${data.name}" style="width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:8px;">` : ''}
+    ${data.direccion ? `<p style="color:#6b7280;margin:0 0 4px;">📍 ${data.direccion}</p>` : ''}
+    ${features ? `<p style="margin:0;">${features}</p>` : ''}
+  `;
+
+  skeleton.style.display = 'none';
+  details.style.display = 'block';
 };
 
 // Función para agregar event listeners a los botones de los popups
@@ -1077,15 +1093,31 @@ const closeDropdowns = () => {
   showOperationDropdown.value = false;
 };
 
+// Caché local de detalles ya cargados — evita re-fetch al reabrir el mismo popup
+const previewCache = new Map<number, any>();
+
 const initMap = () => {
   if (!mapContainer.value) return;
 
-  map = L.map(mapContainer.value).setView([defaultCenter.lat, defaultCenter.lng], 6);
+
+  // Iniciar en el centro de Bolivia mientras carga la geolocalización
+  map = L.map(mapContainer.value).setView([FALLBACK_CENTER.lat, FALLBACK_CENTER.lng], FALLBACK_ZOOM);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19,
   }).addTo(map);
+
+  // Centrar en la ubicación real del usuario
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        map.setView([position.coords.latitude, position.coords.longitude], 13, { animate: true });
+      },
+      () => { /* Usuario denegó o no disponible — se queda en fallback */ },
+      { timeout: 6000, maximumAge: 300000 }
+    );
+  }
 
   // Inicializar el grupo de clustering con configuración optimizada
   markerClusterGroup = L.markerClusterGroup({
@@ -1143,6 +1175,29 @@ const initMap = () => {
   map.addLayer(markerClusterGroup);
   // NO llamar a updateMarkers() aquí - los marcadores se agregan progresivamente
   // con loadPropertiesProgressive() -> addMarkersToMap()
+
+  // Cargar detalles completos cuando se abre un popup (carga bajo demanda)
+  map.on('popupopen', async (e: any) => {
+    const container = e.popup.getElement();
+    const propertyId = parseInt(container?.querySelector('[data-property-id]')?.getAttribute('data-property-id') || '0');
+    if (!propertyId) return;
+
+    // Si ya está en caché, actualizar directamente sin fetch
+    if (previewCache.has(propertyId)) {
+      fillPopupDetails(container, previewCache.get(propertyId));
+      e.popup.update();
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/propiedades/${propertyId}/preview`);
+      if (!res.ok) return;
+      const data = await res.json();
+      previewCache.set(propertyId, data);
+      fillPopupDetails(container, data);
+      e.popup.update();
+    } catch (_) { /* mantener contenido básico si falla */ }
+  });
 
   // Solo escuchar clicks cuando el modo radar está activo
   map.on('click', (e) => {
@@ -1430,13 +1485,27 @@ const updateMarkers = () => {
   console.log(`Total de marcadores agregados: ${markersCount}`);
 };
 
-const getOperacionIcon = (operacion: string) => {
-  switch (operacion) {
-    case 'venta': return '💰';
-    case 'alquiler': return '🔑';
-    case 'anticretico': return '📄';
-    default: return '🏠';
-  }
+// SVG inline para marcadores — sin emojis, iconos vectoriales limpios
+const OPERACION_SVGS: Record<string, string> = {
+  venta: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    <line x1="12" y1="6" x2="12" y2="10"/><line x1="10" y1="8" x2="14" y2="8"/>
+  </svg>`,
+  alquiler: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    <circle cx="7.5" cy="15.5" r="5.5"/>
+    <path d="M21 2l-9.6 9.6M15.5 2H21v5.5"/>
+  </svg>`,
+  anticretico: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+  </svg>`,
+  default: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>`,
+};
+
+const getOperacionIcon = (operacion: string): string => {
+  return OPERACION_SVGS[operacion] ?? OPERACION_SVGS.default;
 };
 
 const getOperacionColor = (operacion: string) => {

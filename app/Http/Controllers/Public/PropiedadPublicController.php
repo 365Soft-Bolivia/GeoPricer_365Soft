@@ -14,6 +14,8 @@ use Inertia\Response;
 
 class PropiedadPublicController extends Controller
 {
+    private const MAX_MAP_MARKERS = 500;
+
     private PropertyFilterService $filterService;
 
     public function __construct(PropertyFilterService $filterService)
@@ -41,8 +43,8 @@ class PropiedadPublicController extends Controller
      */
     public function mapa(Request $request): Response
     {
-        // Construir query base
-        $query = Product::with(['location', 'category', 'images'])
+        // Construir query base — sin imágenes (se cargan bajo demanda al hacer click)
+        $query = Product::with(['location', 'category'])
             ->where('is_public', true)
             ->whereHas('location', function ($query) {
                 $query->where('is_active', true);
@@ -97,38 +99,91 @@ class PropiedadPublicController extends Controller
         $totalCount = $query->count();
         \Log::info('Total de propiedades filtradas:', ['total' => $totalCount]);
 
-        // NO cargar propiedades al inicio - se cargarán progresivamente via AJAX
-        $productsConUbicacion = collect(); // Colección vacía
+        // Solo datos mínimos para marcadores — imágenes y detalle se cargan al hacer click
+        $productsConUbicacion = $query->limit(self::MAX_MAP_MARKERS)->get()
+            ->map(function ($product) {
+                return [
+                    'id'                   => $product->id,
+                    'name'                 => $product->name,
+                    'codigo_inmueble'      => $product->codigo_inmueble ?? $product->sku ?? 'N/A',
+                    'price_usd'            => $product->price_usd ? (float) $product->price_usd : null,
+                    'price_bob'            => $product->price_bob ? (float) $product->price_bob : null,
+                    'operacion'            => $product->operacion,
+                    'category_id'          => $product->category_id,
+                    'habitaciones'         => $product->habitaciones,
+                    'banos'                => $product->banos,
+                    'superficie_construida'=> $product->superficie_construida,
+                    'location' => [
+                        'latitude'  => (float) $product->location->latitude,
+                        'longitude' => (float) $product->location->longitude,
+                        'is_active' => $product->location->is_active,
+                    ],
+                ];
+            });
+            
 
-        // Obtener categorías disponibles que tengan propiedades públicas con ubicación
-        $categoriasDisponibles = Product::where('is_public', true)
-            ->whereHas('location', function ($query) {
-                $query->where('is_active', true);
-            })
-            ->whereNotNull('category_id')
-            ->with('category')
-            ->get()
-            ->pluck('category.category_name', 'category.id')
-            ->unique()
+        // Obtener categorías disponibles via JOIN directo (sin cargar todos los productos)
+        $categoriasDisponibles = ProductCategory::select('product_category.id', 'product_category.category_name')
+            ->join('products', 'product_category.id', '=', 'products.category_id')
+            ->join('product_locations', 'products.id', '=', 'product_locations.product_id')
+            ->where('products.is_public', true)
+            ->where('product_locations.is_active', true)
+            ->distinct()
+            ->orderBy('product_category.category_name')
+            ->pluck('product_category.category_name', 'product_category.id')
             ->toArray();
 
         return Inertia::render('Public/Propiedades/Mapa', [
-            'productsConUbicacion' => $productsConUbicacion,
+            'productsConUbicacion'  => $productsConUbicacion,
             'categoriasDisponibles' => $categoriasDisponibles,
-            'defaultCenter' => [
-                'lat' => -16.5000, // La Paz, Bolivia (centro del país)
-                'lng' => -68.1500,
-            ],
-            'totalPropiedades' => $totalCount,
+            'totalPropiedades'      => $totalCount,
             'filtrosAplicados' => [
-                'categoria' => $request->get('categoria') ? (int)$request->get('categoria') : null,
-                'operacion' => $request->get('operacion'),
-                'precio_min' => $request->get('precio_min') ? (float)$request->get('precio_min') : null,
-                'precio_max' => $request->get('precio_max') ? (float)$request->get('precio_max') : null,
-                'habitaciones' => $request->get('habitaciones') ? (int)$request->get('habitaciones') : null,
-                'banos' => $request->get('banos') ? (int)$request->get('banos') : null,
+                'categoria'   => $request->get('categoria') ? (int)$request->get('categoria') : null,
+                'operacion'   => $request->get('operacion'),
+                'precio_min'  => $request->get('precio_min') ? (float)$request->get('precio_min') : null,
+                'precio_max'  => $request->get('precio_max') ? (float)$request->get('precio_max') : null,
+                'habitaciones'=> $request->get('habitaciones') ? (int)$request->get('habitaciones') : null,
+                'banos'       => $request->get('banos') ? (int)$request->get('banos') : null,
                 'ubicaciones' => $request->get('ubicaciones'),
             ]
+        ]);
+    }
+
+    /**
+     * Devuelve el detalle completo de una propiedad para el popup del mapa.
+     * Se llama bajo demanda cuando el usuario hace click en un marcador.
+     */
+    public function preview(int $id): \Illuminate\Http\JsonResponse
+    {
+        $product = Product::with([
+            'images' => fn($q) => $q->orderBy('is_primary', 'desc')->orderBy('order'),
+            'location',
+            'category',
+        ])
+        ->where('is_public', true)
+        ->findOrFail($id);
+
+        return response()->json([
+            'id'                    => $product->id,
+            'name'                  => $product->name,
+            'codigo_inmueble'       => $product->codigo_inmueble ?? $product->sku ?? 'N/A',
+            'price_usd'             => $product->price_usd ? (float) $product->price_usd : null,
+            'price_bob'             => $product->price_bob ? (float) $product->price_bob : null,
+            'operacion'             => $product->operacion,
+            'category'              => $product->category?->category_name ?? null,
+            'habitaciones'          => $product->habitaciones,
+            'banos'                 => $product->banos,
+            'ambientes'             => $product->ambientes,
+            'cocheras'              => $product->cocheras,
+            'superficie_construida' => $product->superficie_construida,
+            'superficie_util'       => $product->superficie_util,
+            'ano_construccion'      => $product->ano_construccion,
+            'direccion'             => $product->location?->address,
+            'comision'              => $product->comision,
+            'images'                => $product->images->map(fn($img) => [
+                'image_path' => $img->image_path,
+                'is_primary' => $img->is_primary,
+            ]),
         ]);
     }
 
